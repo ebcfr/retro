@@ -2290,7 +2290,7 @@ void main_loop (int argc, char *argv[])
 	epsilon=10000*DBL_EPSILON;
 	sort_builtin(); sort_command(); make_xors(); clear_fktext();
 	next=line;		/* clear input line */
-	strcpy(line,"load \"euler.cfg\";");
+	strcpy(line,"load \"retro.cfg\";");
 	for (i=1; i<argc; i++)
 	{	strcat(line," load \"");
 		strcat(line,argv[i]);
