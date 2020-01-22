@@ -192,7 +192,7 @@ void ghold (void)
 }
 
 void show_graphics (void)
-{	int scan;
+{	scantyp scan;
 	graphic_mode(); wait_key(&scan); text_mode();
 }
 

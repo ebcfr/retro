@@ -1174,7 +1174,8 @@ void scan_elementary (void)
 	{	next++; s=next; 
 		while (*next!='\"' && *next!=0) next++;
 		hd=new_string(s,next-s,"");
-		if (*next=='\"') next++;
+		if (*next!='\"') { output("\" missing\n"); error=1; return; }
+		next++;
 	}
 	else error=1;
 	after: if (error) return;

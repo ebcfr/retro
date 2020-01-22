@@ -1,6 +1,9 @@
 ##############################################################################################
 
-PROJ=xretro
+XPROJ=xretro
+TPROJ=retro-cli
+
+INSTALL_DIR = /usr/local
 
 TARGET  =
 CC      = $(TARGET)gcc
@@ -10,7 +13,7 @@ SIZE    = $(TARGET)size
 OBJDUMP = $(TARGET)objdump
 
 # List all default C defines here
-DDEFS = -g -O0 -DFONT=\"8x13\" -DGFONT=\"8x13\"
+DDEFS = -g -O0 -DFONT=\"8x13\" -DGFONT=\"8x13\" -DINSTALL=\"$(INSTALL_DIR)\" -D_GNU_SOURCE
 
 # List all default directories to look for include files here
 DINCDIR = . src
@@ -19,12 +22,18 @@ DINCDIR = . src
 DLIBDIR =
 
 # List all default libraries here
-DLIBS = -lm -lX11
+DLIBS = -lm 
+
+XLIBS = -lX11
 
 # C source files here
 SRC  = src/edit.c src/extend.c src/graphics.c src/mainloop.c \
        src/polynom.c src/express.c src/funcs.c \
-       src/helpf.c src/matheh.c src/sysdepx.c
+       src/helpf.c src/matheh.c
+
+XSRC = src/sysdepx.c
+
+TSRC = src/sysdept.c
 
 #
 # End of user defines
@@ -36,9 +45,11 @@ DEFS    = $(DDEFS)
 LIBS    = $(DLIBS)
 
 OBJS    = $(SRC:%.c=%.o)
+XOBJS   = $(XSRC:%.c=%.o)
+TOBJS   = $(TSRC:%.c=%.o)
 
 CFLAGS  = $(INCDIR) $(MCFLAGS) $(DEBUG) $(OPT) -fomit-frame-pointer -Wall -std=c99 -D_POSIX_C_SOURCE=200809L $(DEFS)
-LDFLAGS = -Wl,-Map=$@.map,--gc-sections $(LIBDIR)
+LDFLAGS = -Wl,--gc-sections $(LIBDIR)
 
 # Generate dependency information
 CFLAGS += -MD -MP -MF .dep/$(@F).d
@@ -46,17 +57,24 @@ CFLAGS += -MD -MP -MF .dep/$(@F).d
 #
 # makefile rules
 #
-all: $(PROJ)
+all: $(XPROJ) $(TPROJ)
 
-$(PROJ): $(OBJS)
+$(XPROJ): $(OBJS) $(XOBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS) $(XLIBS)
+
+$(TPROJ): $(OBJS) $(TOBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 	
+install:
+	cp $(XPROJ) $(INSTALL_DIR)/bin/
+	cp $(TPROJ) $(INSTALL_DIR)/bin/
+
 clean:
-	-rm -f $(OBJS)
-	-rm -f $(PROJ)
+	-rm -f $(OBJS) $(XOBJS) $(TOBJS)
+	-rm -f $(XPROJ) $(TPROJ)
 	-rm -f *.map
 	-rm -fR .dep
 

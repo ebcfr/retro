@@ -4,7 +4,7 @@
 "Demo loading."
 ""
 
-demodelay=180;
+demodelay=5;
 
 function delay
 	global demodelay;
@@ -124,7 +124,7 @@ function weiter
 endfunction
 
 function normaldemo
-## Einfhrung in EULER
+## Demo of Retro
 	global Pi; pi=Pi;
 	
 	"Hint for window versions:"
@@ -208,7 +208,7 @@ function normaldemo
 	"See an overview with >list."
 	weiter();
 	
-	"It is easy to generate a table for a function, and with
+	"It is easy to generate a table for a function, and with"
 	"the table, one can plot the function."
 	"" ">t=0:pi/50:2*pi; s=sin(t); xplot(t,s);"
 	t=0:pi/50:2*pi; s=sin(t);
@@ -666,7 +666,7 @@ function specialdemo
 	""
 	"We compute the eigenvalues and eigenvectors of A."
 	">{l,V}=eigen(A); l=re(l),"
-	{l,V}=eigen(A); l=re(l),"
+	{l,V}=eigen(A); l=re(l),
 	">V=re(V),"
 	V=re(V), 
 	weiter();
@@ -685,7 +685,7 @@ function taste
 endfunction
 
 function grafiktutor
-## Erkl„rt die Grafikfunktionen
+## Demo of graphical features of Retro
 	hold off;
 	global Pi;
 	"Explanation of some grafics functions."

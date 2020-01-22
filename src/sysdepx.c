@@ -3,9 +3,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
-#include <sys/times.h>
+#include <sys/time.h>
 #include <sys/select.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 #include <unistd.h> /* for chdir and getcwd */
 #include <dirent.h>
@@ -51,6 +52,7 @@ double nextcheck;
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
 
@@ -61,6 +63,7 @@ char sdisp[64]="";
 int screen, depth;
 int winit=0;
 Window window;
+Atom sel_prop;
 GC gc,cleargc,stipplegc,textgc,invtextgc;
 Pixmap stipple[64];
 unsigned long blackpixel, whitepixel;
@@ -69,9 +72,9 @@ int usedcolors=maxcolors;
 unsigned long color[maxcolors];
 char *colorname[maxcolors]=
 {
-	"White","Black","Green","Lightblue","Blue","SteelBlue","Khaki","Tan",
-	"Grey","Yellow","Green","Red","LightBlue","LightSteelBlue",
-	"LimeGreen","Navy"
+	"White","Black","Green","Lightblue","Blue","SteelBlue",
+	"Khaki","Tan","Grey","Yellow","Green","Red","LightBlue",
+	"LightSteelBlue","LimeGreen","Navy"
 };
 XFontStruct *font,*textfont;
 Pixmap pixmap;
@@ -136,12 +139,14 @@ void initX (void)
 		exit(1);
 	}
 
+	sel_prop=XInternAtom(display,"SEL_PROP",False);
+	
 	XFlush(display);
 
 }
 
 void quitX (void)
-/* Disconnect to server */
+/* Disconnect from server */
 {   
 	static int quitted=0;
 	if (quitted) return;
@@ -784,14 +789,15 @@ void scale (double s)
 	}
 }
 
-void translate (XKeyEvent *event, int *key, int *scan);
+void translate (XKeyEvent *event, int *key, scantyp *scan);
 void mouse (int *x, int *y)
 /****** mouse
 	wait, until the user marked a screen point with the mouse.
 ******/
 {	
 	XEvent event;
-	int taste,scan;
+	int taste;
+	scantyp scan;
 	while (1)
 	{
 		XWindowEvent(display,window,mask,&event);
@@ -822,6 +828,14 @@ void getpixel (double *x, double *y)
 /* defined as macros */
 
 /************** text screen **************************/
+
+void edit_on (void)
+{
+}
+
+void edit_off (void)
+{
+}
 
 void show_cursor (void)
 {
@@ -986,14 +1000,7 @@ void refresh_window (void)
 
 /******************** keyboard and other events **********************/
 
-int isgerman (KeySym k)
-{	
-	if (k=='„' || k=='”' || k=='' || k=='á' ||
-		k=='Ž' || k=='™' || k=='š') return 1;
-	return 0;
-}
-
-void translate (XKeyEvent *event, int *key, int *scan)
+void translate (XKeyEvent *event, int *key, scantyp *scan)
 /* Translate events into key codes */
 {
 	int length,i;
@@ -1003,6 +1010,11 @@ void translate (XKeyEvent *event, int *key, int *scan)
 
 	*scan=0; *key=0;
 	length=XLookupString(event,buffer,64,&keysym,&status);
+
+	if ((event->state & ControlMask) && keysym==0x64) {
+		*scan = eot;
+		return;
+	}
 	switch (keysym)
 	{	case XK_Prior :
 			if (!in_text || textwindow==textstart) break;
@@ -1035,9 +1047,7 @@ void translate (XKeyEvent *event, int *key, int *scan)
 			refresh_window();
 			return;
 	}
-	if (
-		( ((keysym>=' ') && (keysym<='~')) || isgerman(keysym) )
-		&& length>0)
+	if (((keysym>=' ') && (keysym<='~')) && length>0)
 	{
 		*key=buffer[0];
 		return;
@@ -1076,6 +1086,8 @@ void translate (XKeyEvent *event, int *key, int *scan)
 		case XK_F8 : *scan=fk8; break;
 		case XK_F9 : *scan=fk9; break;
 		case XK_F10 : *scan=fk10; break;
+		case XK_F11 : *scan=fk11; break;
+		case XK_F12 : *scan=fk12; break;
 		case XK_KP_Enter : *scan=enter; break;
 		case XK_Tab : *scan=switch_screen; break;
 		case XK_End :
@@ -1126,25 +1138,77 @@ void process_event (XEvent *event)
 	}
 }
 
-int wait_key (int *scan)
+int wait_key (scantyp* scan)
 /***** 
 	wait for a keystroke. return the scancode.
 *****/
 {   
-	int taste;
+	int ch;
 	XEvent event;
-
-	*scan=key_none; taste=0;
-	while (1)
-	{
-		XWindowEvent(display,window,mask,&event);
-		if (event.type==KeyPress)
-		{	translate(&(event.xkey),&taste,scan);
-			if (*scan || taste) break;
+	
+	Window sel_owner;
+	static unsigned char* selection=NULL;
+	static unsigned char* sel_ptr=NULL;
+	
+	*scan=key_none; ch=0;
+	while (1) {
+		if (in_text && selection) {
+			while (*sel_ptr=='\r') sel_ptr++;
+			ch=*sel_ptr++;
+			if (ch=='\n') *scan=enter;
+			else if (ch=='\t') ch=' ';
+			if (*sel_ptr==0) {
+				XFree(selection);
+				selection = NULL;
+			}
+			break;
 		}
-		process_event(&event);
+		XNextEvent(display, &event);
+		if (event.type==KeyPress) {
+			translate(&(event.xkey),&ch,scan);
+			if (*scan || ch) break;
+		} else if (event.type==ButtonPress && 
+			event.xbutton.button==Button2) {
+			sel_owner = XGetSelectionOwner(display, XA_PRIMARY);
+		    if (sel_owner != None) {
+		    	/* - ask the server for the selection */
+				XConvertSelection(display, XA_PRIMARY, XA_STRING,
+					sel_prop, window, CurrentTime);
+			}
+		} else if (event.type==SelectionNotify){
+			if (event.xselection.property!=None) {
+			    Atom da, type;
+			    int di;
+			    unsigned long size, dul;
+			
+			    /* Dummy call to get type and size. */
+			    XGetWindowProperty(display, window, event.xselection.property, 0, 0, False, AnyPropertyType,
+			                       &type, &di, &dul, &size, &selection);
+			    XFree(selection);
+				selection=NULL;
+				
+/*			    Atom incr = XInternAtom(dpy, "INCR", False);
+			    if (type == incr)
+			    {
+			        fprintf(stderr,"Data too large and INCR mechanism not implemented\n");
+			        return;
+			    }*/
+			
+			    /* Read the data in one go. */
+//			    fprintf(stderr,"Property size: %lu\n", size);
+			
+			    XGetWindowProperty(display, window, event.xselection.property, 0, size, False, AnyPropertyType,
+			                       &da, &di, &dul, &dul, &selection);
+//			    fprintf(stderr,"%s", selection);
+			    sel_ptr = selection;
+			
+			    /* Signal the selection owner that we have 
+			       successfully read the data. */
+			    XDeleteProperty(display, window, event.xselection.property);
+			}
+		} else process_event(&event);
 	}
-	return taste;
+	return ch;
 }
 
 int test_key (void)
@@ -1154,7 +1218,9 @@ int test_key (void)
 *****/
 {   
 	XEvent event;
-	int scan,key;
+	int key;
+	scantyp scan;
+	
 	if (userbreak)
 	{
 		userbreak=0; return escape;
@@ -1172,13 +1238,13 @@ int test_key (void)
 
 /**************** directory *******************/
 
-char path[256];
+char curpath[256];
 
 char *cd (char *dir)
 /* sets the path if dir!=0 and returns the path */
 {	
 	chdir(dir);
-	if (getcwd(path,256)) return path;
+	if (getcwd(curpath,256)) return curpath;
 	return dir;
 }
 
@@ -1264,18 +1330,13 @@ double myclock (void)
 	gettimer(TIMEOFDAY,&t);
 	return (t.tv_sec+t.tv_nsec/1000000000.0);
 #else
-	struct tms b;
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return (double)(tv.tv_sec+tv.tv_usec*1e-6);
+/*	struct tms b;
 	times(&b);
-	return (double)(b.tms_utime)/(SY_CLK_TCK);
+	return (double)(b.tms_utime)/(SY_CLK_TCK);*/
 #endif
-}
-
-void edit_on (void)
-{
-}
-
-void edit_off (void)
-{
 }
 
 void sys_wait (double time, int *scan)
@@ -1322,7 +1383,46 @@ void sys_wait (double time, int *scan)
 	*scan=0;
 }
 
+/************ path utils *******************/
+
+/* path_expand
+ *   expands ~ and resolve relative path
+ *   returns the expanded path. 
+ *     result has to be freed if not NULL
+ */
+static char* path_expand(char* path)
+{
+	char rpath[PATH_MAX];
+	
+	if (path[0]=='~') {
+		char* home=getenv("HOME");
+		if (home) {
+			strncat(rpath, home, PATH_MAX);
+			strncat(rpath, path+1, PATH_MAX);
+			return realpath(rpath, NULL);
+		}
+		return NULL;
+	}
+	return realpath(path, NULL);
+}
+
+/* path_is_dir
+ *   does the path exist and identifies a directory ?
+ */
+static int path_is_dir(char* path)
+{
+	struct stat si;
+	if (stat(path, &si)==0 && S_ISDIR(si.st_mode)) {
+		return 1;
+	}
+	return 0;
+}
+
 /************ main *******************/
+
+char titel[]="This is EULER, Version 3.04 compiled %s.\n\n"
+	"Type help(Return) for help.\n"
+	"Enter command: (%ld Bytes free.)\n\n";
 
 void usage (void)
 {
@@ -1449,9 +1549,50 @@ int main (int argc, char *argv[])
 		else break;
 	}
 	if (!memory_init()) exit(1);
+	
+	/* set up default pathes and directory */
+	char* s=getenv("EULER");
+	if (!s) s="~/.euler/progs:";
+	
+	// get a buffer of the required size
+	char str[strlen(s)+1];
+	s=strcpy(str,s);
+	
+	path[0]=".";
+	npath=1;
+	for (s=strtok(s,":"); s!=NULL; s=strtok(NULL,":")) {
+		char* p=path_expand(s);
+		if (p && path_is_dir(p)) {
+	 		path[npath++]=p;
+	 	} else {
+	 		fprintf(stderr, "path %s rejected (not a valid path!)\n", s);
+	 		if (p) free(p);
+	 	}
+	 	if (npath==MAX_PATH) {
+	 		fprintf(stderr, "Too many pathes\n");
+	 		npath=MAX_PATH-1;
+	 		break;
+	 	}
+	}
+	path[npath++]=INSTALL"share/euler/progs\n";
+	
+#ifdef DEBUG	
+	fprintf(stderr,"npath %d\n",npath);
+	for (int i=0; i<npath; i++) {
+		fprintf(stderr,"%s\n",path[i]);
+	}
+#endif
+
 	grafik();
 	XWindowEvent(display,window,ExposureMask,&event);
 	process_event(&event);
+	
+#ifndef SPLIT_MEM
+	output1(titel,__DATE__,(unsigned long)(ramend-ramstart));
+#else
+	output1(titel,__DATE__,(unsigned long)(ramend-varstart));
+#endif
+
 	main_loop(argc,argv);
 	return 0;
 }

@@ -19,24 +19,20 @@ FILE *metafile=0;
 
 double epsilon;
 
-char titel[]="This is EULER, Version 3.04 compiled %s.\n\n"
-	"Type help(Return) for help.\n"
-	"Enter command: (%ld Bytes free.)\n\n";
-
 int error,quit,surpressed,udf=0,errorout,outputing=1,stringon=0,
 	trace=0;
-char line[1024];
+char line[MAXLINE];
 
 long loopindex=0;
 
 int fieldw=15,linew=5;
 double maxexpo=1.0e5,minexpo=1.0e-7;
-char expoformat[16]=" %14.5e";
-char fixedformat[16]=" %14.7f";
+char expoformat[16]=" %14.5E";
+char fixedformat[16]=" %14.7F";
 
 int nosubmref=0;
 
-FILE *infile=0,*outfile=0;
+FILE *infile=NULL,*outfile=NULL;
 
 header commandheader;
 int commandtype;
@@ -49,22 +45,56 @@ void output (char *s)
 	if (outfile)
 	{	fprintf(outfile,"%s",s);
 		if (ferror(outfile))
-		{	output("Error on dump file (disk full?).\n");
+		{	
 			error=200;
-			fclose(outfile); outfile=0;
+			fclose(outfile); outfile=NULL;
+			output("Error on dump file (disk full?).\n");
 		}
 	}
 }
 
-void output1 (char *s, ...)
+void output1 (char *fmt, ...)
 {	char text [1024];
 	va_list v;
 	text_mode();
-	va_start(v,s);
-	vsprintf(text,s,v);
+	va_start(v,fmt);
+	vsnprintf(text,1024,fmt,v);
+	va_end(v);
 	if (outputing || error) gprint(text);
 	if (outfile)
-	{	vfprintf(outfile,s,v);
+	{	va_start(v,fmt);
+		vfprintf(outfile,fmt,v);
+		va_end(v);
+		if (ferror(outfile))
+		{	
+			error=200;
+			fclose(outfile); outfile=NULL;
+			output("Error on dump file (disk full?).\n");
+		}
+	}
+}
+
+/*
+void output1hold (int f, char *fmt, ...)
+{	static char text [1024];
+	unsigned long si;
+	va_list v;
+	if (f==0) text[0]=0;
+	text_mode();
+	va_start(v,fmt);
+	vsprintf(text+strlen(text),fmt,v);
+	if (f<=0) return;
+	si=strlen(text);
+	if (si<f)
+	{	memmove(text+(f-si),text,si+1);
+		memset(text,' ',f-si);
+	}
+	if (outputbuffer)
+	{	output(text); return;
+	}
+	if (outputing || error) gprint(text);
+	if (outfile)
+	{   fprintf(outfile,text);
 		if (ferror(outfile))
 		{	output("Error on dump file (disk full?).\n");
 			error=200;
@@ -72,13 +102,13 @@ void output1 (char *s, ...)
 		}
 	}
 }
-
+*/
 /* help */
 
 extern commandtyp command_list[];
 
-int dohelp (char start[256], char extend[16][16])
-/* dohelp
+int extend(char* start, char extend[16][MAXNAME])
+/* extend
 Extend a start string in up to 16 ways to a command or function.
 This function is called from the line editor, whenever the HELP
 key is pressed.
@@ -87,7 +117,7 @@ key is pressed.
 	header *hd=(header *)ramstart;
 	builtintyp *b=builtin_list;
 	commandtyp *c=command_list;
-	ln=(int)strlen(start);
+	ln=strlen(start);
 	while (b->name)
 	{	if (!strncmp(start,b->name,ln))
 		{	l=(int)strlen(b->name)-ln;
@@ -126,6 +156,30 @@ key is pressed.
 
 /* functions that manipulate the stack */
 
+/* Organization of the stack                      when global
+                                                     scope
+   ----------------------------- <-- ramstart          |
+   udf (user defined functions)                        V
+   ----------------------------- <-- udfend      [startlocal]
+   global variables
+   ----------------------------- <-- startlocal  [endlocal]
+   running function local scope
+   ----------------------------- <-- newram = endlocal (top of stack)
+   
+   
+               free
+   
+   
+   ----------------------------- <-- ramend
+   
+   the running function local is transient and exists only while
+   the function is executed.
+   
+   startlocal and endlocal relates either to the current running
+   local scope or to the global scope when an expression is
+   evaluated at the global level of the interpreter.
+   
+ */
 void kill_local (char *name);
 void clear (void)
 /***** clear
@@ -248,7 +302,7 @@ header *new_string (char *s, size_t length, char *name)
 	header *hd=(header *)newram;
 	size=sizeof(header)+((int)(length+1)/2+1)*2;
 	d=(char *)make_header(s_string,size,name);
-	if (d) strncpy(d,s,length); d[length]=0;
+	if (d) {strncpy(d,s,length); d[length]=0;}
 	return hd;
 }
 
@@ -274,7 +328,7 @@ header *new_complex (double x, double y, char *name)
 	header *hd=(header *)newram;
 	size=sizeof(header)+2*sizeof(double);
 	d=(double *)make_header(s_complex,size,name);
-	if (d) *d=x; *(d+1)=y;
+	if (d) {*d=x; *(d+1)=y;}
 	return hd;
 }
 
@@ -616,26 +670,6 @@ void print_error (char *p)
 	errorout=1;
 }
 
-void read_line (char *line)
-{	int count=0,input;
-	char *p=line;
-	while(1)
-	{	input=getc(infile);
-		if (input==EOF)
-		{	fclose(infile); *p++=1; infile=0;
-			break; 
-		}
-		if (input=='\n') break;
-		if (count>=1023) 
-		{	output("Line to long!\n"); error=50; *line=0; return;
-		}
-		if ((char)input>=' ' || (signed char)input<0 || (char)input==TAB)
-		{	*p++=(char)input; count++;
-		}
-	}
-	*p=0;
-}
-
 char *type_udfline (char *start)
 {	char outline[1024],*p=start,*q;
 	double x;
@@ -669,7 +703,8 @@ char *type_udfline (char *start)
 void minput (header *hd);
 
 void trace_udfline (char *next)
-{	int scan,oldtrace;
+{	int oldtrace;
+	scantyp scan;
 	extern header *running;
 	header *hd,*res;
 	output1("%s: ",running->name); type_udfline(next);
@@ -713,6 +748,26 @@ void trace_udfline (char *next)
 	}
 }
 
+void read_line (char *line)
+{	int count=0,input;
+	char *p=line;
+	while(1)
+	{	input=getc(infile);
+		if (input==EOF)
+		{	fclose(infile); *p++=1; infile=0;
+			break; 
+		}
+		if (input=='\n') break;
+		if (count>=1023) 
+		{	output("Line too long!\n"); error=50; *line=0; return;
+		}
+		if ((char)input>=' ' || (signed char)input<0 || (char)input==TAB)
+		{	*p++=(char)input; count++;
+		}
+	}
+	*p=0;
+}
+
 void next_line (void)
 /**** next_line
 	read a line from keyboard or file.
@@ -730,7 +785,10 @@ void next_line (void)
 		{	error=2300; output("Input ended in string!\n");
 			return;
 		}
-		if (!infile) edit(line);
+		if (!infile) {
+			scantyp r=edit(line);
+			if (r==eot) strcpy(line,"quit");
+		}
 		else read_line(line);
 		next=line;
 	}
@@ -836,6 +894,41 @@ void scan_else (void)
 	}
 }
 
+void scan_filename (char *name, int lmax)
+{	int count=0;
+	if (*next=='\"')
+	{	next++;
+		while (*next!='\"' && *next)
+		{	*name++=*next++; count++;
+			if (count>=lmax-1)
+			{	output("Name too long!\n");
+				error=11; break;
+			}
+		}
+		if (*next=='\"') next++;
+		else
+		{
+			output("\" missing\n");
+			error=11;
+		}
+	}
+	else if (!isalpha(*next) && *next!='_' && *next!=PATH_DELIM_CHAR)
+	{   output1("Valid file name or path expected at:\n%s\n",next);
+		error=11; *name=0; return;
+	}
+	else
+	{	if (*next=='_') { *name++=*next++; count++; }
+		while (isalpha(*next) || isdigit(*next) || *next==PATH_DELIM_CHAR || *next=='-' || *next=='.')
+		{	*name++=*next++; count++;
+			if (count>=lmax-1)
+			{	output("Name too long!\n");
+				error=11; break;
+			}
+		}
+	}
+	*name=0;
+}
+
 void scan_name (char *name)
 {	int count=0;
 	if (!isalpha(*next))
@@ -844,7 +937,7 @@ void scan_name (char *name)
 	while (isalpha(*next) || isdigit(*next))
 	{	*name++=*next++; count++;
 		if (count>=15)
-		{	output("Name to long!\n");
+		{	output("Name too long!\n");
 			error=11; break;
 		}
 	}
@@ -900,7 +993,7 @@ header *searchudf (char *name)
 
 void kill_local (char *name)
 /***** kill_local
-	kill a loal variable name, if there is one.
+	kill a local variable name, if there is one.
 *****/
 {	size_t size,rest;
 	header *hd=(header *)startlocal;
@@ -957,7 +1050,7 @@ header *assign (header *var, header *value)
 /***** assign
 	assign the value to the variable.
 *****/
-{	char name[16],*nextvar;
+{	char name[MAXNAME],*nextvar;
 	size_t size,dif;
 	double *m,*mv,*m1,*m2;
 	int i,j,c,r,cv,rv,*rind,*cind;
@@ -1125,7 +1218,7 @@ void out_matrix (header *hd)
 	for (c0=0; c0<c; c0+=linew)
 	{	cend=c0+linew-1; 
 		if (cend>=c) cend=c-1;
-		if (c>linew) output2("Column %d to %d:\n",c0+1,cend+1);
+		if (c>linew) output1("Column %d to %d:\n",c0+1,cend+1);
 		for (i=0; i<r; i++)
 		{	x=mat(m,c,i,c0);
 			for (j=c0; j<=cend; j++) double_out(*x++);
@@ -1159,7 +1252,7 @@ void out_cmatrix (header *hd)
 	for (c0=0; c0<c; c0+=linew/2)
 	{	cend=c0+linew/2-1; 
 		if (cend>=c) cend=c-1;
-		if (c>linew/2) output2("Column %d to %d:\n",c0+1,cend+1);
+		if (c>linew/2) output1("Column %d to %d:\n",c0+1,cend+1);
 		for (i=0; i<r; i++)
 		{	x=cmat(m,c,i,c0);
 			for (j=c0; j<=cend; j++) { complex_out(*x,*(x+1)); 
@@ -1187,38 +1280,68 @@ void give_out (header *hd)
 
 /***************** some builtin commands *****************/
 
+char * path[MAX_PATH];
+int npath=0;
+
 void load_file (void)
 /***** load_file
 	inerpret a file.
 *****/
-{	header *filename;
-	char oldline[1024],fn[256],*oldnext;
+{	char filename[256];
+	char oldline[1024],*oldnext;
 	FILE *oldinfile;
-	filename=scan_value(); if (error) return;
-	if (filename->type!=s_string)
-	{	output("Illegal filename!\n"); error=52; return;
-	}
-	if (udfon)
-	{	output("Cannot load a file in a function!\n");
+
+	if (udfon) {
+		output("Cannot load a file in a function!\n");
 		error=221; return;
 	}
+	
+	/* get a file name or path*/
+	scan_space();
+	if (*next=='(') {
+		header* hd=scan_value();
+		if (error) return;
+		if (hd->type!=s_string) {
+			output("String value expected!\n");
+			error=1; return;
+		}
+		strncpy(filename,stringof(hd),255);filename[255]=0;
+	} else {
+		scan_filename(filename,256);
+	}
+	if (error) return;
+	
+	/* try to open it */
 	oldinfile=infile;
-	infile=fopen(stringof(filename),"r");
-	if (!infile)
-	{	strcpy(fn,stringof(filename));
-		strcat(fn,EXTENSION);
-		infile=fopen(fn,"r");
-		if (!infile)
-		{	output1("Could not open %s!\n",stringof(filename));
-			error=53; infile=oldinfile; return;
+	if (filename[0]==PATH_DELIM_CHAR) {	/* an absolute path, use it */
+		infile=fopen(filename,"r");
+	} else {							/* use standard path */
+		for (int k=0; k<npath; k++) {
+			char fn[strlen(path[k])+strlen(stringof(filename))+strlen(EXTENSION)+strlen(PATH_DELIM_STR)+1];
+			
+			strcpy(fn,path[k]);strcat(fn,PATH_DELIM_STR);strcat(fn,filename);
+			infile=fopen(fn,"r");
+			if (infile) break;
+			else {
+				strcat(fn,EXTENSION);
+				infile=fopen(fn,"r");
+				if (infile) break;
+			}
 		}
 	}
-	strcpy(oldline,line); oldnext=next;
-	*line=0; next=line;
-	while (!error && infile && !quit) command();
-	if (infile) fclose(infile);
-	infile=oldinfile;
-	strcpy(line,oldline); next=oldnext;
+	
+	/* interpret the file if it exists */
+	if (infile) {
+		strcpy(oldline,line); oldnext=next;
+		*line=0; next=line;
+		while (!error && infile && !quit) command();
+		if (infile) fclose(infile);
+		infile=oldinfile;
+		strcpy(line,oldline); next=oldnext;
+	} else {
+		output1("Could not open %s!\n",stringof(filename));
+		error=53; infile=oldinfile; return;
+	}
 }
 
 commandtyp *preview_command (size_t *l);
@@ -1227,7 +1350,7 @@ void get_udf (void)
 /***** get_udf
 	define a user defined function.
 *****/
-{	char name[16],argu[16],*p,*firstchar,*startp;
+{	char name[MAXNAME],argu[MAXNAME],*p,*firstchar,*startp;
 	int *ph,*phh,count=0,n;
 	size_t l;
 	header *var,*result,*hd;
@@ -1316,6 +1439,7 @@ void get_udf (void)
 			{	*p++=*next++;
 				while (*next!='"' && *next) *p++=*next++;
 				if (*next=='"') *p++=*next++;
+				else { output("\" missing.\n"); error=2200; goto stop; }
 			}
 			else if (isdigit(*next) || 
 				     	(*next=='.' && isdigit(*(next+1))) )
@@ -1630,7 +1754,7 @@ void do_exec (void)
 }
 
 void do_forget (void)
-{	char name[16];
+{	char name[MAXNAME];
 	header *hd;
 	int r;
 	if (udfon)
@@ -1658,7 +1782,7 @@ void do_forget (void)
 }
 
 void do_global (void)
-{	char name[16];
+{	char name[MAXNAME];
 	int r;
 	header *hd;
 	while (1)
@@ -1688,22 +1812,25 @@ void do_global (void)
 
 void print_commands (void);
 
-void do_list (void)
+static void do_list (void)
 {	header *hd;
-	int lcount=0;
+	int i=0, lw=linelength/MAXNAME;
 	output("  *** Builtin functions:\n");
 	print_builtin();
 	output("  *** Commands:\n");
 	print_commands();
 	output("  *** Your functions:\n");
 	hd=(header *)ramstart;
-	while ((char *)hd<udfend)
+	while ((char*)hd<udfend)
 	{	if (hd->type!=s_udf) break;
-		if (lcount+(int)strlen(hd->name)+2>=linelength) 
-			{ lcount=0; output("\n"); }
-		output1("%s ",hd->name);
-		lcount+=(int)strlen(hd->name)+1; 
+		output1("%-16s",hd->name);
+		if (test_key()==escape) return;
 		hd=nextof(hd);
+		i++;
+		if (i==lw) {
+			i=0;
+			output("\n");
+		}
 	}
 	output("\n");
 }
@@ -1951,12 +2078,12 @@ void do_hexdump (void)
 	if (!hd) hd=searchudf(name);
 	if (error || hd==0) return;
 	p=(unsigned char *)hd; end=p+hd->size;
-	output1("\n%5lx ",count);
+	output1("\n%5lx: ",count);
 	while (p<end)
 	{	hex_out(*p++); i++; count++;
 		if (i>=16) 
 		{	i=0; string_out(p-16);
-			output1("\n%5lx ",count);
+			output1("\n%5lx: ",count);
 			if (test_key()==escape) break;
 		}
 	}
@@ -2073,12 +2200,16 @@ commandtyp command_list[] =
 	 {0,0,0} };
 
 void print_commands (void)
-{	int linel=0,i;
-	for (i=0; i<command_count; i++)
-	{	if (linel+strlen(command_list[i].name)+2>linelength)
-			{ output("\n"); linel=0; }
-		output1("%s ",command_list[i].name);
-		linel+=(int)strlen(command_list[i].name)+1;
+{	int i, c, cend, lw=linelength/16;
+	
+	for (i=0; i<command_count; i+=lw) {
+		cend = i+lw;
+		if (cend>=command_count) cend=command_count;
+		for (c=i; c<cend ; c++) {
+			output1("%-16s",command_list[c].name);
+			if (test_key()==escape) return;
+		}
+		output("\n");
 	}
 	output("\n");
 }
@@ -2271,16 +2402,11 @@ int command (void)
 
 void clear_fktext (void)
 {	int i;
-	for (i=0; i<10; i++) fktext[i][0]=0;
+	for (i=0; i<12; i++) fktext[i][0]=0;
 }
 
 void main_loop (int argc, char *argv[])
 {	int i;
-#ifndef SPLIT_MEM
-	output2(titel,__DATE__,(unsigned long)(ramend-ramstart));
-#else
-	output2(titel,__DATE__,(unsigned long)(ramend-varstart));
-#endif
 #ifndef SPLIT_MEM
 	newram=startlocal=endlocal=ramstart;
 #else

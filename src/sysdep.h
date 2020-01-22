@@ -1,3 +1,6 @@
+#ifndef __SYSDEP_H__
+#define __SYSDEP_H__
+
 /* definiert in rmat.c */
 
 typedef enum { line_none, line_solid, line_dotted, line_dashed }
@@ -9,7 +12,8 @@ typedef enum { fill_blank, fill_filled } filltyp;
 typedef enum { key_none, cursor_up, cursor_down, cursor_left, cursor_right,
 	escape, delete, backspace, clear_home, switch_screen, enter,
 	space, line_end, line_start, fk1, fk2, fk3, fk4, fk5, fk6, fk7,
-	fk8, fk9, fk10, word_left, word_right, help } 
+	fk8, fk9, fk10, fk11, fk12, word_left, word_right, help, sel_insert,
+	page_up, page_down, eot } 
 	scantyp;
 
 void text_mode (void);
@@ -27,7 +31,7 @@ void gfillh (double c[], double hue, int color, int connect);
 void getpixel (double *x, double *y);
 
 
-int wait_key (int *scan);
+int wait_key (scantyp *scan);
 int test_key (void);
 
 char *cd (char *dir);
@@ -46,7 +50,7 @@ void gflush (void); /* flush out graphics */
 void move_cr (void);
 void move_cl (void);
 void clear_eol (void);
-void  cursor_off (void); 
+void cursor_off (void); 
 void cursor_on (void);
 
 void edit_on (void);
@@ -54,3 +58,4 @@ void edit_off (void);
 
 void sys_wait (double delay, int *scan);
 
+#endif

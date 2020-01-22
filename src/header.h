@@ -1,3 +1,8 @@
+#ifndef __HEADER_H__
+#define __HEDAER_H__
+
+#include "sysdep.h"
+
 extern char *ramstart,*ramend,*startlocal,*endlocal,
 	*newram,*udfend,*varstart;
 
@@ -13,14 +18,36 @@ extern char *ramstart,*ramend,*startlocal,*endlocal,
 #define M_PI            3.14159265358979323846
 #endif
 
+#ifndef ALIGNMENT
+#define ALIGNMENT 8
+#endif
+
+#ifdef _WIN32
+#define PATH_DELIM_CHAR '\\'
+#define PATH_DELIM_STR "\\"
+#else
+#define PATH_DELIM_CHAR '/'
+#define PATH_DELIM_STR "/"
+#endif
+
+#define MAX_PATH	10
+
+extern char * path[MAX_PATH];
+extern int npath;
+
 #define EXTENSION ".e"
 
-extern char fktext[10][64];
+extern char fktext[12][64];
 
 extern int error,surpressed,udf,udfon,linelength,stringon;
 extern long loopindex;
 extern char *next,*udfline;
 extern int actargn;
+
+#define MAXLINE		256			/* Maximum input line length */
+#define	MAXHIST		32			/* Maximum entries in editing history */
+
+#define MAXNAME		16			/* Maximum length of an identifier */
 
 extern int linew,fieldw,hchar,wchar;
 extern double maxexpo,minexpo;
@@ -28,8 +55,7 @@ extern char expoformat[],fixedformat[];
 
 extern FILE *infile,*outfile;
 void output(char *s);
-void output1(char *form, ...);
-#define output2(form,s,t) output1(form,s,t)
+void output1(char *fmt, ...);
 
 typedef enum { s_real,s_complex,s_matrix,s_cmatrix,
 	s_reference,s_command,s_submatrix,s_csubmatrix,s_string,s_udf } 
@@ -64,8 +90,8 @@ extern builtintyp builtin_list[];
 
 /* edit.c */
 
-void edit (char *s);
-void prompt (void);
+scantyp edit (char *s);
+//void prompt (void);
 
 /* mainloop.c */
 
@@ -170,3 +196,4 @@ void make_xors (void);
 
 extern FILE *metafile;
 
+#endif

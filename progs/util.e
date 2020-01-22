@@ -87,7 +87,7 @@ function write (x,s)
 		else; writeform(x[i,si[2]])|";",
 		endif;
 	end;
-	return 0
+	return 0;
 endfunction
 
 .. ### plot things ###

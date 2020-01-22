@@ -1015,7 +1015,7 @@ void mwait (header *hd)
 }
 
 void mkey (header *hd)
-{	int scan;
+{	scantyp scan;
 	wait_key(&scan);
 	new_real(scan,"");
 }
@@ -1823,12 +1823,16 @@ int builtin_count;
 extern builtintyp builtin_list[];
 
 void print_builtin (void)
-{	int linel=0,i;
-	for (i=0; i<builtin_count; i++)
-	{	if (linel+strlen(builtin_list[i].name)+2>linelength)
-			{ output("\n"); linel=0; }
-		output1("%s ",builtin_list[i].name);
-		linel+=(int)strlen(builtin_list[i].name)+1;
+{	int i, c, cend, lw=linelength/16;
+	
+	for (i=0; i<builtin_count; i+=lw) {
+		cend = i+lw;
+		if (cend>=builtin_count) cend=builtin_count;
+		for (c=i; c<cend ; c++) {
+			output1("%-16s",builtin_list[c].name);
+			if (test_key()==escape) return;
+		}
+		output("\n");
 	}
 	output("\n");
 }
