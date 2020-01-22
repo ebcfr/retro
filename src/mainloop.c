@@ -11,8 +11,7 @@
 #include "funcs.h"
 #include "graphics.h"
 	
-char *ramstart,*ramend,*udfend,*startlocal,*endlocal,*newram,
-	*varstart,*udframend;
+char *ramstart,*ramend,*udfend,*startlocal,*endlocal,*newram;
 char *next,*udfline;
 
 FILE *metafile=0;

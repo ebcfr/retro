@@ -4,7 +4,7 @@
 #include "sysdep.h"
 
 extern char *ramstart,*ramend,*startlocal,*endlocal,
-	*newram,*udfend,*varstart;
+	*newram,*udfend;
 
 #define LONG size_t
 #define TAB 9
