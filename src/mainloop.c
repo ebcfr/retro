@@ -1835,6 +1835,49 @@ static void do_list (void)
 	output("\n");
 }
 
+static void do_listvar (void)
+{	header *hd=(header *)startlocal;
+	while (hd<(header*)endlocal)
+	{	switch (hd->type) {
+		case s_real:
+			output1("%-20sType: %s\n",hd->name,"Real");
+			break;
+		case s_complex:
+			output1("%-20sType: %s\n",hd->name,"Complex");
+			break;
+		case s_string:
+			output1("%-20sType: %s\n",hd->name,"String");
+			break;
+		case s_matrix:
+			output1("%-20sType: %s (%dx%d)\n",hd->name,
+				"Real Matrix",dimsof(hd)->r,dimsof(hd)->c);
+			break;
+		case s_cmatrix:
+			output1("%-20sType: %s (%dx%d)\n",hd->name,
+				"Complex Matrix",dimsof(hd)->r,dimsof(hd)->c);
+			break;
+		case s_reference:
+			output1("%-20sType: %s\n",hd->name,"Reference");
+			break;
+		case s_submatrix:
+			output1("%-20sType: %s (%dx%0d)",hd->name,
+				"Real Submatrix",
+				submdimsof(hd)->r,submdimsof(hd)->c);
+			break;
+		case s_csubmatrix :
+			output1("%-20sType: %s (%dx%0d)",hd->name,
+				"Complex Submatrix",
+				submdimsof(hd)->r,submdimsof(hd)->c);
+			break;
+		default:
+			output1("%-20sType: %s\n",hd->name,"Unknown Type");
+			break;
+		}
+		hd=nextof(hd);
+		if (test_key()==escape) break;
+	}
+}
+
 void do_type (void)
 {	char name[16];
 	header *hd;
@@ -2164,40 +2207,42 @@ void do_trace(void)
 
 int command_count;
 
-commandtyp command_list[] =
-	{{"quit",c_quit,do_quit},
-	 {"hold",c_hold,ghold},
-	 {"shg",c_shg,show_graphics},
-	 {"load",c_load,load_file},
-	 {"function",c_udf,get_udf},
-	 {"return",c_return,do_return},
-	 {"for",c_for,do_for},
-	 {"endif",c_endif,do_endif},
-	 {"end",c_end,do_end},
-	 {"break",c_break,do_break},
-	 {"loop",c_loop,do_loop},
-	 {"else",c_else,do_else},
-	 {"if",c_if,do_if},
-	 {"repeat",c_repeat,do_repeat},
-	 {"clear",c_clear,do_clear},
-	 {"clg",c_clg,do_clg},
-	 {"cls",c_cls,do_cls},
-	 {"exec",c_exec,do_exec},
-	 {"forget",c_forget,do_forget},
-	 {"global",c_global,do_global},
-	 {"list",c_global,do_list},
-	 {"type",c_global,do_type},
-	 {"dump",c_global,do_dump},
-	 {"remove",c_global,do_remove},
-	 {"help",c_global,do_help},
-	 {"do",c_global,do_do},
-	 {"memorydump",c_global,do_mdump},
-	 {"hexdump",c_global,do_hexdump},
-	 {"output",c_global,do_output},
-	 {"meta",c_global,do_meta},
-	 {"comment",c_global,do_comment},
-	 {"trace",c_global,do_trace},
-	 {0,0,0} };
+commandtyp command_list[] = {
+	{"quit",c_quit,do_quit},
+	{"hold",c_hold,ghold},
+	{"shg",c_shg,show_graphics},
+	{"load",c_load,load_file},
+	{"function",c_udf,get_udf},
+	{"return",c_return,do_return},
+	{"for",c_for,do_for},
+	{"endif",c_endif,do_endif},
+	{"end",c_end,do_end},
+	{"break",c_break,do_break},
+	{"loop",c_loop,do_loop},
+	{"else",c_else,do_else},
+	{"if",c_if,do_if},
+	{"repeat",c_repeat,do_repeat},
+	{"clear",c_clear,do_clear},
+	{"clg",c_clg,do_clg},
+	{"cls",c_cls,do_cls},
+	{"exec",c_exec,do_exec},
+	{"forget",c_forget,do_forget},
+	{"global",c_global,do_global},
+	{"list",c_global,do_list},
+	{"listvar",c_global,do_listvar},
+	{"type",c_global,do_type},
+	{"dump",c_global,do_dump},
+	{"remove",c_global,do_remove},
+	{"help",c_global,do_help},
+	{"do",c_global,do_do},
+	{"memorydump",c_global,do_mdump},
+	{"hexdump",c_global,do_hexdump},
+	{"output",c_global,do_output},
+	{"meta",c_global,do_meta},
+	{"comment",c_global,do_comment},
+	{"trace",c_global,do_trace},
+	{0,0,0}
+};
 
 void print_commands (void)
 {	int i, c, cend, lw=linelength/16;
