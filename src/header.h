@@ -6,11 +6,6 @@
 extern char *ramstart,*ramend,*startlocal,*endlocal,
 	*newram,*udfend,*varstart;
 
-#if defined __MSDOS__
-#define SPLIT_MEM
-#define FLOAT_TEST
-#endif
-
 #define LONG size_t
 #define TAB 9
 

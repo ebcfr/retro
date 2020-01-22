@@ -1587,11 +1587,7 @@ int main (int argc, char *argv[])
 	XWindowEvent(display,window,ExposureMask,&event);
 	process_event(&event);
 	
-#ifndef SPLIT_MEM
 	output1(titel,__DATE__,(unsigned long)(ramend-ramstart));
-#else
-	output1(titel,__DATE__,(unsigned long)(ramend-varstart));
-#endif
 
 	main_loop(argc,argv);
 	return 0;

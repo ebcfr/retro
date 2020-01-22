@@ -886,11 +886,7 @@ Initialize memory and call main_loop
 	atexit(term_restore);
 #endif
 	
-#ifndef SPLIT_MEM
 	if (!quiet) output1(titel,__DATE__,(unsigned long)(ramend-ramstart));
-#else
-	if (!quiet) output1(titel,__DATE__,(unsigned long)(ramend-varstart));
-#endif
 	
 	main_loop(argc,argv);
 	return 0;

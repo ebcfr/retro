@@ -1018,14 +1018,9 @@ void kill_udf (char *name)
 	while ((char *)hd<udfend)
 	{	if (!strcmp(hd->name,name)) /* found! */
 		{	size=hd->size;
-#ifndef SPLIT_MEM
 			rest=newram-(char *)hd-size;
 			if (size && rest) memmove((char *)hd,(char *)hd+size,rest);
 			endlocal-=size; startlocal-=size; newram-=size;
-#else
-			rest=udfend-(char *)hd-size;
-			if (size && rest) memmove((char *)hd,(char *)hd+size,rest);
-#endif
 			udfend-=size;
 			return;
 		}
@@ -1064,19 +1059,12 @@ header *assign (header *var, header *value)
 		if (value->type==s_udf)
 		{	strcpy(value->name,name);
 			value->xor=xor(name);
-#ifndef SPLIT_MEM
 			if (newram+size>ramend)
 			{	output("Memory overflow.\n"); error=500; return value;
 			}
 			memmove(ramstart+size,ramstart,newram-ramstart);
 			newram+=size; endlocal+=size; startlocal+=size;
 			value=(header *)((char *)value+size);
-#else
-			if (udfend+size>udframend)
-			{	output("Memory overflow.\n"); error=500; return value;
-			}
-			memmove(ramstart+size,ramstart,udfend-ramstart);
-#endif
 			udfend+=size;
 			memmove(ramstart,(char *)value,size);
 			return (header *)ramstart;
@@ -1787,11 +1775,7 @@ void do_global (void)
 	header *hd;
 	while (1)
 	{	scan_space(); scan_name(name); r=xor(name);
-#ifdef SPLIT_MEM
-		hd=(header *)varstart;
-#else
 		hd=(header *)udfend;
-#endif
 		if (hd==(header *)startlocal) break;
 		while ((char *)hd<startlocal)
 		{	if (r==hd->xor && !strcmp(hd->name,name)) break;
@@ -2055,35 +2039,14 @@ void do_do (void)
 
 void do_mdump (void)
 {	header *hd;
-#ifndef SPLIT_MEM
 	output1("ramstart : 0\nstartlocal : %ld\n",startlocal-ramstart);
 	output1("endlocal : %ld\n",endlocal-ramstart);
 	output1("newram   : %ld\n",newram-ramstart);
 	output1("ramend   : %ld\n",ramend-ramstart);
-#else
-	output1("ramstart : 0\nstartlocal : %ld\n",startlocal-varstart);
-	output1("endlocal : %ld\n",endlocal-varstart);
-	output1("newram   : %ld\n",newram-varstart);
-	output1("ramend   : %ld\n",ramend-varstart);
-#endif
 	hd=(header *)ramstart;
-#ifdef SPLIT_MEM
-	while ((char *)hd<udfend)
-	{
-		output1("%6ld : %16s, ",(char *)hd-ramstart,hd->name);
-		output1("size %6ld ",(long)hd->size);
-		output1("type %d\n",hd->type);
-		hd=nextof(hd);
-	}
-	hd=(header *)varstart;
-#endif
 	while ((char *)hd<newram)
 	{
-#ifndef SPLIT_MEM
 		output1("%6ld : %16s, ",(char *)hd-ramstart,hd->name);
-#else
-		output1("%6ld : %16s, ",(char *)hd-varstart,hd->name);
-#endif
 		output1("size %6ld ",(long)hd->size);
 		output1("type %d\n",hd->type);
 		hd=nextof(hd);
@@ -2452,11 +2415,7 @@ void clear_fktext (void)
 
 void main_loop (int argc, char *argv[])
 {	int i;
-#ifndef SPLIT_MEM
 	newram=startlocal=endlocal=ramstart;
-#else
-	newram=startlocal=endlocal=varstart;
-#endif
 	udfend=ramstart;
 	epsilon=10000*DBL_EPSILON;
 	sort_builtin(); sort_command(); make_xors(); clear_fktext();

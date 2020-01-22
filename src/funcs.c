@@ -1868,7 +1868,6 @@ int exec_builtin (char *name, int nargs, header *hd)
 	else return 0;
 }
 
-#ifndef SPLIT_MEM
 
 typedef struct { size_t udfend,startlocal,endlocal,newram; }
 	ptyp;
@@ -1929,4 +1928,3 @@ void mrestore (header *hd)
 	newram=ramstart+p.newram;
 }
 	
-#endif

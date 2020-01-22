@@ -143,10 +143,8 @@ void mflipy (header *hd);
 void mzerosmat (header *hd);
 void mjacobi (header *hd);
 void mframe (header *hd);
-#ifndef SPLIT_MEM
 void mstore (header *hd);
 void mrestore (header *hd);
-#endif
 void mkey (header *hd);
 void merrlevel (header *hd);
 void mdensity (header *hd);
@@ -294,10 +292,8 @@ builtintyp builtin_list[] =
 	 {"matrix",2,mmatrix},
 	 {"jacobi",1,mjacobi},
 	 {"frame",0,mframe},
-#ifndef SPLIT_MEM
 	 {"store",1,mstore},
 	 {"restore",1,mrestore},
-#endif
 	 {"key",0,mkey},
 	 {"errorlevel",1,merrlevel},
 	 {"density",1,mdensity},
