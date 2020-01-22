@@ -810,8 +810,8 @@ Initialize memory and call main_loop
 	if (!memory_init()) return 1;
 	
 	/* set up default pathes and directory */
-	s=getenv("EULER");
-	if (!s) s="~/.euler/progs:";
+	s=getenv("RETRO");
+	if (!s) s="~/.retro/progs:";
 	
 	// get a buffer of the required size
 	char str[strlen(s)+1];
@@ -833,7 +833,7 @@ Initialize memory and call main_loop
 	 		break;
 	 	}
 	}
-	path[npath++]=INSTALL"share/euler/progs\n";
+	path[npath++]=INSTALL"share/retro/progs\n";
 	
 #ifdef DEBUG	
 	fprintf(stderr,"npath %d\n",npath);

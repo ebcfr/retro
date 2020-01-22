@@ -1551,8 +1551,8 @@ int main (int argc, char *argv[])
 	if (!memory_init()) exit(1);
 	
 	/* set up default pathes and directory */
-	char* s=getenv("EULER");
-	if (!s) s="~/.euler/progs:";
+	char* s=getenv("RETRO");
+	if (!s) s="~/.retro/progs:";
 	
 	// get a buffer of the required size
 	char str[strlen(s)+1];
@@ -1574,7 +1574,7 @@ int main (int argc, char *argv[])
 	 		break;
 	 	}
 	}
-	path[npath++]=INSTALL"share/euler/progs\n";
+	path[npath++]=INSTALL"share/retro/progs\n";
 	
 #ifdef DEBUG	
 	fprintf(stderr,"npath %d\n",npath);
