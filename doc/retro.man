@@ -1,11 +1,13 @@
-.TH Euler 1 "" ""
+.TH Retro 1 "" ""
 
 .SH NAME
-Euler - A numerical laboratory.
+Retro - A numerical laboratory.
 
 .SH SYNTAX
-euler [-f font] [-g font] [-s KB] [-geom geometry]
+xretro [-f font] [-g font] [-s KB] [-geom geometry]
  [-d display] [-0..15 color] [ files ]
+
+retro-cli [-s KB] [-q] [ files ]
 
 .SH OPTIONS
 .TP 8
@@ -24,43 +26,45 @@ geometry is the geometry of the euler window in standard form.
 -number color
 Sets the color number to a color name.
 .TP 8
+-q quiet: no input is echoed to stdout, only output are printed to stdout enabling Retro to be used as a filter
+.TP 8
 files
-Specifies input files for Euler. Default extension is ".e".
+Specifies input files for Retro. Default extension is ".e".
 
 .SH PURPOSE
-Euler is a Matlab(R) style numerical laboratory. It is capable of
+Retro is a Matlab(R) style numerical laboratory. It is capable of
 numerical mathematics with real or complex scalars, vectors or
 matrices. It can produce graphics in 2D or 3D. The built in programming
 language can be used to define functions, which can be loaded from
 external files. Many useful numerical algorithms are contained in the
-code. Others are contained in the setup file and written in the Euler
+code. Others are contained in the setup file and written in the Retro
 language.
 
 .SH USAGE
-This version of Euler has a single window. The user can switch between
+This version of Retro has a single window. The user can switch between
 the text and graphics output with the TAB key. Old text output may be
 accessed by the page up and pyge down key. Pointer usage is restricted
 to the mouse function.
 
-For details on the use of euler see the file euler.doc.
+For details on the use of euler see the file retro.md.
 
 .SH FILES
 .TP 12
-euler
+retro
 The program.
 .TP 12
-euler.cfg
+retro.cfg
 The configuration file, which in turn loads "util.e".
 .TP 12
 *.e
-Euler language files. Important examples are "util.e" and
+Retro language files. Important examples are "util.e" and
 "demo.e"
 .TP 12
-euler.doc
+retro.md
 The documentation.
 
 .P
-On this system, euler is a shell script, which envokes the euler program
-and sets the directory to $HOME/euler/progs. Scan this directory for
-the "*.e" and "*.doc" files.
+On this system, retro is a shell script, which envokes the retro program
+and sets the directory to $HOME/.retro/progs. Scan this directory for
+the "*.e" and "*.md" files.
 
