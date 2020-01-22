@@ -123,257 +123,121 @@ void moveresult1 (header *stack, header *result)
 	newram=(char *)stack+size;
 }
 
-header *mapt2 (void f(double *,double *,double *),
-	void fc(double *, double *, double *, double *, double *, double *),
-	header *hd, header *hd1)
-/***** map
-	do the function elementwise to the two values.
-	store the result hd2. the values may also be complex,
-	then fc is used.
-******/
-{	dims *d,*d1;
-	double x,y,*m,*m1,*m2,null=0.0;
-	header *hd2;
-	LONG i,n;
-	if (hd->type==s_real)
-	{	if (hd1->type==s_matrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			hd2=new_matrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	f(m1,&x,m2); m1++; m2++;
-				}
-			return hd2;
-		}
-		if (fc && hd1->type==s_cmatrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			hd2=new_cmatrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	fc(m1,m1+1,&x,&null,m2,m2+1); m1+=2; m2+=2;
-				}
-			return hd2;
-		}
+#define isreal(hd) (((hd)->type==s_real || (hd)->type==s_matrix))
+#define iscomplex(hd) (((hd)->type==s_complex || (hd)->type==s_cmatrix))
+
+header * map2 (void f (double *, double *, double *),
+	void fc (double *, double *, double *, double *, double *, double *),
+	header *hd1, header *hd2)
+/**** map2
+    calculate the result of a binary operator applied to hd1 and
+    hd2, selecting the right operator (in R or C). If hd1 or hd2 
+    are matrices, the operator is applied elementwise
+ ****/
+{	int t1,t2,t,r1,c1,r2,c2,rr,cr,r,c; /* means real */
+	double *m1,*m2,*m,x,y,null=0.0,*l1,*l2;
+	header *result;
+	if (isreal(hd1)) t1=0;
+	else if (iscomplex(hd1)) t1=1;
+	else
+	{	output("Illegal Argument.\n"); error=1; return 0;
 	}
-	else if (fc && hd->type==s_complex)
-	{	if (hd1->type==s_matrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			y=*(imagof(hd));
-			hd2=new_cmatrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	fc(m1,&null,&x,&y,m2,m2+1); m1++; m2+=2;
-				}
-			return hd2;
-		}
-		if (hd1->type==s_cmatrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			y=*(imagof(hd));
-			hd2=new_cmatrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	fc(m1,m1+1,&x,&y,m2,m2+1); m1+=2; m2+=2;
-				}
-			return hd2;
-		}
+	if (isreal(hd2)) t2=0;
+	else if (iscomplex(hd2)) t2=1;
+	else
+	{	output("Illegal Argument.\n"); error=1; return 0;
 	}
-	else if (hd->type==s_matrix)
-	{	if (fc && hd1->type==s_cmatrix)
-		{	d=dimsof(hd);
-			m=matrixof(hd);
-			d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			if (d->c!=d1->c || d->r!= d1->r)
-			{	output("Matrix dimensions must agree!\n");
-				error=4; return new_string("Fehler",6,"");
+	if ( (t1==0 && t2==0 && !f) ||
+        (!fc && (t1==1 || t2==1)) )
+	{	output("Cannot evaluate this operation.\n");
+		error=1; return 0;
+	}
+	getmatrix(hd1,&r1,&c1,&m1); l1=m1;
+	getmatrix(hd2,&r2,&c2,&m2); l2=m2;
+	if ((r1>1 && r2>1 && (r1!=r2)) ||
+	 (c1>1 && c2>1 && (c1!=c2)))
+	{   output("Cannot combine these matrices!\n");
+		error=1; return 0;
+	}
+	rr=r1; if (rr<r2) rr=r2;
+	cr=c1; if (cr<c2) cr=c2;
+	t=t1; if (t2!=0) t=t2;
+	switch (t)
+	{	case 0 :
+			if (rr==1 && cr==1)
+			{	f(m1,m2,&x);
+				return new_real(x,"");
 			}
-			hd2=new_cmatrix(d->r,d->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d->c)*(d->r);
-			for (i=0; i<n; i++)
-				{	fc(m1,m1+1,m,&null,m2,m2+1); m++; m1+=2; m2+=2;
+			result=new_matrix(rr,cr,"");
+			if (error) return 0;
+			m=matrixof(result);
+			for (r=0; r<rr; r++)
+			{	for (c=0; c<cr; c++)
+				{	f(m1,m2,m);
+					if (error) break;
+					if (c1>1) m1++;
+					if (c2>1) m2++;
+					m++;
 				}
-			return hd2;
-		}
+				if (r1==1) m1=l1;
+				else if (c1==1) m1++;
+				if (r2==1) m2=l2;
+				else if (c2==1) m2++;
+			}
+			return result;
+		case 1 :
+			if (rr==1 && cr==1)
+			{	if (t1==0) fc(m1,&null,m2,m2+1,&x,&y);
+				else if (t2==0) fc(m1,m1+1,m2,&null,&x,&y);
+				else fc(m1,m1+1,m2,m2+1,&x,&y);
+				return new_complex(x,y,"");
+			}
+			result=new_cmatrix(rr,cr,"");
+			if (error) return 0;
+			m=matrixof(result);
+			for (r=0; r<rr; r++)
+			{	for (c=0; c<cr; c++)
+				{	if (t1==0)
+					{	fc(m1,&null,m2,m2+1,m,m+1);
+						if (c1>1) m1++;
+						if (c2>1) m2+=2;
+					}
+					else if (t2==0)
+					{	fc(m1,m1+1,m2,&null,m,m+1);
+						if (c1>1) m1+=2;
+						if (c2>1) m2++;
+					}
+					else
+					{	fc(m1,m1+1,m2,m2+1,m,m+1);
+						if (c1>1) m1+=2;
+						if (c2>1) m2+=2;
+					}
+					if (error) break;
+					m+=2;
+				}
+				if (r1==1) m1=l1;
+				else if (c1==1)
+				{	if (t1==0) m1++;
+					else m1+=2;
+				}
+				if (r2==1) m2=l2;
+				else if (c2==1)
+				{	if (t2==0) m2++;
+					else m2+=2;
+				}
+			}
+			return result;
 	}
-	output("Illegal operation\n"); error=3;
-	return new_string("Fehler",6,"");
+	return 0;
 }
 
-header *map2 (void f(double *,double *,double *),
-	void fc(double *, double *, double *, double *, double *, double *),
-	header *hd, header *hd1)
-/***** map
-	do the function elementwise to the two values.
-	store the result hd2. the values may also be complex,
-	then fc is used.
-******/
-{	dims *d,*d1;
-	double x,y,*m,*m1,*m2,null=0.0;
-	header *hd2;
-	LONG i,n;
-	if (hd->type==s_real)
-	{	if (hd1->type==s_real)
-		{	f(realof(hd),realof(hd1),&x);
-			return new_real(x,"");
-		}
-		if (fc && hd1->type==s_complex)
-		{	fc(realof(hd),&null,realof(hd1),imagof(hd1),&x,&y);
-			return new_complex(x,y,"");
-		}
-		if (hd1->type==s_matrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			hd2=new_matrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	f(&x,m1,m2); m1++; m2++;
-				}
-			return hd2;
-		}
-		if (fc && hd1->type==s_cmatrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			hd2=new_cmatrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	fc(&x,&null,m1,m1+1,m2,m2+1); m1+=2; m2+=2;
-				}
-			return hd2;
-		}
-	}
-	else if (fc && hd->type==s_complex)
-	{	if (hd1->type==s_real)
-		{	fc(realof(hd),imagof(hd),realof(hd1),&null,&x,&y);
-			return new_complex(x,y,"");
-		}
-		if (hd1->type==s_complex)
-		{	fc(realof(hd),imagof(hd),realof(hd1),imagof(hd1),&x,&y);
-			return new_complex(x,y,"");
-		}
-		if (hd1->type==s_matrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			y=*(imagof(hd));
-			hd2=new_cmatrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	fc(&x,&y,m1,&null,m2,m2+1); m1++; m2+=2;
-				}
-			return hd2;
-		}
-		if (hd1->type==s_cmatrix)
-		{	d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			x=*(realof(hd));
-			y=*(imagof(hd));
-			hd2=new_cmatrix(d1->r,d1->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d1->c)*(d1->r);
-			for (i=0; i<n; i++)
-				{	fc(&x,&y,m1,m1+1,m2,m2+1); m1+=2; m2+=2;
-				}
-			return hd2;
-		}
-	}
-	else if (hd->type==s_matrix)
-	{	if (hd1->type==s_matrix)
-		{	d=dimsof(hd);
-			m=matrixof(hd);
-			d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			if (d->c!=d1->c || d->r!= d1->r)
-			{	output("Matrix dimensions must agree!\n");
-				error=4;
-				return new_string("Fehler",6,"");
-			}
-			hd2=new_matrix(d->r,d->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d->c)*(d->r);
-			for (i=0; i<n; i++)
-				{	f(m,m1,m2); m++; m1++; m2++;
-				}
-			return hd2;
-		}
-		if (fc && hd1->type==s_cmatrix)
-		{	d=dimsof(hd);
-			m=matrixof(hd);
-			d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			if (d->c!=d1->c || d->r!= d1->r)
-			{	output("Matrix dimensions must agree!\n");
-				error=4; return new_string("Fehler",6,"");
-			}
-			hd2=new_cmatrix(d->r,d->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d->c)*(d->r);
-			for (i=0; i<n; i++)
-				{	fc(m,&null,m1,m1+1,m2,m2+1); m++; m1+=2; m2+=2;
-				}
-			return hd2;
-		}
-		return mapt2(f,fc,hd1,hd);
-	}
-	else if (fc && hd->type==s_cmatrix)
-	{	if (hd1->type==s_cmatrix)
-		{	d=dimsof(hd);
-			m=matrixof(hd);
-			d1=dimsof(hd1);
-			m1=matrixof(hd1);
-			if (d->c!=d1->c || d->r!= d1->r)
-			{	output("Matrix dimensions must agree!\n");
-				error=4; return new_string("Fehler",6,"");
-			}
-			hd2=new_cmatrix(d->r,d->c,"");
-			if (error) return new_string("Fehler",6,"");
-			m2=matrixof(hd2);
-			n=(d->c)*(d->r);
-			for (i=0; i<n; i++)
-				{	fc(m,m+1,m1,m1+1,m2,m2+1); m+=2; m1+=2; m2+=2;
-				}
-			return hd2;
-		}
-		return mapt2(f,fc,hd1,hd);
-	}
-	output("Illegal operation\n"); error=3;
-	return new_string("Fehler",6,"");
-}
 
 header *map1 (void f(double *, double *), 
 	void fc(double *, double *, double *, double *),
 	header *hd)
-/***** map
+/***** map1
 	do the function elementwise to the value.
-	te value may be real or complex!
+	the value and the result may be real or complex!
 ******/
 {	double x,y;
 	dims *d;
@@ -392,8 +256,8 @@ header *map1 (void f(double *, double *),
 		m1=matrixof(hd1);
 		n=d->c*d->r;
 		for (i=0; i<n; i++)
-			{	f(m,m1); m++; m1++;
-			}
+		{	f(m,m1); m++; m1++;
+		}
 		return hd1;
 	}
 	else if (fc && hd->type==s_complex)
@@ -408,8 +272,8 @@ header *map1 (void f(double *, double *),
 		m1=matrixof(hd1);
 		n=d->c*d->r;
 		for (i=0; i<n; i++)
-			{	fc(m,m+1,m1,m1+1); m+=2; m1+=2;
-			}
+		{	fc(m,m+1,m1,m1+1); m+=2; m1+=2;
+		}
 		return hd1;
 	}
 	output("Illegal operation\n"); error=3;
@@ -421,7 +285,7 @@ header *map1r (void f(double *, double *),
 	header *hd)
 /***** map
 	do the function elementwise to the value.
-	te value may be real or complex! the result is always real.
+	the value may be real or complex! the result is always real.
 ******/
 {	double x;
 	dims *d;
@@ -440,8 +304,8 @@ header *map1r (void f(double *, double *),
 		m1=matrixof(hd1);
 		n=d->c*d->r;
 		for (i=0; i<n; i++)
-			{	f(m,m1); m++; m1++;
-			}
+		{	f(m,m1); m++; m1++;
+		}
 		return hd1;
 	}
 	else if (fc && hd->type==s_complex)
@@ -456,8 +320,8 @@ header *map1r (void f(double *, double *),
 		m1=matrixof(hd1);
 		n=d->c*d->r;
 		for (i=0; i<n; i++)
-			{	fc(m,m+1,m1); m+=2; m1++;
-			}
+		{	fc(m,m+1,m1); m+=2; m1++;
+		}
 		return hd1;
 	}
 	output("Illegal operation\n"); error=3;
