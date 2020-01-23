@@ -1659,6 +1659,13 @@ void do_else (void)
 	scan_endif();
 }
 
+void do_elseif (void)
+{	if (!udfon)
+	{	output("Elseif only allowed in functions!\n"); error=57; return;
+	}
+	scan_endif();
+}
+
 void do_endif (void)
 {	if (!udfon)
 	{	output("Endif only allowed in functions!\n"); error=57;
@@ -2182,6 +2189,7 @@ commandtyp command_list[] = {
 	{"break",c_break,do_break},
 	{"loop",c_loop,do_loop},
 	{"else",c_else,do_else},
+	{"elseif",c_elseif,do_elseif},
 	{"if",c_if,do_if},
 	{"repeat",c_repeat,do_repeat},
 	{"clear",c_clear,do_clear},

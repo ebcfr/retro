@@ -8,7 +8,7 @@
 #include "funcs.h"
 #include "matheh.h"
 
-#define wrong_arg() { error=26; output("Wrong argument\n"); return; }
+//#define wrong_arg() { error=26; output("Wrong argument\n"); return; }
 
 #define max(x,y) ((x)>(y)?(x):(y))
 
@@ -46,20 +46,20 @@ void polyval (header *hd)
 	hd=getvalue(hd); if (error) return;
 	if (hd->type==s_real || hd->type==s_matrix)
 	{	getmatrix(hd,&r,&c,&polynom);
-		if (r!=1) wrong_arg();
+		if (r!=1) wrong_arg("row vector expected");
 		degree=c-1;
-		if (degree<0) wrong_arg();
+		if (degree<0) wrong_arg("non 0-sized vector expected");
 		polreal=1;
 	}
 	else if (hd->type==s_complex || hd->type==s_cmatrix)
 	{	make_complex(hd1);
 		getmatrix(hd,&r,&c,&polynom);
-		if (r!=1) wrong_arg();
+		if (r!=1) wrong_arg("row vector expected");
 		degree=c-1;
-		if (degree<0) wrong_arg();
+		if (degree<0) wrong_arg("non 0-sized vector expected");
 		polreal=0;
 	}	
-	else wrong_arg();
+	else wrong_arg("bad type");
 	spread1(peval,cpeval,hd1);
 	moveresult(st,hd1);
 }
@@ -89,8 +89,8 @@ void polyadd (header *hd)
 	complex *mc1,*mc2,*mcr;
 	hd1=next_param(st);
 	flag=testparams(&hd,&hd1); if (error) return;
-	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg();
-	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg();
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
 	c=max(c1,c2);
 	if (flag) /* complex values */
 	{	mc1=(complex *)m1; mc2=(complex *)m2;
@@ -121,9 +121,9 @@ void polymult (header *hd)
 	complex *mc1,*mc2,*mcr,xc,hc;
 	hd1=next_param(st);
 	flag=testparams(&hd,&hd1); if (error) return;
-	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg();
-	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg();
-	if ((LONG)c1+c2-1>INT_MAX) wrong_arg();
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	if ((LONG)c1+c2-1>INT_MAX) wrong_arg("can't handle those large vectors");
 	c=c1+c2-1;
 	if (flag)
 	{	mc1=(complex *)m1; mc2=(complex *)m2;
@@ -161,8 +161,8 @@ void polydiv (header *hd)
 	complex *mc1,*mc2,*mcr,*mch,xc,lc,hc;
 	hd1=next_param(st);
 	flag=testparams(&hd,&hd1); if (error) return;
-	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg();
-	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg();
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
 	if (c1<c2)
 	{	result=new_real(0.0,"");
 		rest=(header *)newram;
@@ -179,7 +179,7 @@ void polydiv (header *hd)
 		}
 		memmove((char *)mch,(char *)mc1,c1*sizeof(complex));
 		c_copy(lc,mc2[c2-1]);
-		if (lc[0]==0.0 && lc[1]==0.0) wrong_arg();
+		if (lc[0]==0.0 && lc[1]==0.0) wrong_arg("");
 		for (i=c1-c2; i>=0; i--)
 		{	c_div(mch[c2+i-1],lc,xc); c_copy(mcr[i],xc);
 			for(j=0; j<c2; j++) 
@@ -199,7 +199,7 @@ void polydiv (header *hd)
 		}
 		memmove((char *)mh,(char *)m1,c1*sizeof(double));
 		l=m2[c2-1];
-		if (l==0.0) wrong_arg();
+		if (l==0.0) wrong_arg("");
 		for (i=c1-c2; i>=0; i--)
 		{	x=mh[c2+i-1]/l; mr[i]=x;
 			for(j=0; j<c2; j++) mh[i+j]-=m2[j]*x;
@@ -217,9 +217,9 @@ void dd (header *hd)
 	complex *mc1,*mc2,*mcr,hc1,hc2;
 	hd1=next_param(st);
 	flag=testparams(&hd,&hd1); if (error) return;
-	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg();
-	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg();
-	if (c1!=c2) wrong_arg();
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	if (c1!=c2) wrong_arg("columns must agree");
 	if (flag) /* complex values */
 	{	mc1=(complex *)m1; mc2=(complex *)m2;
 		result=new_cmatrix(1,c1,""); if (error) return;
@@ -228,7 +228,7 @@ void dd (header *hd)
 		for (i=1; i<c1; i++)
 		{	for (j=c1-1; j>=i; j--)
 			{	if (mc1[j][0]==mc1[j-i][0] &&
-					mc1[j][1]==mc1[j-i][1]) wrong_arg();
+					mc1[j][1]==mc1[j-i][1]) wrong_arg("");
 				c_sub(mcr[j],mcr[j-1],hc1);
 				c_sub(mc1[j],mc1[j-i],hc2);
 				c_div(hc1,hc2,mcr[j]);
@@ -241,7 +241,7 @@ void dd (header *hd)
 		memmove((char *)mr,(char *)m2,c1*sizeof(double));
 		for (i=1; i<c1; i++)
 		{	for (j=c1-1; j>=i; j--)
-			{	if (m1[j]==m1[j-i]) wrong_arg();
+			{	if (m1[j]==m1[j-i]) wrong_arg("");
 				mr[j]=(mr[j]-mr[j-1])/(m1[j]-m1[j-i]);
 			}
 		}	
@@ -290,34 +290,34 @@ void ddval (header *hd)
 	hdd=getvalue(hdd); if (error) return;
 	if (hd->type==s_real || hd->type==s_matrix)
 	{	getmatrix(hd,&r,&c,&divx);
-		if (r!=1) wrong_arg();
+		if (r!=1) wrong_arg("row vector expected");
 		degree=c-1;
-		if (degree<0) wrong_arg();
+		if (degree<0) wrong_arg("non 0-sized vector expected");
 		polreal=1;
 		if (hdd->type!=s_real && hdd->type!=s_matrix)
 		{	if (hdd->type==s_complex || hdd->type==s_cmatrix)
 			{	make_complex(st); goto start; }
-			else wrong_arg();
+			else wrong_arg("bad type");
 		}
 		getmatrix(hdd,&r,&c1,&divdif);
-		if (r!=1 || c1!=c) wrong_arg();
+		if (r!=1 || c1!=c) wrong_arg("");
 	}
 	else if (hd->type==s_complex || hd->type==s_cmatrix)
 	{	make_complex(hd1);
 		getmatrix(hd,&r,&c,&divx);
-		if (r!=1) wrong_arg();
+		if (r!=1) wrong_arg("row vector expected");
 		degree=c-1;
-		if (degree<0) wrong_arg();
+		if (degree<0) wrong_arg("non 0-sized vector expected");
 		polreal=0;
 		if (hdd->type!=s_complex && hdd->type!=s_cmatrix)
 		{	if (hdd->type==s_real || hdd->type==s_matrix)
 			{	make_complex(nextof(st)); goto start; }
-			else wrong_arg();
+			else wrong_arg("bad type");
 		}
 		getmatrix(hdd,&r,&c1,&divdif);
-		if (r!=1 || c1!=c) wrong_arg();
+		if (r!=1 || c1!=c) wrong_arg("");
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	spread1(rddeval,cddeval,hd1);
 	moveresult(st,hd1);
 }
@@ -330,7 +330,7 @@ void polyzeros (header *hd)
 	hd=getvalue(hd); if (error) return;
 	if (hd->type==s_real || hd->type==s_matrix)
 	{	getmatrix(hd,&r,&c,&m);
-		if (r!=1) wrong_arg();
+		if (r!=1) wrong_arg("row vector expected");
 		result=new_matrix(1,c+1,""); if (error) return;
 		mr=matrixof(result);
 		mr[0]=-m[0]; mr[1]=1.0;
@@ -342,7 +342,7 @@ void polyzeros (header *hd)
 	}
 	else if (hd->type==s_complex || hd->type==s_cmatrix)
 	{	getmatrix(hd,&r,&c,&m); mc=(complex *)m;
-		if (r!=1) wrong_arg();
+		if (r!=1) wrong_arg("row vector expected");
 		result=new_cmatrix(1,c+1,""); if (error) return;
 		mcr=(complex *)matrixof(result);
 		mcr[0][0]=-mc[0][0]; mcr[0][1]=-mc[0][1];
@@ -357,7 +357,7 @@ void polyzeros (header *hd)
 			c_mult(xc,mcr[0],mcr[0]);
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -368,9 +368,9 @@ void polydd (header *hd)
 	complex *mc1,*mc2,*mcr,hc,xc;
 	hd1=next_param(st);
 	flag=testparams(&hd,&hd1); if (error) return;
-	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg();
-	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg();
-	if (c1!=c2) wrong_arg();
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	if (c1!=c2) wrong_arg("columns must agree");
 	if (flag) /* complex values */
 	{	mc1=(complex *)m1; mc2=(complex *)m2;
 		result=new_cmatrix(1,c1,""); if (error) return;
@@ -430,7 +430,7 @@ void polytrunc (header *hd)
 				(i+1)*sizeof(complex));
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 

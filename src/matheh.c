@@ -15,7 +15,7 @@ complex **c_lumat,*c_c,c_det;
 int rank;
 
 #define outofram() { output("Out of Memory!\n"); error=120; return; }
-#define wrong_arg() { output("Wrong arguments!\n"); error=1000; return; }
+//#define wrong_arg() { output("Wrong arguments!\n"); error=1000; return; }
 
 /***************** real linear systems *******************/
 
@@ -976,9 +976,9 @@ void mjacobi (header *hd)
 	double *m,max,neumax,*mr;
 	int r,c,i,j;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_matrix) wrong_arg();
+	if (hd->type!=s_matrix) wrong_arg("real matrix expected");
 	getmatrix(hd,&r,&c,&m);
-	if (r!=c) wrong_arg();
+	if (r!=c) wrong_arg("square matrix expected");
 	if (r<2) { moveresult(st,hd); return; }
 	hd1=new_matrix(r,r,""); if (error) return;
 	m=matrixof(hd1);

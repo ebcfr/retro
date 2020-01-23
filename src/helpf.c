@@ -8,7 +8,7 @@
 #include "helpf.h"
 #include "matheh.h"
 
-#define wrong_arg() { error=26; output("Wrong argument\n"); return; }
+//#define wrong_arg() { error=26; output("Wrong argument\n"); return; }
 
 void minmax (double *x, LONG n, double *min, double *max, 
 	int *imin, int *imax)
@@ -108,7 +108,7 @@ void mfft (header *hd)
 	if (hd->type==s_real || hd->type==s_matrix)
 	{	make_complex(st); hd=st; }
 	getmatrix(hd,&r,&c,&m);
-	if (r!=1) wrong_arg();
+	if (r!=1) wrong_arg("row vector expected");
 	result=new_cmatrix(1,c,"");
 	mr=matrixof(result);
     memmove((char *)mr,(char *)m,(LONG)2*c*sizeof(double));
@@ -125,7 +125,7 @@ void mifft (header *hd)
 	if (hd->type==s_real || hd->type==s_matrix)
 	{	make_complex(st); hd=st; }
 	getmatrix(hd,&r,&c,&m);
-	if (r!=1) wrong_arg();
+	if (r!=1) wrong_arg("row vector expected");
 	result=new_cmatrix(1,c,"");
 	mr=matrixof(result);
     memmove((char *)mr,(char *)m,(LONG)2*c*sizeof(double));
@@ -140,7 +140,7 @@ void mtridiag (header *hd)
 	hd=getvalue(hd); if (error) return;
 	if (hd->type==s_matrix)
 	{	getmatrix(hd,&c,&r,&m);
-		if (c!=r || c==0) wrong_arg();
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
 		result=new_matrix(c,c,""); if (error) return;
 		result1=new_matrix(1,c,""); if (error) return;
 		mr=matrixof(result);
@@ -151,7 +151,7 @@ void mtridiag (header *hd)
 	}
 	else if (hd->type==s_cmatrix)
 	{	getmatrix(hd,&c,&r,&m);
-		if (c!=r || c==0) wrong_arg();
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
 		result=new_cmatrix(c,c,""); if (error) return;
 		result1=new_matrix(1,c,""); if (error) return;
 		mr=matrixof(result);
@@ -160,7 +160,7 @@ void mtridiag (header *hd)
 		mr=matrixof(result1);
 		for (i=0; i<c; i++) *mr++=rows[i]+1;
 	}
-	else wrong_arg();
+	else wrong_arg("matrix expected");
 	moveresult(st,result);
 	moveresult((header *)newram,result1);
 }
@@ -172,7 +172,7 @@ void mcharpoly (header *hd)
 	hd=getvalue(hd); if (error) return;
 	if (hd->type==s_matrix)
 	{	getmatrix(hd,&c,&r,&m);
-		if (c!=r || c==0) wrong_arg();
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
 		result=new_matrix(c,c,""); if (error) return;
 		result1=new_matrix(1,c+1,""); if (error) return;
 		mr=matrixof(result);
@@ -181,14 +181,14 @@ void mcharpoly (header *hd)
 	}
 	else if (hd->type==s_cmatrix)
 	{	getmatrix(hd,&c,&r,&m);
-		if (c!=r || c==0) wrong_arg();
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
 		result=new_cmatrix(c,c,""); if (error) return;
 		result1=new_cmatrix(1,c+1,""); if (error) return;
 		mr=matrixof(result);
         memmove(mr,m,(LONG)c*c*(LONG)2*sizeof(double));
 		ccharpoly(mr,c,matrixof(result1));
 	}
-	else wrong_arg();
+	else wrong_arg("matrix expected");
 	moveresult(st,result1);
 }
 
@@ -201,7 +201,7 @@ void mscompare (header *hd)
 	{	result=new_real(strcmp(stringof(hd),stringof(hd1)),"");
 		if (error) return;
 	}
-	else wrong_arg();
+	else wrong_arg("strings expected");
 	moveresult(st,result);
 }
 
@@ -213,10 +213,10 @@ void mfind (header *hd)
 	hd1=getvalue(nextof(st));
 	if (error) return;
 	if ((hd->type!=s_matrix && hd->type!=s_real) || 
-	    (hd1->type!=s_matrix && hd1->type!=s_real)) wrong_arg();
+	    (hd1->type!=s_matrix && hd1->type!=s_real)) wrong_arg("real value or matrix expected");
 	getmatrix(hd,&c,&r,&m);
 	getmatrix(hd1,&c1,&r1,&m1);
-	if (c!=1 && r!=1) wrong_arg();
+	if (c!=1 && r!=1) wrong_arg("row or column vector expected");
 	if (r!=1) c=r;
 	result=new_matrix(c1,r1,""); if (error) return;
 	mr=matrixof(result);
@@ -237,7 +237,7 @@ void mdiag2 (header *hd)
 	hd1=next_param(hd);
 	hd=getvalue(hd); if (hd1) hd1=getvalue(hd1);
 	if (error) return;
-	if (hd1->type!=s_real) wrong_arg();
+	if (hd1->type!=s_real) wrong_arg("2nd arg: real value expected");
 	n=(int)*realof(hd1);
 	if (hd->type==s_matrix || hd->type==s_real)
 	{	getmatrix(hd,&r,&c,&m);
@@ -266,7 +266,7 @@ void mdiag2 (header *hd)
 		dimsof(result)->c=l;
 		result->size=cmatrixsize(1,c);
 	}
-	else wrong_arg();
+	else wrong_arg("1st arg: real or complex matrix expected");
 	moveresult(st,result);
 }
 
@@ -278,7 +278,7 @@ void mband (header *hd)
 	hd2=next_param(hd1);
 	hd=getvalue(hd); hd1=getvalue(hd1); hd2=getvalue(hd2);
 	if (error) return;
-	if (hd1->type!=s_real || hd2->type!=s_real) wrong_arg();
+	if (hd1->type!=s_real || hd2->type!=s_real) wrong_arg("2nd and 3rd args: real value expected");
 	n1=(int)*realof(hd1); n2=(int)*realof(hd2);
 	if (hd->type==s_matrix || hd->type==s_real)
 	{	getmatrix(hd,&r,&c,&m);
@@ -300,7 +300,7 @@ void mband (header *hd)
 				else { *mr++=0.0; *mr++=0.0; m+=2; }
 			}
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -310,11 +310,11 @@ void mdup (header *hd)
 	int c,i,n,j,r;
 	hd=getvalue(hd);
 	hd1=next_param(st);
-	if (!hd1) wrong_arg();
+	if (!hd1) wrong_arg("needs a 2nd arg");
 	hd1=getvalue(hd1); if (error) return;
-	if (hd1->type!=s_real) wrong_arg();
+	if (hd1->type!=s_real) wrong_arg("2nd arg: real value expected");
 	x=*realof(hd1); n=(int)x;
-	if (n<1 || x>=INT_MAX) wrong_arg();
+	if (n<1 || x>=INT_MAX) wrong_arg("2nd arg: must be >= 1");
 	if (hd->type==s_matrix && dimsof(hd)->r==1)
 	{	c=dimsof(hd)->c;
 		result=new_matrix(n,c,"");
@@ -367,7 +367,7 @@ void mdup (header *hd)
 		m1=matrixof(result);
 		for (i=0; i<n; i++) { *m1++=*realof(hd); *m1++=*imagof(hd); }
 	}
-	else wrong_arg();
+	else wrong_arg("bad 1st arg");
 	moveresult(st,result);
 }
 
@@ -423,13 +423,13 @@ void mvconcat (header *hd)
 	size_t size=0;
 	hd=getvalue(hd);
 	hd1=next_param(st);
-	if (!hd1) wrong_arg();
+	if (!hd1) wrong_arg("");
 	hd1=getvalue(hd1); if (error) return;
 	if (hd->type==s_real || hd->type==s_matrix)
 	{	if (hd1->type==s_real || hd1->type==s_matrix)
 		{	getmatrix(hd,&r,&c,&m);
 			getmatrix(hd1,&r1,&c1,&m1);
-			if (r!=0 && (c!=c1 || (LONG)r+r1>INT_MAX)) wrong_arg();
+			if (r!=0 && (c!=c1 || (LONG)r+r1>INT_MAX)) wrong_arg("columns must agree");
 			result=new_matrix(r+r1,c1,"");
 			if (r!=0)
 			{	size=(LONG)r*c*sizeof(double);
@@ -444,13 +444,13 @@ void mvconcat (header *hd)
 			mvconcat(st);
 			return;
 		}
-		else wrong_arg();
+		else wrong_arg("bad type");
 	}
 	else if (hd->type==s_complex || hd->type==s_cmatrix)
 	{	if (hd1->type==s_complex || hd1->type==s_cmatrix)
 		{	getmatrix(hd,&r,&c,&m);
 			getmatrix(hd1,&r1,&c1,&m1);
-			if (r!=0 && (c!=c1 || (LONG)r+r1>INT_MAX)) wrong_arg();
+			if (r!=0 && (c!=c1 || (LONG)r+r1>INT_MAX)) wrong_arg("columns must agree");
 			result=new_cmatrix(r+r1,c1,"");
 			if (r!=0)
 			{	size=(LONG)r*(LONG)2*c*sizeof(double);
@@ -465,9 +465,9 @@ void mvconcat (header *hd)
 			mvconcat(st);
 			return;
 		}
-		else wrong_arg();
+		else wrong_arg("bad type");
 	}	
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -477,7 +477,7 @@ void mhconcat (header *hd)
 	int r,c,r1,c1,i;
 	hd=getvalue(hd);
 	hd1=next_param(st);
-	if (!hd1) wrong_arg();
+	if (!hd1) wrong_arg("");
 	hd1=getvalue(hd1); if (error) return;
 	if (hd->type==s_string && hd1->type==s_string)
 	{	result=new_string(stringof(hd),
@@ -488,7 +488,7 @@ void mhconcat (header *hd)
 	{	if (hd1->type==s_real || hd1->type==s_matrix)
 		{	getmatrix(hd,&r,&c,&m);
 			getmatrix(hd1,&r1,&c1,&m1);
-			if (c!=0 && (r!=r1 || (LONG)c+c1>INT_MAX)) wrong_arg();
+			if (c!=0 && (r!=r1 || (LONG)c+c1>INT_MAX)) wrong_arg("rows must agree");
 			result=new_matrix(r1,c+c1,"");
 			mr=matrixof(result);
 			for (i=0; i<r1; i++)
@@ -503,13 +503,13 @@ void mhconcat (header *hd)
 			mhconcat(st);
 			return;
 		}
-		else wrong_arg();
+		else wrong_arg("bad type");
 	}
 	else if (hd->type==s_complex || hd->type==s_cmatrix)
 	{	if (hd1->type==s_complex || hd1->type==s_cmatrix)
 		{	getmatrix(hd,&r,&c,&m);
 			getmatrix(hd1,&r1,&c1,&m1);
-			if (c!=0 && (r!=r1 || (LONG)c+c1>INT_MAX)) wrong_arg();
+			if (c!=0 && (r!=r1 || (LONG)c+c1>INT_MAX)) wrong_arg("rows must agree");
 			result=new_cmatrix(r1,c+c1,"");
 			mr=matrixof(result);
 			for (i=0; i<r1; i++)
@@ -524,9 +524,9 @@ void mhconcat (header *hd)
 			mhconcat(st);
 			return;
 		}
-		else wrong_arg();
+		else wrong_arg("bad type");
 	}	
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -654,7 +654,7 @@ void wmultiply (header *hd)
 		moveresult(st,result);
 		return;
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 }
 
 void smultiply (header *hd)
@@ -782,6 +782,6 @@ void smultiply (header *hd)
 		moveresult(st,result);
 		return;
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 }
 

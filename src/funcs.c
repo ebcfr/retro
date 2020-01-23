@@ -13,7 +13,7 @@
 #include "helpf.h"
 #include "graphics.h"
 
-#define wrong_arg() { error=26; output("Wrong argument\n"); return; }
+//#define wrong_arg() { error=26; output("Wrong argument\n"); return; }
 
 char *argname[] =
 	{ "arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9",
@@ -38,7 +38,7 @@ void spread1 (double f (double),
 	if (!error) moveresult(st,result);
 }
 
-void csin (double *x, double *xi, double *z, double *zi)
+static void csin (double *x, double *xi, double *z, double *zi)
 {	*z=cosh(*xi)*sin(*x);
 	*zi=sinh(*xi)*cos(*x);
 }
@@ -47,7 +47,7 @@ void msin (header *hd)
 {	spread1(sin,csin,hd);
 }
 
-void ccos (double *x, double *xi, double *z, double *zi)
+static void ccos (double *x, double *xi, double *z, double *zi)
 {	*z=cosh(*xi)*cos(*x);
 	*zi=-sinh(*xi)*sin(*x);
 }
@@ -56,16 +56,18 @@ void mcos (header *hd)
 {	spread1(cos,ccos,hd);
 }
 
-void ctan (double *x, double *xi, double *z, double *zi)
+static void ctan (double *x, double *xi, double *z, double *zi)
 {	double s,si,c,ci;
 	csin(x,xi,&s,&si); ccos(x,xi,&c,&ci);
 	complex_divide(&s,&si,&c,&ci,z,zi);
 }
 
-double rtan (double x)
+#ifdef FLOAT_TEST
+static double rtan (double x)
 {	if (cos(x)==0.0) return 1e10;
 	return tan(x);
 }
+#endif
 
 void mtan (header *hd)
 {	spread1(
@@ -77,11 +79,6 @@ void mtan (header *hd)
 	ctan,hd);
 }
 
-double ratan (double x)
-{	if (x<=-M_PI && x>=M_PI) return 1e10;
-	else return atan(x);
-}
-
 void carg (double *x, double *xi, double *z)
 {	
 #ifdef FLOAT_TEST
@@ -90,10 +87,12 @@ void carg (double *x, double *xi, double *z)
 	*z = atan2(*xi,*x);
 }
 
-double rlog (double x)
+#ifdef FLOAT_TEST
+static double rlog (double x)
 {	if (x<=0) { error=1; return 0; }
 	else return log(x);
 }
+#endif
 
 void cclog (double *x, double *xi, double *z, double *zi)
 {	
@@ -105,7 +104,7 @@ void cclog (double *x, double *xi, double *z, double *zi)
 	carg(x,xi,zi);
 }
 
-double rsign (double x)
+static double rsign (double x)
 {	if (x<0) return -1;
 	else if (x<=0) return 0;
 	else return 1;
@@ -115,7 +114,14 @@ void msign (header *hd)
 {	spread1(rsign,0,hd);
 }
 
-void catan (double *x, double *xi, double *y, double *yi)
+#ifdef FLOAT_TEST
+static double ratan (double x)
+{	if (x<=-M_PI && x>=M_PI) return 1e10;
+	else return atan(x);
+}
+#endif
+
+static void catan (double *x, double *xi, double *y, double *yi)
 {	double h,hi,g,gi,t,ti;
 	h=1-*xi; hi=*x; g=1+*xi; gi=-*x;
 	complex_divide(&h,&hi,&g,&gi,&t,&ti);
@@ -133,12 +139,14 @@ void matan (header *hd)
 	catan,hd);
 }
 
-double rasin (double x)
+#ifdef FLOAT_TEST
+static double rasin (double x)
 {	if (x<-1 || x>1) { error=1; return 0; }
 	else return asin(x);
 }
+#endif
 
-void csqrt (double *x, double *xi, double *z, double *zi)
+static void csqrt (double *x, double *xi, double *z, double *zi)
 {	double a,r;
 	carg(x,xi,&a); a=a/2.0;
 	r=sqrt(sqrt(*x * *x + *xi * *xi));
@@ -146,7 +154,7 @@ void csqrt (double *x, double *xi, double *z, double *zi)
 	*zi=r*sin(a);
 }
 
-void casin (double *x, double *xi, double *y, double *yi)
+static void casin (double *x, double *xi, double *y, double *yi)
 {	double h,hi,g,gi;
 	complex_multiply(x,xi,x,xi,&h,&hi);
 	h=1-h; hi=-hi;
@@ -166,12 +174,14 @@ void masin (header *hd)
 	casin,hd);
 }
 
-double racos (double x)
+#ifdef FLOAT_TEST
+static double racos (double x)
 {	if (x<-1 || x>1) { error=1; return 0; }
 	else return acos(x);
 }
+#endif
 
-void cacos (double *x, double *xi, double *y, double *yi)
+static void cacos (double *x, double *xi, double *y, double *yi)
 {	double h,hi,g,gi;
 	complex_multiply(x,xi,x,xi,&h,&hi);
 	h=1-h; hi=-hi;
@@ -191,7 +201,7 @@ void macos (header *hd)
 	cacos,hd);
 }
 
-void cexp (double *x, double *xi, double *z, double *zi)
+static void cexp (double *x, double *xi, double *z, double *zi)
 {	double r=exp(*x);
 	*z=cos(*xi)*r;
 	*zi=sin(*xi)*r;
@@ -201,7 +211,7 @@ void mexp (header *hd)
 {	spread1(exp,cexp,hd);
 }
 
-double rarg (double x)
+static double rarg (double x)
 {	if (x>=0) return 0.0;
 	else return M_PI;
 }
@@ -210,10 +220,12 @@ void mlog (header *hd)
 {	spread1(log,cclog,hd);
 }
 
-double rsqrt (double x)
+#ifdef FLOAT_TEST
+static double rsqrt (double x)
 {	if (x<0.0) { error=1; return 1e10; }
 	else return sqrt(x);
 }
+#endif
 
 void msqrt (header *hd)
 {	spread1(
@@ -233,11 +245,11 @@ void mfloor (header *hd)
 {	spread1(floor,0,hd);
 }
 
-void cconj (double *x, double *xi, double *z, double *zi)
+static void cconj (double *x, double *xi, double *z, double *zi)
 {	*zi=-*xi; *z=*x;
 }
 
-double ident (double x)
+static double ident (double x)
 {	return x;
 }
 
@@ -256,12 +268,12 @@ void spread1r (double f (double),
 	if (!error) moveresult(st,result);
 }
 
-double rnot (double x)
+static double rnot (double x)
 {	if (x!=0.0) return 0.0;
 	else return 1.0;
 }
 
-void cnot (double *x, double *xi, double *r)
+static void cnot (double *x, double *xi, double *r)
 {	if (*x==0.0 && *xi==0.0) *r=1.0;
 	else *r=0.0;
 }
@@ -270,7 +282,7 @@ void mnot (header *hd)
 {	spread1r(rnot,cnot,hd);
 }
 
-void crealpart (double *x, double *xi, double *z)
+static void crealpart (double *x, double *xi, double *z)
 {	*z=*x;
 }
 
@@ -278,11 +290,11 @@ void mre (header *hd)
 {	spread1r(ident,crealpart,hd);
 }
 
-double zero (double x)
+static double zero (double x)
 {	return 0.0;
 }
 
-void cimagpart (double *x, double *xi, double *z)
+static void cimagpart (double *x, double *xi, double *z)
 {	*z=*xi;
 }
 
@@ -294,7 +306,7 @@ void marg (header *hd)
 {	spread1r(rarg,carg,hd);
 }
 
-void cxabs (double *x, double *xi, double *z)
+static void cxabs (double *x, double *xi, double *z)
 {	*z=sqrt(*x * *x + *xi * *xi);
 }
 
@@ -318,11 +330,12 @@ void mfree (header *hd)
 {	new_real(ramend-endlocal,"");
 }
 
+#if 0
 void mshrink (header *hd)
 {	header *st=hd,*result;
 	size_t size;
 	hd=getvalue(hd); if (error) return;
-	if (*realof(hd)>LONG_MAX) wrong_arg();
+	if (*realof(hd)>LONG_MAX) wrong_arg("too large number");
 	size=(size_t)*realof(hd);
 	if (ramend-size<newram)
 	{	output("Cannot shrink that much!\n");
@@ -337,6 +350,7 @@ void mshrink (header *hd)
 	result=new_real(ramend-ramstart,"");
 	moveresult(st,result);
 }
+#endif
 
 void mepsilon (header *hd)
 {	new_real(epsilon,"");
@@ -345,7 +359,7 @@ void mepsilon (header *hd)
 void msetepsilon (header *hd)
 {	header *stack=hd,*hd1,*result;
 	hd1=getvalue(hd); if (error) return;
-	if (hd1->type!=s_real) wrong_arg();
+	if (hd1->type!=s_real) wrong_arg("real value expected");
 	result=new_real(epsilon,"");
 	epsilon=*realof(hd1);
 	moveresult(stack,result);
@@ -381,7 +395,7 @@ void spread2r (void f (double *, double *, double *),
 	if (!error) moveresult(st,result);
 }
 
-void rmod (double *x, double *n, double *y)
+static void rmod (double *x, double *n, double *y)
 {	*y=fmod(*x,*n);
 }
 
@@ -400,7 +414,7 @@ void cpow (double *x, double *xi, double *y, double *yi,
 	cexp(&w,&wi,z,zi);
 }
 
-void rpow (double *x, double *y, double *z)
+static void rpow (double *x, double *y, double *z)
 {	int n;
 	if (*x>0.0) *z=pow(*x,*y);
 	else if (*x==0.0) if (*y==0.0) *z=1.0; else *z=0.0;
@@ -415,16 +429,28 @@ void mpower (header *hd)
 {	spread2(rpow,cpow,hd);
 }
 
-void rgreater (double *x, double *y, double *z)
+/****************************************************************
+ *	compare operator
+ ****************************************************************/
+static void rgreater (double *x, double *y, double *z)
 {	if (*x>*y) *z=1.0;
 	else *z=0.0;
 }
 
 void mgreater (header *hd)
-{	spread2(rgreater,0,hd);
+{   header *st=hd,*hd1,*result,*hdv;
+	hdv=getvariable(hd);
+	if (hdv->type==s_string)
+	{   hd=getvalue(hd);
+		hd1=getvalue(nextof(st)); if (error) return;
+		if (hd1->type!=s_string) wrong_arg("2nd arg: string expected");
+		result=new_real(strcmp(stringof(hd),stringof(hd1))>0,"");
+		moveresult(st,result);
+	}
+	else spread2(rgreater,0,hd);
 }
 
-void rless (double *x, double *y, double *z)
+static void rless (double *x, double *y, double *z)
 {	if (*x<*y) *z=1.0;
 	else *z=0.0;
 }
@@ -433,7 +459,7 @@ void mless (header *hd)
 {	spread2(rless,0,hd);
 }
 
-void rgreatereq (double *x, double *y, double *z)
+static void rgreatereq (double *x, double *y, double *z)
 {	if (*x>=*y) *z=1.0;
 	else *z=0.0;
 }
@@ -442,7 +468,7 @@ void mgreatereq (header *hd)
 {	spread2(rgreatereq,0,hd);
 }
 
-void rlesseq (double *x, double *y, double *z)
+static void rlesseq (double *x, double *y, double *z)
 {	if (*x<=*y) *z=1.0;
 	else *z=0.0;
 }
@@ -451,7 +477,7 @@ void mlesseq (header *hd)
 {	spread2(rlesseq,0,hd);
 }
 
-void ror (double *x, double *y, double *z)
+static void ror (double *x, double *y, double *z)
 {	if (*x!=0.0 || *y!=0.0) *z=1.0;
 	else *z=0.0;
 }
@@ -460,7 +486,7 @@ void mor (header *hd)
 {	spread2(ror,0,hd);
 }
 
-void rrand (double *x, double *y, double *z)
+static void rrand (double *x, double *y, double *z)
 {	if (*x!=0.0 && *y!=0.0) *z=1.0;
 	else *z=0.0;
 }
@@ -469,12 +495,12 @@ void mand (header *hd)
 {	spread2(rrand,0,hd);
 }
 
-void requal (double *x, double *y, double *z)
+static void requal (double *x, double *y, double *z)
 {	if (*x==*y) *z=1.0;
 	else *z=0.0;
 }
 
-void cequal (double *x, double *xi, double *y, double *yi, double *z,
+static void cequal (double *x, double *xi, double *y, double *yi, double *z,
 	double *zi)
 {	if (*x==*xi && *y==*yi) *z=1.0;
 	else *z=0.0;
@@ -485,12 +511,12 @@ void mequal (header *hd)
 {	spread2r(requal,cequal,hd);
 }
 
-void runequal (double *x, double *y, double *z)
+static void runequal (double *x, double *y, double *z)
 {	if (*x!=*y) *z=1.0;
 	else *z=0.0;
 }
 
-void cunequal (double *x, double *xi, double *y, double *yi, double *z,
+static void cunequal (double *x, double *xi, double *y, double *yi, double *z,
 	double *zi)
 {	if (*x!=*y || *xi!=*yi) *z=1.0;
 	else *z=0.0;
@@ -501,12 +527,12 @@ void munequal (header *hd)
 {	spread2(runequal,cunequal,hd);
 }
 
-void raboutequal (double *x, double *y, double *z)
+static void raboutequal (double *x, double *y, double *z)
 {	if (fabs(*x-*y)<epsilon) *z=1.0;
 	else *z=0.0;
 }
 
-void caboutequal 
+static void caboutequal 
 	(double *x, double *xi, double *y, double *yi, double *z,
 		double *zi)
 {	if (fabs(*x-*y)<epsilon && fabs(*xi-*yi)<epsilon) *z=1.0;
@@ -532,9 +558,9 @@ void mlusolve (header *hd)
 		{	make_complex(st);
 			mlusolve(st); return;	
 		}
-		if (hd1->type!=s_matrix && hd1->type!=s_real) wrong_arg();
+		if (hd1->type!=s_matrix && hd1->type!=s_real) wrong_arg("real value or matrix expected");
 		getmatrix(hd1,&r1,&c1,&m1);
-		if (c!=r || c<1 || r!=r1) wrong_arg();
+		if (c!=r || c<1 || r!=r1) wrong_arg("bad size");
 		result=new_matrix(r,c1,""); if (error) return;
 		lu_solve(m,r,m1,c1,matrixof(result));
 		if (error) return;
@@ -546,15 +572,15 @@ void mlusolve (header *hd)
 		{	make_complex(next_param(st));
 			mlusolve(st); return;
 		}
-		if (hd1->type!=s_cmatrix && hd1->type!=s_complex) wrong_arg();
+		if (hd1->type!=s_cmatrix && hd1->type!=s_complex) wrong_arg("complex value or matrix expected");
 		getmatrix(hd1,&r1,&c1,&m1);
-		if (c!=r || c<1 || r!=r1) wrong_arg();
+		if (c!=r || c<1 || r!=r1) wrong_arg("bad size");
 		result=new_cmatrix(r,c1,""); if (error) return;
 		clu_solve(m,r,m1,c1,matrixof(result));
 		if (error) return;
 		moveresult(st,result);
 	}
-	else wrong_arg();
+	else wrong_arg("real or complex value or matrix expected");
 }
 
 void msolve (header *hd)
@@ -571,9 +597,9 @@ void msolve (header *hd)
 		{	make_complex(st);
 			msolve(st); return;	
 		}
-		if (hd1->type!=s_matrix && hd1->type!=s_real) wrong_arg();
+		if (hd1->type!=s_matrix && hd1->type!=s_real) wrong_arg("real value or matrix expected");
 		getmatrix(hd1,&r1,&c1,&m1);
-		if (c!=r || c<1 || r!=r1) wrong_arg();
+		if (c!=r || c<1 || r!=r1) wrong_arg("bad size");
 		result=new_matrix(r,c1,""); if (error) return;
 		solvesim(m,r,m1,c1,matrixof(result));
 		if (error) return;
@@ -585,15 +611,15 @@ void msolve (header *hd)
 		{	make_complex(next_param(st));
 			msolve(st); return;
 		}
-		if (hd1->type!=s_cmatrix && hd1->type!=s_complex) wrong_arg();
+		if (hd1->type!=s_cmatrix && hd1->type!=s_complex) wrong_arg("complex value or matrix expected");
 		getmatrix(hd1,&r1,&c1,&m1);
-		if (c!=r || c<1 || r!=r1) wrong_arg();
+		if (c!=r || c<1 || r!=r1) wrong_arg("bad size");
 		result=new_cmatrix(r,c1,""); if (error) return;
 		c_solvesim(m,r,m1,c1,matrixof(result));
 		if (error) return;
 		moveresult(st,result);
 	}
-	else wrong_arg();
+	else wrong_arg("real or complex value or matrix expected");
 }
 
 void mcomplex (header *hd)
@@ -644,7 +670,7 @@ void msum (header *hd)
 			*mr++=s; *mr++=si;
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("real or complex value or matrix expected");
 	moveresult(st,result);
 }
 
@@ -676,14 +702,14 @@ void mprod (header *hd)
 			*mr++=s; *mr++=si;
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("real or complex value or matrix expected");
 	moveresult(st,result);
 }
 
 void msize (header *hd)
 {	header *result,*st=hd,*hd1=hd,*end=(header *)newram;
 	int r,c,r0=0,c0=0;
-	if (!hd) wrong_arg();
+//	if (!hd) wrong_arg();
 	result=new_matrix(1,2,""); if (error) return;
 	while (end>hd)
 	{	hd1=getvariable(hd); if (error) return;
@@ -698,15 +724,16 @@ void msize (header *hd)
 		{	r=submdimsof(hd1)->r;
 			c=submdimsof(hd1)->c;
 		}
-		else wrong_arg();
-		if ((r>1 || c>1) && (r0>1 || c0>1))
+		else wrong_arg("bad type");
+		if ((r>1 && r0>1 && r!=r0) || (c>1 && c0>1 && c!=c0))
 		{	if (r0!=r && c0!=c)
 			{	output("Matrix dimensions must agree!\n");
 				error=1021; return;
 			}
 		}
 		else
-		{	r0=(r0>r)?r0:r; c0=(c0>c)?c0:c;
+		{	if (r>r0) r0=r;
+			if (c>c0) c0=c;
 		}
         hd=nextof(hd);
 	}
@@ -727,7 +754,7 @@ void mcols (header *hd)
 		case s_real :
 		case s_complex : n=1; break;
 		case s_string : n=(int)strlen(stringof(hd)); break;
-		default : wrong_arg();
+		default : wrong_arg("bad type");
 	}
 	res=new_real(n,""); if (error) return;
 	moveresult(st,res);
@@ -744,7 +771,7 @@ void mrows (header *hd)
 		case s_csubmatrix : n=submdimsof(hd)->r; break;
 		case s_real :
 		case s_complex : n=1; break;
-		default : wrong_arg();
+		default : wrong_arg("bad type");
 	}
 	res=new_real(n,""); if (error) return;
 	moveresult(st,res);
@@ -757,10 +784,10 @@ void mzerosmat (header *hd)
 	LONG i,n;
 	hd=getvalue(hd); if (error) return;
 	if (hd->type!=s_matrix || dimsof(hd)->r!=1 || dimsof(hd)->c!=2)
-		wrong_arg();
+		wrong_arg("1x2 real matrix expected");
 	rows=*matrixof(hd); cols=*(matrixof(hd)+1);
 	if (rows<0 || rows>=INT_MAX || cols<0 || cols>=INT_MAX)
-		wrong_arg();
+		wrong_arg("bad size required");
 	r=(int)rows; c=(int)cols;
 	result=new_matrix(r,c,""); if (error) return;
 	m=matrixof(result);
@@ -776,10 +803,10 @@ void mones (header *hd)
 	LONG i,n;
 	hd=getvalue(hd); if (error) return;
 	if (hd->type!=s_matrix || dimsof(hd)->r!=1 || dimsof(hd)->c!=2)
-		wrong_arg();
+		wrong_arg("1x2 real matrix expected");
 	rows=*matrixof(hd); cols=*(matrixof(hd)+1);
 	if (rows<0 || rows>=INT_MAX || cols<0 || cols>=INT_MAX)
-		wrong_arg();
+		wrong_arg("bad size required");
 	r=(int)rows; c=(int)cols;
 	result=new_matrix(r,c,""); if (error) return;
 	m=matrixof(result);
@@ -795,16 +822,16 @@ void mdiag (header *hd)
 	LONG l,n;
 	hd=getvalue(hd); if (error) return;
 	if (hd->type!=s_matrix || dimsof(hd)->r!=1 || dimsof(hd)->c!=2)
-		wrong_arg();
+		wrong_arg("1st arg: 1x2 real matrix expected");
 	rows=*matrixof(hd); cols=*(matrixof(hd)+1);
 	if (rows<0 || rows>=INT_MAX || cols<0 || cols>=INT_MAX)
-		wrong_arg();
+		wrong_arg("bad size required");
 	r=(int)rows; c=(int)cols;
 	hd1=next_param(st); if (hd1) hd2=next_param(hd1);
 	if (hd1) hd1=getvalue(hd1);
 	if (hd2) hd2=getvalue(hd2);
 	if (error) return;
-	if	(hd1->type!=s_real) wrong_arg();
+	if	(hd1->type!=s_real) wrong_arg("2nd arg: real value expected");
 	k=(int)*realof(hd1);
 	if (hd2->type==s_matrix || hd2->type==s_real)
 	{	result=new_matrix(r,c,""); if (error) return;
@@ -812,7 +839,7 @@ void mdiag (header *hd)
 		n=(LONG)c*r;
 		for (l=0; l<n; l++) *m++=0.0;
 		getmatrix(hd2,&rd,&cd,&md);
-		if (rd!=1 || cd<1) wrong_arg();
+		if (rd!=1 || cd<1) wrong_arg("3rd arg: row vector expected");
 		m=matrixof(result);
 		for (i=0; i<r; i++)
 		{	if (i+k>=0 && i+k<c) 
@@ -827,7 +854,7 @@ void mdiag (header *hd)
         n=(LONG)2*(LONG)c*r;
 		for (l=0; l<n; l++) *m++=0.0;
 		getmatrix(hd2,&rd,&cd,&md);
-		if (rd!=1 || cd<1) wrong_arg();
+		if (rd!=1 || cd<1) wrong_arg("3rd arg: row vector expected");
 		m=matrixof(result);
 		for (i=0; i<r; i++)
 		{	if (i+k>=0 && i+k<c) 
@@ -837,7 +864,7 @@ void mdiag (header *hd)
 			}
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("3rd arg: bad type");
 	moveresult(st,result);
 }
 
@@ -847,13 +874,13 @@ void msetdiag (header *hd)
 	int r,c,i,ik=0,k,rd,cd;
 	hd=getvalue(st); if (error) return;
 	if (hd->type!=s_matrix && hd->type!=s_cmatrix)
-		wrong_arg();
+		wrong_arg("1st arg: matrix expected");
 	getmatrix(hd,&c,&r,&mhd);
 	hd1=next_param(st); if (hd1) hd2=next_param(hd1);
 	if (hd1) hd1=getvalue(hd1);
 	if (hd2) hd2=getvalue(hd2);
 	if (error) return;
-	if	(hd1->type!=s_real) wrong_arg();
+	if	(hd1->type!=s_real) wrong_arg("2nd arg: real value expected");
 	k=(int)*realof(hd1);
 	if (hd->type==s_matrix && 
 			(hd2->type==s_complex || hd2->type==s_cmatrix))
@@ -868,7 +895,7 @@ void msetdiag (header *hd)
 		m=matrixof(result);
 		memmove((char *)m,(char *)mhd,(LONG)c*r*sizeof(double));
 		getmatrix(hd2,&rd,&cd,&md);
-		if (rd!=1 || cd<1) wrong_arg();
+		if (rd!=1 || cd<1) wrong_arg("3rd arg: row vector expected");
 		for (i=0; i<r; i++)
 		{	if (i+k>=0 && i+k<c) 
 			{	*mat(m,c,i,i+k)=*md;
@@ -881,7 +908,7 @@ void msetdiag (header *hd)
 		m=matrixof(result);
         memmove((char *)m,(char *)mhd,(LONG)c*r*(LONG)2*sizeof(double));
 		getmatrix(hd2,&rd,&cd,&md);
-		if (rd!=1 || cd<1) wrong_arg();
+		if (rd!=1 || cd<1) wrong_arg("3rd arg: row vector expected");
 		m=matrixof(result);
 		for (i=0; i<r; i++)
 		{	if (i+k>=0 && i+k<c) 
@@ -891,7 +918,7 @@ void msetdiag (header *hd)
 			}
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("3rd arg: bad type");
 	moveresult(st,result);
 }
 
@@ -914,7 +941,7 @@ void mextrema (header *hd)
 			*mr++=min; *mr++=imin+1; *mr++=max; *mr++=imax+1;
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("real value or matrix expected");
 	moveresult(st,result);
 }
 
@@ -953,7 +980,7 @@ void mcumsum (header *hd)
 			}
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -996,7 +1023,7 @@ void mcumprod (header *hd)
 			}
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -1005,7 +1032,7 @@ void mwait (header *hd)
 	double now;
 	int h;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_real) wrong_arg();
+	if (hd->type!=s_real) wrong_arg("real value expected");
 	now=myclock();
 	sys_wait(*realof(hd),&h);
 	if (h==escape) { error=1; return; }
@@ -1026,9 +1053,9 @@ void mformat (header *hd)
 	int oldl=l,oldd=d;
 	hd=getvalue(hd); if (error) return;
 	if (hd->type!=s_matrix || dimsof(hd)->r!=1 || dimsof(hd)->c!=2)
-		wrong_arg();
+		wrong_arg("1x2 real vector expected");
 	l=(int)*matrixof(hd); d=(int)*(matrixof(hd)+1);
-	if (l<2 || l>2*DBL_DIG || d<0 || d>DBL_DIG) wrong_arg();
+	if (l<2 || l>2*DBL_DIG || d<0 || d>DBL_DIG) wrong_arg("bad value");
 	if (d>l-3) d=l-3;
 	sprintf(fixedformat," %c%d.%df",'%',l,d);
 	sprintf(expoformat," %c%d.%de",'%',l,(l>9)?l-9:0);
@@ -1051,7 +1078,7 @@ void mrandom (header *hd)
 	if (hd->type!=s_matrix || dimsof(hd)->r!=1 || dimsof(hd)->c!=2
 		|| *(m=matrixof(hd))<0 || *m>=INT_MAX 
 		|| *(m+1)<0 || *(m+1)>INT_MAX)
-		wrong_arg();
+		wrong_arg("1x2 real vector expected or bad values");
 	r=(int)*m;
 	c=(int)*(m+1);
 	result=new_matrix(r,c,""); if (error) return;
@@ -1070,7 +1097,7 @@ void mnormal (header *hd)
 	if (hd->type!=s_matrix || dimsof(hd)->r!=1 || dimsof(hd)->c!=2
 		|| *(m=matrixof(hd))<0 || *m>=INT_MAX 
 		|| *(m+1)<0 || *(m+1)>INT_MAX)
-		wrong_arg();
+		wrong_arg("1x2 real vector expected or bad values");
 	r=(int)*m;
 	c=(int)*(m+1);
 	result=new_matrix(r,c,""); if (error) return;
@@ -1087,7 +1114,7 @@ void mnormal (header *hd)
 	moveresult(st,result);
 }
 
-double gauss (double z)
+static double gauss (double z)
 {	double x,w;
 	x=1/(0.2316419*fabs(z)+1);
 	w=x*(0.31938153+x*(-0.356556382+x*(1.781477937+x*(
@@ -1101,7 +1128,7 @@ void mgauss (header *hd)
 {	spread1(gauss,0,hd);
 }
 
-double invgauss (double a)
+static double invgauss (double a)
 {	double t,c,d;
 	int flag=0;
 	if (a<0.5) { a=1-a; flag=1; }
@@ -1116,7 +1143,7 @@ void minvgauss (header *hd)
 {	spread1(invgauss,0,hd);
 }
 
-double rfak (double x)
+static double rfak (double x)
 {	int i,n;
 	double res=1;
 	if (x<2 || x>INT_MAX) return 1.0;
@@ -1129,7 +1156,7 @@ void mfak (header *hd)
 {	spread1(rfak,0,hd);
 }
 
-void rbin (double *x, double *y, double *z)
+static void rbin (double *x, double *y, double *z)
 {   long i,n,m,k;
 	double res;
 	n=(long)*x; m=(long)*y;
@@ -1145,7 +1172,7 @@ void mbin (header *hd)
 {	spread2(rbin,0,hd);
 }
 
-void rtd (double *xa, double *yf, double *zres)
+static void rtd (double *xa, double *yf, double *zres)
 {	double t,t1,a,b,h,z,p,y,x;
 	int flag=0;
 	if (fabs(*xa)<epsilon) { *zres=0.5; return; }
@@ -1168,7 +1195,7 @@ void mtd (header *hd)
 {	spread2(rtd,0,hd);
 }
 
-void invrtd (double *x, double *y, double *zres)
+static void invrtd (double *x, double *y, double *zres)
 {	double z=*x,f=*y,g1,g2,g3,g4,z2;
 	int flag=0;
 	if (z<0.5) { flag=1; z=1-z; }
@@ -1186,7 +1213,7 @@ void minvtd (header *hd)
 {	spread2(invrtd,0,hd);
 }
 
-void chi (double *xa, double *yf, double *zres)
+static void chi (double *xa, double *yf, double *zres)
 {	double ch=*xa,x,y,s,t,g,j=1;
 	long i=1,p,f;
 	f=(long)*yf;
@@ -1209,9 +1236,9 @@ void mchi (header *hd)
 {	spread2(chi,0,hd);
 }
 
-double f1,f2;
+static double f1,f2;
 
-double rfd (double F)
+static double rfd (double F)
 {	double f0,a,b,h,z,p,y,x;
 	if (F<epsilon) return 0.0;
 	if (F<1) { a=f2; b=f1; f0=1/F; }
@@ -1235,13 +1262,13 @@ void mfdis (header *hd)
 	}
 	if (hd2) hd2=getvalue(hd2);
 	if (error) return;
-	if (hd1->type!=s_real || hd2->type!=s_real) wrong_arg();
+	if (hd1->type!=s_real || hd2->type!=s_real) wrong_arg("real values expected");
 	f1=*realof(hd1);
 	f2=*realof(hd2);
 	spread1(rfd,0,hd);
 }
 
-void rmax (double *x, double *y, double *z)
+static void rmax (double *x, double *y, double *z)
 {	if (*x>*y) *z=*x;
 	else *z=*y;
 }
@@ -1250,7 +1277,7 @@ void mmax (header *hd)
 {	spread2(rmax,0,hd);
 }
 
-void rmin (double *x, double *y, double *z)
+static void rmin (double *x, double *y, double *z)
 {	if (*x>*y) *z=*y;
 	else *z=*x;
 }
@@ -1261,7 +1288,7 @@ void mmin (header *hd)
 
 typedef struct { double val; int ind; } sorttyp;
 
-int sorttyp_compare (const sorttyp *x, const sorttyp *y)
+static int sorttyp_compare (const sorttyp *x, const sorttyp *y)
 {	if (x->val>y->val) return 1;
 	else if (x->val==y->val) return 0;
 	else return -1;
@@ -1273,15 +1300,15 @@ void msort (header *hd)
 	sorttyp *t;
 	int r,c,i;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_real && hd->type!=s_matrix) wrong_arg();
+	if (hd->type!=s_real && hd->type!=s_matrix) wrong_arg("real value or matrix expected");
 	getmatrix(hd,&r,&c,&m);
 	if (c==1 || r==1) result=new_matrix(r,c,"");
-	else wrong_arg();
+	else wrong_arg("row or colum vector expected");
 	if (error) return;
 	result1=new_matrix(r,c,"");
 	if (error) return;
 	if (c==1) c=r;
-	if (c==0) wrong_arg();
+	if (c==0) wrong_arg("can't sort a 0-sized vector");
 	if (newram+c*sizeof(sorttyp)>ramend)
 	{	output("Out of memory!\n"); error=600; return; 
 	}
@@ -1305,9 +1332,9 @@ void mnonzeros (header *hd)
 	double *m,*mr;
 	int r,c,i,k;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_real && hd->type!=s_matrix) wrong_arg();
+	if (hd->type!=s_real && hd->type!=s_matrix) wrong_arg("real value or matrix expected");
 	getmatrix(hd,&r,&c,&m);
-	if (r!=1 && c!=1) wrong_arg();
+	if (r!=1 && c!=1) wrong_arg("row or colum vector expected");
 	if (c==1) c=r;
 	result=new_matrix(1,c,""); if (error) return;
 	k=0; mr=matrixof(result);
@@ -1328,11 +1355,11 @@ void mstatistics (header *hd)
 	hd=getvalue(hd);
 	hd1=next_param(st);
 	if (hd1) hd1=getvalue(hd1); if (error) return;
-	if (hd1->type!=s_real || hd->type!=s_matrix) wrong_arg();
-	if (*realof(hd1)>INT_MAX || *realof(hd1)<2) wrong_arg();
+	if (hd1->type!=s_real || hd->type!=s_matrix) wrong_arg("1st arg: real value or matrix expected");
+	if (*realof(hd1)>INT_MAX || *realof(hd1)<2) wrong_arg("2nd arg >= 2");
 	n=(int)*realof(hd1);
 	getmatrix(hd,&r,&c,&m);
-	if (r!=1 && c!=1) wrong_arg();
+	if (r!=1 && c!=1) wrong_arg("1st arg: real row or column vector expected");
 	if (c==1) c=r;
 	result=new_matrix(1,n,""); if (error) return;
 	mr=matrixof(result); for (i=0; i<n; i++) *mr++=0.0;
@@ -1351,7 +1378,7 @@ void minput (header *hd)
 {	header *st=hd,*result;
 	char input[1024],*oldnext;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("string expected");
 	retry: output(stringof(hd)); output("? ");
 	edit(input);
 	stringon=1;
@@ -1367,7 +1394,7 @@ void mlineinput (header *hd)
 {	header *st=hd,*result;
 	char input[1024];
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("string expected");
 	output(stringof(hd)); output("? ");
 	edit(input);
 	result=new_string(input,strlen(input),"");
@@ -1378,7 +1405,7 @@ void minterpret (header *hd)
 {	header *st=hd,*result;
 	char *oldnext;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("string to be interpreted expected");
 	stringon=1;
 	oldnext=next; next=stringof(hd); result=scan(); next=oldnext;
 	stringon=0;
@@ -1404,7 +1431,7 @@ void mmax1 (header *hd)
 			*mr++=max;
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("real value or matrix expected");
 	moveresult(st,result);
 }
 
@@ -1426,7 +1453,7 @@ void mmin1 (header *hd)
 			*mr++=max;
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("real value or matrix expected");
 	moveresult(st,result);
 }
 
@@ -1439,13 +1466,13 @@ void mdo (header *hd)
 {	header *st=hd,*hd1,*result;
 	int count=0;
 	size_t size;
-	if (!hd) wrong_arg();
+	if (!hd) wrong_arg("parameter required");
 	hd=getvalue(hd);
 	result=hd1=next_param(st);
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("1st arg: string expected");
 	if (error) return;
 	hd=searchudf(stringof(hd));
-	if (!hd || hd->type!=s_udf) wrong_arg();
+	if (!hd || hd->type!=s_udf) wrong_arg("1st arg not a user defined function");
 	while (hd1) 
 	{	strcpy(hd1->name,argname[count]);
 		hd1->xor=xors[count];
@@ -1467,7 +1494,7 @@ void mlu (header *hd)
 	hd=getvalue(hd); if (error) return;
 	if (hd->type==s_matrix || hd->type==s_real)
 	{	getmatrix(hd,&r,&c,&m);
-		if (r<1) wrong_arg();
+		if (r<1) wrong_arg("not a 0-sized matrix expected");
 		result=new_matrix(r,c,""); if (error) return;
 		mr=matrixof(result);
 		memmove((char *)mr,(char *)m,(LONG)r*c*sizeof(double));
@@ -1491,7 +1518,7 @@ void mlu (header *hd)
 	}
 	else if (hd->type==s_cmatrix || hd->type==s_complex)
 	{	getmatrix(hd,&r,&c,&m);
-		if (r<1) wrong_arg();
+		if (r<1) wrong_arg("not a 0-sized matrix expected");
 		result=new_cmatrix(r,c,""); if (error) return;
 		mr=matrixof(result);
         memmove((char *)mr,(char *)m,(LONG)r*c*(LONG)2*sizeof(double));
@@ -1514,7 +1541,7 @@ void mlu (header *hd)
 		moveresult(st,getvalue(res2)); st=nextof(st);
 		moveresult(st,getvalue(res3));
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 }
 
 void miscomplex (header *hd)
@@ -1537,21 +1564,31 @@ void misreal (header *hd)
 	moveresult(st,result);
 }
 
-double rounder;
+void misstring (header *hd)
+{	header *st=hd,*result;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_string)
+		result=new_real(1.0,"");
+	else result=new_real(0.0,"");
+	if (error) return;
+	moveresult(st,result);
+}
 
-double rround (double x)
+static double rounder;
+
+static double rround (double x)
 {	x*=rounder;
 	if (x>0) x=floor(x+0.5);
 	else x=-floor(-x+0.5);
 	return x/rounder;
 }
 
-void cround (double *x, double *xi, double *z, double *zi)
+static void cround (double *x, double *xi, double *z, double *zi)
 {	*z=rround(*x);
 	*zi=rround(*xi);
 }
 
-double frounder[]={1.0,10.0,100.0,1000.0,10000.0,100000.0,1000000.0,
+static double frounder[]={1.0,10.0,100.0,1000.0,10000.0,100000.0,1000000.0,
 10000000.0,100000000.0,1000000000.0,10000000000.0};
 
 void mround (header *hd)
@@ -1559,7 +1596,7 @@ void mround (header *hd)
 	int n;
 	hd1=next_param(hd);
 	if (hd1) hd1=getvalue(hd1); if (error) return;
-	if (hd1->type!=s_real) wrong_arg();
+	if (hd1->type!=s_real) wrong_arg("2nd arg: real value expected");
 	n=(int)(*realof(hd1));
 	if (n>0 && n<11) rounder=frounder[n];
 	else rounder=pow(10.0,n);
@@ -1569,7 +1606,7 @@ void mround (header *hd)
 void mchar (header *hd)
 {	header *st=hd,*result;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_real) wrong_arg();
+	if (hd->type!=s_real) wrong_arg("ascii code expected");
 	result=new_string("a",1,""); if (error) return;
 	*stringof(result)=(char)*realof(hd);
 	moveresult(st,result);
@@ -1577,7 +1614,7 @@ void mchar (header *hd)
 
 void merror (header *hd)
 {	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("string expected");
 	output1("Error : %s\n",stringof(hd));
 	error=301;
 }
@@ -1587,7 +1624,7 @@ void merrlevel (header *hd)
 	char *oldnext;
 	int en;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("string expected");
 	stringon=1;
 	oldnext=next; next=stringof(hd); scan(); next=oldnext;
 	stringon=0;
@@ -1603,7 +1640,7 @@ void mprintf (header *hd)
 	hd=getvalue(hd);
 	hd1=getvalue(hd1); if (error) return;
 	if (hd->type!=s_string || hd1->type!=s_real)
-		wrong_arg();
+		wrong_arg("printf(\"string\",value)");
 	sprintf(string,stringof(hd),*realof(hd1));
 	result=new_string(string,strlen(string),""); if (error) return;
 	moveresult(st,result);
@@ -1618,9 +1655,9 @@ void msetkey (header *hd)
 	int n;
 	hd=getvalue(hd); if (error) return;
 	hd1=nextof(st); hd1=getvalue(hd1); if (error) return;
-	if (hd->type!=s_real || hd1->type!=s_string) wrong_arg();
+	if (hd->type!=s_real || hd1->type!=s_string) wrong_arg("setkey(F key number,\"str\")");
 	n=(int)(*realof(hd))-1; p=stringof(hd1);
-	if (n<0 || n>=10 || strlen(p)>63) wrong_arg();
+	if (n<0 || n>=10 || strlen(p)>63) wrong_arg("too long");
 	result=new_string(fktext[n],strlen(fktext[n]),"");
 	if (error) return;
 	strcpy(fktext[n],p);
@@ -1641,7 +1678,7 @@ void many (header *hd)
 	{	getmatrix(hd,&r,&c,&m);
         n=(LONG)2*(LONG)(c)*r;
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	for (i=0; i<n; i++)
 		if (*m++!=0.0) { res=1; break; }
 	result=new_real(res,""); if (error) return;
@@ -1652,7 +1689,7 @@ void mcd (header *hd)
 {	header *st=hd,*result;
 	char *path;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("path expected");
 	path=cd(stringof(hd));
 	result=new_string(path,strlen(path),"");
 	moveresult(st,result);
@@ -1662,7 +1699,7 @@ void mdir (header *hd)
 {	header *st=hd,*result;
 	char *name;
 	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_string) wrong_arg();
+	if (hd->type!=s_string) wrong_arg("path expected");
 	name=dir(stringof(hd));
 	if (name) result=new_string(name,strlen(name),"");
 	else result=new_string("",0,"");
@@ -1676,9 +1713,9 @@ void margs (header *hd)
 	int i,n;
 	size_t size;
 	hd=getvalue(hd);
-	if (hd->type!=s_real) wrong_arg();
+	if (hd->type!=s_real) wrong_arg("real value expected");
 	n=(int)*realof(hd);
-	if (n<1) wrong_arg();
+	if (n<1) wrong_arg("must be >= 1");
 	if (n>actargn)
 	{	newram=(char *)st; return;
 	}
@@ -1742,7 +1779,7 @@ void mflipx (header *hd)
 			mr+=2l*c;
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -1774,7 +1811,7 @@ void mflipy (header *hd)
 			m+=2l*c; mr-=2l*c;
 		}
 	}
-	else wrong_arg();
+	else wrong_arg("bad type");
 	moveresult(st,result);
 }
 
@@ -1792,7 +1829,7 @@ void mmatrix (header *hd)
 	if (hd->type==s_matrix)
 	{	getmatrix(hd,&r,&c,&m);
 		if (*m<0 || *m>INT_MAX || *(m+1)<0 || *(m+1)>INT_MAX)
-			wrong_arg();
+			wrong_arg("bad matrix size required");
 		r1=(int)*m; c1=(int)*(m+1);
 		if (hd1->type==s_real)
 		{	result=new_matrix(r1,c1,"");
@@ -1810,9 +1847,9 @@ void mmatrix (header *hd)
 			{	*mr++=x; *mr++=xi;
 			}
 		}
-		else wrong_arg();
+		else wrong_arg("2nd arg: real or complex value required");
 	}
-	else wrong_arg();
+	else wrong_arg("1st arg: 1x2 real vector required");
 	moveresult(st,result);
 }
 
