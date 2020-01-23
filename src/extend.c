@@ -114,7 +114,6 @@ void msign (header *hd);
 void mmouse (header *hd);
 void mtridiag (header *hd);
 void mcharpoly (header *hd);
-void mscompare (header *hd);
 void mfind (header *hd);
 void msetdiag (header *hd);
 void mzeros1 (header *hd);
@@ -266,7 +265,6 @@ builtintyp builtin_list[] = {
 	{"mouse",0,mmouse},
 	{"hb",1,mtridiag},
 	{"charpoly",1,mcharpoly},
-	{"stringcompare",2,mscompare},
 	{"find",2,mfind},
 	{"setdiag",3,msetdiag},
 	{"polyroot",2,mzeros1},

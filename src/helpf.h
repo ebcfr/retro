@@ -6,7 +6,6 @@ void mfft (header *hd);
 void mifft (header *hd);
 void mtridiag (header *hd);
 void mcharpoly (header *hd);
-void mscompare (header *hd);
 void mfind (header *hd);
 void mdiag2 (header *hd);
 void mband (header *hd);

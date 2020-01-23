@@ -443,7 +443,7 @@ void mgreater (header *hd)
 	if (hdv->type==s_string)
 	{   hd=getvalue(hd);
 		hd1=getvalue(nextof(st)); if (error) return;
-		if (hd1->type!=s_string) wrong_arg("2nd arg: string expected");
+		if (hd1->type!=s_string) wrong_arg("not the same type");
 		result=new_real(strcmp(stringof(hd),stringof(hd1))>0,"");
 		moveresult(st,result);
 	}
@@ -456,7 +456,16 @@ static void rless (double *x, double *y, double *z)
 }
 
 void mless (header *hd)
-{	spread2(rless,0,hd);
+{   header *st=hd,*hd1,*result,*hdv;
+	hdv=getvariable(hd);
+	if (hdv->type==s_string)
+	{   hd=getvalue(hd);
+		hd1=getvalue(nextof(st)); if (error) return;
+		if (hd1->type!=s_string) wrong_arg("not the same type");
+		result=new_real(strcmp(stringof(hd),stringof(hd1))<0,"");
+		moveresult(st,result);
+	}
+	else spread2(rless,0,hd);
 }
 
 static void rgreatereq (double *x, double *y, double *z)
@@ -465,7 +474,16 @@ static void rgreatereq (double *x, double *y, double *z)
 }
 
 void mgreatereq (header *hd)
-{	spread2(rgreatereq,0,hd);
+{   header *st=hd,*hd1,*result,*hdv;
+	hdv=getvariable(hd);
+	if (hdv->type==s_string)
+	{   hd=getvalue(hd);
+		hd1=getvalue(nextof(st)); if (error) return;
+		if (hd1->type!=s_string) wrong_arg("not the same type");
+		result=new_real(strcmp(stringof(hd),stringof(hd1))>=0,"");
+		moveresult(st,result);
+	}
+	else spread2(rgreatereq,0,hd);
 }
 
 static void rlesseq (double *x, double *y, double *z)
@@ -474,7 +492,16 @@ static void rlesseq (double *x, double *y, double *z)
 }
 
 void mlesseq (header *hd)
-{	spread2(rlesseq,0,hd);
+{   header *st=hd,*hd1,*result,*hdv;
+	hdv=getvariable(hd);
+	if (hdv->type==s_string)
+	{   hd=getvalue(hd);
+		hd1=getvalue(nextof(st)); if (error) return;
+		if (hd1->type!=s_string) wrong_arg("not the same type");
+		result=new_real(strcmp(stringof(hd),stringof(hd1))<=0,"");
+		moveresult(st,result);
+	}
+	else spread2(rlesseq,0,hd);
 }
 
 static void ror (double *x, double *y, double *z)
@@ -508,7 +535,16 @@ static void cequal (double *x, double *xi, double *y, double *yi, double *z,
 }
 
 void mequal (header *hd)
-{	spread2r(requal,cequal,hd);
+{   header *st=hd,*hd1,*result,*hdv;
+	hdv=getvariable(hd);
+	if (hdv->type==s_string)
+	{   hd=getvalue(hd);
+		hd1=getvalue(nextof(st)); if (error) return;
+		if (hd1->type!=s_string) wrong_arg("not the same type");
+		result=new_real(strcmp(stringof(hd),stringof(hd1))==0,"");
+		moveresult(st,result);
+	}
+	else spread2r(requal,cequal,hd);
 }
 
 static void runequal (double *x, double *y, double *z)
@@ -524,7 +560,16 @@ static void cunequal (double *x, double *xi, double *y, double *yi, double *z,
 }
 
 void munequal (header *hd)
-{	spread2(runequal,cunequal,hd);
+{   header *st=hd,*hd1,*result,*hdv;
+	hdv=getvariable(hd);
+	if (hdv->type==s_string)
+	{   hd=getvalue(hd);
+		hd1=getvalue(nextof(st)); if (error) return;
+		if (hd1->type!=s_string) wrong_arg("not the same type");
+		result=new_real(strcmp(stringof(hd),stringof(hd1))!=0,"");
+		moveresult(st,result);
+	}
+	else spread2(runequal,cunequal,hd);
 }
 
 static void raboutequal (double *x, double *y, double *z)

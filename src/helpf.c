@@ -192,19 +192,6 @@ void mcharpoly (header *hd)
 	moveresult(st,result1);
 }
 
-void mscompare (header *hd)
-{	header *st=hd,*hd1,*result;
-	hd=getvalue(hd);
-	hd1=getvalue(nextof(st));
-	if (error) return;
-	if (hd->type==s_string && hd1->type==s_string)
-	{	result=new_real(strcmp(stringof(hd),stringof(hd1)),"");
-		if (error) return;
-	}
-	else wrong_arg("strings expected");
-	moveresult(st,result);
-}
-
 void mfind (header *hd)
 {	header *st=hd,*hd1,*result;
 	double *m,*m1,*mr;
