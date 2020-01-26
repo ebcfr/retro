@@ -1,4 +1,4 @@
-/* Primitive user interface for EULER.
+/* Primitive user interface for Retro.
 Missing are:
 	- graphics
 	- single keystrokes (e.g. for tracing)
@@ -731,7 +731,7 @@ static void term_restore(void)
 }
 #endif
 
-static char titel[]="This is EULER, Version 3.04 compiled %s.\n\n"
+static char titel[]="This is Retro, Version 3.04 compiled %s.\n\n"
 	"Type help(Return) for help.\n"
 	"Enter command: (%ld Bytes free.)\n\n";
 
@@ -802,7 +802,7 @@ Initialize memory and call main_loop
 				break;
 			default :
 			error :
-				fprintf(stderr, "Use: euler [-s KB] [-q] files\n");
+				fprintf(stderr, "Use: retro [-s KB] [-q] files\n");
 				return 1;
 		}
 	}

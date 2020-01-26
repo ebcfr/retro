@@ -263,13 +263,13 @@ Window open_window (int x, int y, int width, int height, int flag)
 	XDefineCursor(display,window,cursor);
 
 	/* class hints */
-	/* classhints.res_name="Euler";
-	classhints.res_class="Euler";
+	/* classhints.res_name="Retro";
+	classhints.res_class="Retro";
 	XSetClassHint(display,window,classhints); */
 
 	/* Window and Icon name */
-	XStoreName(display,window,"Euler");
-	XSetIconName(display,window,"Euler");
+	XStoreName(display,window,"Retro");
+	XSetIconName(display,window,"Retro");
 
 	/* size hints */
 	sizehints.flags=PMinSize;
@@ -1420,13 +1420,13 @@ static int path_is_dir(char* path)
 
 /************ main *******************/
 
-char titel[]="This is EULER, Version 3.04 compiled %s.\n\n"
+char titel[]="This is Retro, Version 1.00 compiled %s.\n\n"
 	"Type help(Return) for help.\n"
 	"Enter command: (%ld Bytes free.)\n\n";
 
 void usage (void)
 {
-	fprintf(stderr,"euler [-f FONT] [-g FONT] [-s KBYTES]\n"
+	fprintf(stderr,"xretro [-f FONT] [-g FONT] [-s KBYTES]\n"
 		" [-geom GEOMETRY] [-d DISPLAY] [-0..15 COLOR] files\n");
 }
 

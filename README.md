@@ -31,3 +31,4 @@ a microcontroller.
 * Retro [manual](doc/retro.md)
 * [Examples](doc/examples.md)
 * [Extending](doc/extend.md) retro with your own functions
+* for the [insiders](doc/insider.md)

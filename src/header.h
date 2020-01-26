@@ -1,5 +1,5 @@
-#ifndef __HEADER_H__
-#define __HEDAER_H__
+#ifndef _HEADER_H_
+#define _HEADER_H_
 
 #include "sysdep.h"
 
@@ -152,6 +152,7 @@ int command (void);
 
 /* express.c */
 
+/*
 header *map2 (void f(double *,double *,double *),
 	void fc(double *, double *, double *, double *, double *, double *),
 	header *hd, header *hd1);
@@ -161,6 +162,7 @@ header *map1 (void f(double *, double *),
 header *map1r (void f(double *, double *), 
 	void fc(double *, double *, double *),
 	header *hd);
+*/
 header *getvalue (header *);
 header *getvariable (header *);
 header *scan(void);

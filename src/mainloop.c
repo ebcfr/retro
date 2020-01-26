@@ -2215,7 +2215,7 @@ commandtyp command_list[] = {
 };
 
 void print_commands (void)
-{	int i, c, cend, lw=linelength/16;
+{	int i, c, cend, lw=linelength/MAXNAME;
 	
 	for (i=0; i<command_count; i+=lw) {
 		cend = i+lw;
@@ -2242,7 +2242,7 @@ void sort_command (void)
 
 commandtyp *preview_command (size_t *l)
 {	commandtyp h;
-	char name[16],*a,*n;
+	char name[MAXNAME],*a,*n;
 	*l=0;
 	a=next; n=name;
 	while (*l<15 && isalpha(*a)) { *n++=*a++; *l+=1; }

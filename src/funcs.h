@@ -27,6 +27,7 @@ void mcomplex (header *hd);
 void mpower (header *hd);
 
 int exec_builtin (char *name, int nargs, header *hd);
+builtintyp *find_builtin (char *name);
 void print_builtin (void);
 
 void mgreater (header *hd);

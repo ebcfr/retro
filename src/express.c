@@ -7,6 +7,7 @@
 #include "header.h"
 #include "sysdep.h"
 #include "funcs.h"
+#include "spread.h"
 
 void scan_summe (void);
 
@@ -35,7 +36,7 @@ header *getvalue (header *hd)
 			return mhd;
 		}
 		output1("Variable %s not defined!\n",old->name);
-		error=10; return new_string("Fehler",6,"");
+		error=10; return NULL;
 	}
 	if (hd->type==s_submatrix)
 	{	mhd=submrefof(hd); d=submdimsof(hd);
@@ -121,211 +122,6 @@ void moveresult1 (header *stack, header *result)
 	size=newram-(char *)result;
 	memmove((char *)stack,(char *)result,size);
 	newram=(char *)stack+size;
-}
-
-#define isreal(hd) (((hd)->type==s_real || (hd)->type==s_matrix))
-#define iscomplex(hd) (((hd)->type==s_complex || (hd)->type==s_cmatrix))
-
-header * map2 (void f (double *, double *, double *),
-	void fc (double *, double *, double *, double *, double *, double *),
-	header *hd1, header *hd2)
-/**** map2
-    calculate the result of a binary operator applied to hd1 and
-    hd2, selecting the right operator (in R or C). If hd1 or hd2 
-    are matrices, the operator is applied elementwise
- ****/
-{	int t1,t2,t,r1,c1,r2,c2,rr,cr,r,c; /* means real */
-	double *m1,*m2,*m,x,y,null=0.0,*l1,*l2;
-	header *result;
-	if (isreal(hd1)) t1=0;
-	else if (iscomplex(hd1)) t1=1;
-	else
-	{	output("Illegal Argument.\n"); error=1; return 0;
-	}
-	if (isreal(hd2)) t2=0;
-	else if (iscomplex(hd2)) t2=1;
-	else
-	{	output("Illegal Argument.\n"); error=1; return 0;
-	}
-	if ( (t1==0 && t2==0 && !f) ||
-        (!fc && (t1==1 || t2==1)) )
-	{	output("Cannot evaluate this operation.\n");
-		error=1; return 0;
-	}
-	getmatrix(hd1,&r1,&c1,&m1); l1=m1;
-	getmatrix(hd2,&r2,&c2,&m2); l2=m2;
-	if ((r1>1 && r2>1 && (r1!=r2)) ||
-	 (c1>1 && c2>1 && (c1!=c2)))
-	{   output("Cannot combine these matrices!\n");
-		error=1; return 0;
-	}
-	rr=r1; if (rr<r2) rr=r2;
-	cr=c1; if (cr<c2) cr=c2;
-	t=t1; if (t2!=0) t=t2;
-	switch (t)
-	{	case 0 :
-			if (rr==1 && cr==1)
-			{	f(m1,m2,&x);
-				return new_real(x,"");
-			}
-			result=new_matrix(rr,cr,"");
-			if (error) return 0;
-			m=matrixof(result);
-			for (r=0; r<rr; r++)
-			{	for (c=0; c<cr; c++)
-				{	f(m1,m2,m);
-					if (error) break;
-					if (c1>1) m1++;
-					if (c2>1) m2++;
-					m++;
-				}
-				if (r1==1) m1=l1;
-				else if (c1==1) m1++;
-				if (r2==1) m2=l2;
-				else if (c2==1) m2++;
-			}
-			return result;
-		case 1 :
-			if (rr==1 && cr==1)
-			{	if (t1==0) fc(m1,&null,m2,m2+1,&x,&y);
-				else if (t2==0) fc(m1,m1+1,m2,&null,&x,&y);
-				else fc(m1,m1+1,m2,m2+1,&x,&y);
-				return new_complex(x,y,"");
-			}
-			result=new_cmatrix(rr,cr,"");
-			if (error) return 0;
-			m=matrixof(result);
-			for (r=0; r<rr; r++)
-			{	for (c=0; c<cr; c++)
-				{	if (t1==0)
-					{	fc(m1,&null,m2,m2+1,m,m+1);
-						if (c1>1) m1++;
-						if (c2>1) m2+=2;
-					}
-					else if (t2==0)
-					{	fc(m1,m1+1,m2,&null,m,m+1);
-						if (c1>1) m1+=2;
-						if (c2>1) m2++;
-					}
-					else
-					{	fc(m1,m1+1,m2,m2+1,m,m+1);
-						if (c1>1) m1+=2;
-						if (c2>1) m2+=2;
-					}
-					if (error) break;
-					m+=2;
-				}
-				if (r1==1) m1=l1;
-				else if (c1==1)
-				{	if (t1==0) m1++;
-					else m1+=2;
-				}
-				if (r2==1) m2=l2;
-				else if (c2==1)
-				{	if (t2==0) m2++;
-					else m2+=2;
-				}
-			}
-			return result;
-	}
-	return 0;
-}
-
-
-header *map1 (void f(double *, double *), 
-	void fc(double *, double *, double *, double *),
-	header *hd)
-/***** map1
-	do the function elementwise to the value.
-	the value and the result may be real or complex!
-******/
-{	double x,y;
-	dims *d;
-	header *hd1;
-	double *m,*m1;
-	int i,n;
-	if (hd->type==s_real)
-	{	f(realof(hd),&x);
-		return new_real(x,"");
-	}
-	else if (hd->type==s_matrix)
-	{	d=dimsof(hd);
-		hd1=new_matrix(d->r,d->c,"");
-		if (error) return new_string("Fehler",6,"");
-		m=matrixof(hd);
-		m1=matrixof(hd1);
-		n=d->c*d->r;
-		for (i=0; i<n; i++)
-		{	f(m,m1); m++; m1++;
-		}
-		return hd1;
-	}
-	else if (fc && hd->type==s_complex)
-	{	fc(realof(hd),imagof(hd),&x,&y);
-		return new_complex(x,y,"");
-	}
-	else if (fc && hd->type==s_cmatrix)
-	{	d=dimsof(hd);
-		hd1=new_cmatrix(d->r,d->c,"");
-		if (error) return new_string("Fehler",6,"");
-		m=matrixof(hd);
-		m1=matrixof(hd1);
-		n=d->c*d->r;
-		for (i=0; i<n; i++)
-		{	fc(m,m+1,m1,m1+1); m+=2; m1+=2;
-		}
-		return hd1;
-	}
-	output("Illegal operation\n"); error=3;
-	return new_string("Fehler",6,"");
-}
-
-header *map1r (void f(double *, double *), 
-	void fc(double *, double *, double *),
-	header *hd)
-/***** map
-	do the function elementwise to the value.
-	the value may be real or complex! the result is always real.
-******/
-{	double x;
-	dims *d;
-	header *hd1;
-	double *m,*m1;
-	int i,n;
-	if (hd->type==s_real)
-	{	f(realof(hd),&x);
-		return new_real(x,"");
-	}
-	else if (hd->type==s_matrix)
-	{	d=dimsof(hd);
-		hd1=new_matrix(d->r,d->c,"");
-		if (error) return new_string("Fehler",6,"");
-		m=matrixof(hd);
-		m1=matrixof(hd1);
-		n=d->c*d->r;
-		for (i=0; i<n; i++)
-		{	f(m,m1); m++; m1++;
-		}
-		return hd1;
-	}
-	else if (fc && hd->type==s_complex)
-	{	fc(realof(hd),imagof(hd),&x);
-		return new_real(x,"");
-	}
-	else if (fc && hd->type==s_cmatrix)
-	{	d=dimsof(hd);
-		hd1=new_matrix(d->r,d->c,"");
-		if (error) return new_string("Fehler",6,"");
-		m=matrixof(hd);
-		m1=matrixof(hd1);
-		n=d->c*d->r;
-		for (i=0; i<n; i++)
-		{	fc(m,m+1,m1); m+=2; m1++;
-		}
-		return hd1;
-	}
-	output("Illegal operation\n"); error=3;
-	return new_string("Fehler",6,"");
 }
 
 void real_add (double *x, double *y, double *z)
@@ -801,7 +597,7 @@ int scan_arguments (void)
 			hd=nextof(hd);
 		}
 		if (count>=10)
-		{	output("To many arguments!\n"); error=56; return 0; }
+		{	output("Too many arguments!\n"); error=56; return 0; }
 		if (*next!=',') break;
 		next++;
 	}
@@ -936,7 +732,7 @@ void scan_elementary (void)
 {	double x;
 	int n,nargs=0,hadargs=0;
 	header *hd=(header *)newram,*var;
-	char name[16],*s;
+	char name[MAXNAME],*s;
 	scan_space();
 	if ((*next=='.' && isdigit(*(next+1))) || isdigit(*next))
 	{	sscanf(next,"%lf%n",&x,&n);

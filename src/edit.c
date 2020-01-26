@@ -45,7 +45,7 @@ static void push_in_history (char *s)
 static void prompt (void)
 {	if (!outputing) gprint("\n>");
 	if (!udf) output(">");
-	else output("udf>");
+	else output("$");
 }
 
 static void left (int n)

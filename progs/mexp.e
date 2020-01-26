@@ -22,3 +22,21 @@ eigenvalues(A)
 mexp(A)
 "mexp1(A)"
 mexp1(A)
+
+function f(a,b=7,c)
+  return a+2*b+c;
+endfunction
+
+f(5,,11)
+
+f(5,c=11)
+
+f(c=11,a=5)
+
+{x,y,z}={1,2,3}
+
+function g(a)
+  return {2*a,3*a,4*a}
+endfunction
+
+{x,y,z}=g(1)

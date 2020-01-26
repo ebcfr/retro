@@ -1,7 +1,7 @@
 ##############################################################################################
 
 XPROJ=xretro
-TPROJ=retro-cli
+TPROJ=retro
 
 INSTALL_DIR = /usr/local
 
@@ -29,7 +29,7 @@ XLIBS = -lX11
 # C source files here
 SRC  = src/edit.c src/extend.c src/graphics.c src/mainloop.c \
        src/polynom.c src/express.c src/funcs.c \
-       src/helpf.c src/matheh.c
+       src/helpf.c src/matheh.c src/spread.c
 
 XSRC = src/sysdepx.c
 
