@@ -152,17 +152,6 @@ int command (void);
 
 /* express.c */
 
-/*
-header *map2 (void f(double *,double *,double *),
-	void fc(double *, double *, double *, double *, double *, double *),
-	header *hd, header *hd1);
-header *map1 (void f(double *, double *), 
-	void fc(double *, double *, double *, double *),
-	header *hd);
-header *map1r (void f(double *, double *), 
-	void fc(double *, double *, double *),
-	header *hd);
-*/
 header *getvalue (header *);
 header *getvariable (header *);
 header *scan(void);
@@ -170,11 +159,12 @@ header *scan_value(void);
 void moveresult (header *stack, header *result);
 void moveresult1 (header *stack, header *result);
 void copy_complex (double *, double *);
+#if 0
 void complex_divide (double *, double *, double *, double *, double *,
 	double *);
 void complex_multiply (double *, double *, double *, double *, double *,
 	double *);
-
+#endif
 void interpret_udf (header *var, header *args, int nargs);
 
 int scan_arguments (void);

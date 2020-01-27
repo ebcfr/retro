@@ -209,14 +209,15 @@ There is also a function "spread2r".
 THE GENERAL CASE
 ----------------
 
-This is more difficult. First of all you need to collect all
+This is more difficult. First of all you need to collect all the
 parameters. Since some of them may be references, you need to compute
 the values of these references. This is done by the following code
 
 ``` C
 void myfunction (header *hd)
-{	header *result,*hd1=hd,*hd2,*hd3,...;
-	hd2=nextof(hd1); hd3=nextof(hd2); ...
+{	header *result,*st=hd,*hd2,*hd3,...;
+	hd1=next_param(hd); if (!hd1) return;
+	hd2=next_param(hd1); if (!hd2) return;hd3=nextof(hd2); ...
 	hd1=getvalue(hd1); hd2=getvalue(hd2); ...
 	if (error) return;
 	... /* computations */

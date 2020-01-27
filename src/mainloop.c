@@ -1174,15 +1174,6 @@ header *assign (header *var, header *value)
 	return var;
 }
 
-header *next_param (header *hd)
-/***** next_param
-	get the next value on stack, if there is one
-*****/
-{	hd=(header *)((char *)hd+hd->size);
-	if ((char *)hd>=newram) return 0;
-	else return hd;
-}
-
 /********************* interpreter **************************/
 
 void double_out (double x)

@@ -2,8 +2,8 @@
 
 A numerical matrix environment with low resource requirements
 
-The project start from the 1993 program Euler version 3.04 that run,
-at the time, on an Atari ST (I used it along long time ago!), but supported an X11 interface.
+The project started from the 1993 program Euler version 3.04 that run,
+at the time, on an Atari ST (I used it a long long time ago!), but supported an X11 interface.
 
 Dr Grothmann has developped Euler until now and made it become
 

@@ -27,9 +27,8 @@ DLIBS = -lm
 XLIBS = -lX11
 
 # C source files here
-SRC  = src/edit.c src/extend.c src/graphics.c src/mainloop.c \
-       src/polynom.c src/express.c src/funcs.c \
-       src/helpf.c src/matheh.c src/spread.c
+SRC  = src/edit.c src/express.c src/extend.c src/funcs.c \
+       src/graphics.c src/mainloop.c src/matheh.c src/spread.c
 
 XSRC = src/sysdepx.c
 

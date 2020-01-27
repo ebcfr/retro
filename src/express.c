@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -7,7 +8,6 @@
 #include "header.h"
 #include "sysdep.h"
 #include "funcs.h"
-#include "spread.h"
 
 void scan_summe (void);
 
@@ -20,24 +20,35 @@ header *running;
 header *getvalue (header *hd)
 /***** getvalue
 	get an actual value of a reference.
+    references to functions with no arguments (e.g. pi) should be
+    executed
+    submatrices should be resolved to matrices
 *****/
 {	header *old=hd,*mhd,*result;
 	dims *d;
 	double *m,*mr,*m1,*m2,*m3;
 	int r,c,*rind,*cind,*cind1,i,j;
+	
 	while (hd && hd->type==s_reference)
 		hd=referenceof(hd);
-	if (!hd)
-	{	mhd=(header *)newram;
+		
+	if (!hd) 					
+	{	/* points nowhere, try to see if it's a function
+		   (builtin or udf) without parameter */
+		mhd=(header *)newram;
 		if (exec_builtin(old->name,0,mhd)) return mhd;
 		hd=searchudf(old->name);
 		if (hd)
 		{	interpret_udf(hd,mhd,0);
 			return mhd;
 		}
+		/* no variable, no function, so error */
 		output1("Variable %s not defined!\n",old->name);
 		error=10; return NULL;
 	}
+	
+	/* there is a variable
+	   resolve submatrices to matrices */
 	if (hd->type==s_submatrix)
 	{	mhd=submrefof(hd); d=submdimsof(hd);
 		rind=rowsof(hd); cind=colsof(hd);
@@ -81,12 +92,14 @@ header *getvalue (header *hd)
 		}
 		return result;
 	}
+	/* resolve 1x1 matrices to scalars */
 	if (hd->type==s_matrix && dimsof(hd)->c==1 && dimsof(hd)->r==1)
 	{	return new_real(*matrixof(hd),"");
 	}
 	if (hd->type==s_cmatrix && dimsof(hd)->c==1 && dimsof(hd)->r==1)
 	{	return new_complex(*matrixof(hd),*(matrixof(hd)+1),"");
 	}
+	/* just return the variable */
 	return hd;
 }
 
@@ -103,6 +116,29 @@ header *getvariable (header *hd)
 	}
 	return hd;
 }
+
+header *next_param (header *hd)
+/***** next_param
+	get the next value on stack, if there is one
+*****/
+{	hd=(header *)((char *)hd+hd->size);
+	if ((char *)hd>=newram) return 0;
+	else return hd;
+}
+
+#if 0
+header* getparam(header* hd)
+/***** getparam
+	get the next parameter on the stack, if there is one,
+	dereference up to the value.
+*****/
+{
+	hd=nextof(hd);
+	if ((char *)hd>=newram) return NULL; /* nothing above top of stack */
+	/* get the actual value */
+	hd=getvalue(hd);
+}
+#endif
 
 void moveresult (header *stack, header *result)
 /***** moveresult
@@ -122,250 +158,6 @@ void moveresult1 (header *stack, header *result)
 	size=newram-(char *)result;
 	memmove((char *)stack,(char *)result,size);
 	newram=(char *)stack+size;
-}
-
-void real_add (double *x, double *y, double *z)
-{	*z=*x+*y;
-}
-
-void complex_add (double *x, double *xi, double *y, double *yi,
-	double *z, double *zi)
-{	*z=*x+*y;
-	*zi=*xi+*yi;
-}
-
-void add (header *hd, header *hd1)
-/***** add
-	add the values.
-*****/
-{	header *result,*st=hd;
-	hd=getvalue(hd); hd1=getvalue(hd1);
-	if (error) return;
-	result=map2(real_add,complex_add,hd,hd1);
-	if (!error) moveresult(st,result);
-}
-
-void real_subtract (double *x, double *y, double *z)
-{	*z=*x-*y;
-}
-
-void complex_subtract (double *x, double *xi, double *y, double *yi,
-	double *z, double *zi)
-{	*z=*x-*y;
-	*zi=*xi-*yi;
-}
-
-void subtract (header *hd, header *hd1)
-/***** add
-	add the values.
-*****/
-{	header *result,*st=hd;
-	hd=getvalue(hd); hd1=getvalue(hd1);
-	if (error) return;
-	result=map2(real_subtract,complex_subtract,hd,hd1);
-	if (!error) moveresult(st,result);
-}
-
-void real_multiply (double *x, double *y, double *z)
-{	*z=*x*(*y);
-}
-
-void complex_multiply (double *x, double *xi, double *y, double *yi,
-	double *z, double *zi)
-{	*z=*x * *y - *xi * *yi;
-	*zi=*x * *yi + *xi * *y;
-}
-
-void dotmultiply (header *hd, header *hd1)
-/***** add
-	add the values.
-*****/
-{	header *result,*st=hd;
-	hd=getvalue(hd); hd1=getvalue(hd1);
-	if (error) return;
-	result=map2(real_multiply,complex_multiply,hd,hd1);
-	if (!error) moveresult(st,result);
-}
-
-void real_divide (double *x, double *y, double *z)
-{	
-#ifdef FLOAT_TEST
-	if (*y==0.0) { *y=1e-10; error=1; }
-#endif
-	*z=*x/(*y);
-}
-
-void complex_divide (double *x, double *xi, double *y, double *yi,
-	double *z, double *zi)
-{	double r;
-	r=*y * *y + *yi * *yi;
-#ifdef FLOAT_TEST
-	if (r==0) { r=1e-10; error=1; }
-#endif
-	*z=(*x * *y + *xi * *yi)/r;
-	*zi=(*xi * *y - *x * *yi)/r;
-}
-
-void dotdivide (header *hd, header *hd1)
-/***** add
-	add the values.
-*****/
-{	header *result,*st=hd;
-	hd=getvalue(hd); hd1=getvalue(hd1);
-	if (error) return;
-	result=map2(real_divide,complex_divide,hd,hd1);
-	if (!error) moveresult(st,result);
-}
-
-void cscalp (double *s, double *si, double *x, double *xi,
-	double *y, double *yi)
-{	*s += *x * *y - *xi * *yi;
-	*si += *x * *yi + *xi * *y;
-}
-
-void ccopy (double *y, double *x, double *xi)
-{	*y++=*x; *y=*xi;
-}
-
-void multiply (header *hd, header *hd1)
-/***** multiply
-	matrix multiplication.
-*****/
-{	header *result,*st=hd;
-	dims *d,*d1;
-	double *m,*m1,*m2,*mm1,*mm2,x,y,null=0.0;
-	int i,j,c,r,k;
-	hd=getvalue(hd); hd1=getvalue(hd1);
-	if (error) return;
-	if (hd->type==s_matrix && hd1->type==s_matrix)
-	{	d=dimsof(hd);
-		d1=dimsof(hd1);
-		if (d->c != d1->r)
-		{	error=8; output("Cannot multiply these!\n");
-			return;
-		}
-		r=d->r; c=d1->c;
-		result=new_matrix(r,c,"");
-		if (error) return;
-		m=matrixof(result);
-		m1=matrixof(hd);
-		m2=matrixof(hd1);
-		for (i=0; i<r; i++)
-			for (j=0; j<c; j++)
-			{	mm1=mat(m1,d->c,i,0); mm2=m2+j;
-				x=0.0;
-				for (k=0; k<d->c; k++)
-				{	x+=(*mm1)*(*mm2);
-					mm1++; mm2+=d1->c;
-				}
-				*mat(m,c,i,j)=x;
-			}
-		moveresult(st,result);
-		return;
-	}
-	if (hd->type==s_matrix && hd1->type==s_cmatrix)
-	{	d=dimsof(hd);
-		d1=dimsof(hd1);
-		if (d->c != d1->r)
-		{	error=8; output("Cannot multiply these!\n");
-			return;
-		}
-		r=d->r; c=d1->c;
-		result=new_cmatrix(r,c,"");
-		if (error) return;
-		m=matrixof(result);
-		m1=matrixof(hd);
-		m2=matrixof(hd1);
-		for (i=0; i<r; i++)
-			for (j=0; j<c; j++)
-            {   mm1=mat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
-				x=0.0; y=0.0;
-				for (k=0; k<d->c; k++)
-				{	cscalp(&x,&y,mm1,&null,mm2,mm2+1);
-					mm1++; mm2+=2*d1->c;
-				}
-				ccopy(cmat(m,c,i,j),&x,&y);
-			}
-		moveresult(st,result);
-		return;
-	}
-	if (hd->type==s_cmatrix && hd1->type==s_matrix)
-	{	d=dimsof(hd);
-		d1=dimsof(hd1);
-		if (d->c != d1->r)
-		{	error=8; output("Cannot multiply these!\n");
-			return;
-		}
-		r=d->r; c=d1->c;
-		result=new_cmatrix(r,c,"");
-		if (error) return;
-		m=matrixof(result);
-		m1=matrixof(hd);
-		m2=matrixof(hd1);
-		for (i=0; i<r; i++)
-			for (j=0; j<c; j++)
-			{	mm1=cmat(m1,d->c,i,0); mm2=m2+j;
-				x=0.0; y=0.0;
-				for (k=0; k<d->c; k++)
-				{	cscalp(&x,&y,mm1,mm1+1,mm2,&null);
-					mm1+=2; mm2+=d1->c;
-				}
-				ccopy(cmat(m,c,i,j),&x,&y);
-			}
-		moveresult(st,result);
-		return;
-	}
-	if (hd->type==s_cmatrix && hd1->type==s_cmatrix)
-	{	d=dimsof(hd);
-		d1=dimsof(hd1);
-		if (d->c != d1->r)
-		{	error=8; output("Cannot multiply these!\n");
-			return;
-		}
-		r=d->r; c=d1->c;
-		result=new_cmatrix(r,c,"");
-		if (error) return;
-		m=matrixof(result);
-		m1=matrixof(hd);
-		m2=matrixof(hd1);
-		for (i=0; i<r; i++)
-			for (j=0; j<c; j++)
-            {   mm1=cmat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
-				x=0.0; y=0.0;
-				for (k=0; k<d->c; k++)
-				{	cscalp(&x,&y,mm1,mm1+1,mm2,mm2+1);
-					mm1+=2; mm2+=2*d1->c;
-				}
-				ccopy(cmat(m,c,i,j),&x,&y);
-			}
-		moveresult(st,result);
-		return;
-	}
-	else dotmultiply(st,nextof(st));
-}
-
-void divide (header *hd, header *hd1)
-{	dotdivide(hd,hd1);
-}
-
-void real_invert (double *x, double *y)
-{	*y= -*x;
-}
-
-void complex_invert (double *x, double *xi, double *y, double *yi)
-{	*y= -*x;
-	*yi= -*xi;
-}
-
-void invert (header *hd)
-/***** invert
-	compute -matrix.
-*****/
-{	header *result,*st=hd;
-	hd=getvalue(hd);
-	if (error) return;
-	result=map1(real_invert,complex_invert,hd);
-	if (!error) moveresult(st,result);
 }
 
 void get_element (int nargs, header *var, header *hd)
@@ -636,7 +428,7 @@ void scan_matrix (void)
 			if ((char *)(ms+count*(r+1))>=ramend)
 			{	output("Memory overflow!\n"); error=18; return;
 			}
-			if (count>c) /* this column is to long */
+			if (count>c) /* this column is too long */
 			{	if (r>0) /* expand matrix */
 				{	for (j=count-1; j>=0; j--)
 					{	if (complex) copy_complex(cmat(ms,count,r,j),

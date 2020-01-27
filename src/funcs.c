@@ -10,18 +10,11 @@
 #include "funcs.h"
 #include "matheh.h"
 #include "polynom.h"
-#include "helpf.h"
-#include "graphics.h"
+//#include "helpf.h"
+//#include "graphics.h"
 #include "spread.h"
 
 //#define wrong_arg() { error=26; output("Wrong argument\n"); return; }
-
-double (*func) (double);
-
-void funceval (double *x, double *y)
-/* evaluates the function stored in func with pointers. */
-{	*y=func(*x);
-}
 
 /****************************************************************
  *	const
@@ -421,6 +414,254 @@ void mrestore (header *hd)
 	endlocal=ramstart+p.endlocal;
 	newram=ramstart+p.newram;
 }
+
+/****************************************************************
+ *	basic operators
+ ****************************************************************/
+static void real_add (double *x, double *y, double *z)
+{	*z=*x+*y;
+}
+
+static void complex_add (double *x, double *xi, double *y, double *yi,
+	double *z, double *zi)
+{	*z=*x+*y;
+	*zi=*xi+*yi;
+}
+
+void add (header *hd, header *hd1)
+/***** add
+	add the values.
+*****/
+{	header *result,*st=hd;
+	hd=getvalue(hd); hd1=getvalue(hd1);
+	if (error) return;
+	result=map2(real_add,complex_add,hd,hd1);
+	if (!error) moveresult(st,result);
+}
+
+static void real_subtract (double *x, double *y, double *z)
+{	*z=*x-*y;
+}
+
+static void complex_subtract (double *x, double *xi, double *y, double *yi,
+	double *z, double *zi)
+{	*z=*x-*y;
+	*zi=*xi-*yi;
+}
+
+void subtract (header *hd, header *hd1)
+/***** add
+	add the values.
+*****/
+{	header *result,*st=hd;
+	hd=getvalue(hd); hd1=getvalue(hd1);
+	if (error) return;
+	result=map2(real_subtract,complex_subtract,hd,hd1);
+	if (!error) moveresult(st,result);
+}
+
+static void real_multiply (double *x, double *y, double *z)
+{	*z=*x*(*y);
+}
+
+void complex_multiply (double *x, double *xi, double *y, double *yi,
+	double *z, double *zi)
+{	*z=*x * *y - *xi * *yi;
+	*zi=*x * *yi + *xi * *y;
+}
+
+void dotmultiply (header *hd, header *hd1)
+/***** add
+	add the values.
+*****/
+{	header *result,*st=hd;
+	hd=getvalue(hd); hd1=getvalue(hd1);
+	if (error) return;
+	result=map2(real_multiply,complex_multiply,hd,hd1);
+	if (!error) moveresult(st,result);
+}
+
+static void real_divide (double *x, double *y, double *z)
+{	
+#ifdef FLOAT_TEST
+	if (*y==0.0) { *y=1e-10; error=1; }
+#endif
+	*z=*x/(*y);
+}
+
+void complex_divide (double *x, double *xi, double *y, double *yi,
+	double *z, double *zi)
+{	double r;
+	r=*y * *y + *yi * *yi;
+#ifdef FLOAT_TEST
+	if (r==0) { r=1e-10; error=1; }
+#endif
+	*z=(*x * *y + *xi * *yi)/r;
+	*zi=(*xi * *y - *x * *yi)/r;
+}
+
+void dotdivide (header *hd, header *hd1)
+/***** add
+	add the values.
+*****/
+{	header *result,*st=hd;
+	hd=getvalue(hd); hd1=getvalue(hd1);
+	if (error) return;
+	result=map2(real_divide,complex_divide,hd,hd1);
+	if (!error) moveresult(st,result);
+}
+
+void cscalp (double *s, double *si, double *x, double *xi,
+	double *y, double *yi)
+{	*s += *x * *y - *xi * *yi;
+	*si += *x * *yi + *xi * *y;
+}
+
+void ccopy (double *y, double *x, double *xi)
+{	*y++=*x; *y=*xi;
+}
+
+void multiply (header *hd, header *hd1)
+/***** multiply
+	matrix multiplication.
+*****/
+{	header *result,*st=hd;
+	dims *d,*d1;
+	double *m,*m1,*m2,*mm1,*mm2,x,y,null=0.0;
+	int i,j,c,r,k;
+	hd=getvalue(hd); hd1=getvalue(hd1);
+	if (error) return;
+	if (hd->type==s_matrix && hd1->type==s_matrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_matrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+			{	mm1=mat(m1,d->c,i,0); mm2=m2+j;
+				x=0.0;
+				for (k=0; k<d->c; k++)
+				{	x+=(*mm1)*(*mm2);
+					mm1++; mm2+=d1->c;
+				}
+				*mat(m,c,i,j)=x;
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_matrix && hd1->type==s_cmatrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+            {   mm1=mat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	cscalp(&x,&y,mm1,&null,mm2,mm2+1);
+					mm1++; mm2+=2*d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_cmatrix && hd1->type==s_matrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+			{	mm1=cmat(m1,d->c,i,0); mm2=m2+j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	cscalp(&x,&y,mm1,mm1+1,mm2,&null);
+					mm1+=2; mm2+=d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_cmatrix && hd1->type==s_cmatrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+            {   mm1=cmat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	cscalp(&x,&y,mm1,mm1+1,mm2,mm2+1);
+					mm1+=2; mm2+=2*d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	else dotmultiply(st,nextof(st));
+}
+
+void divide (header *hd, header *hd1)
+{	dotdivide(hd,hd1);
+}
+
+static void real_invert (double *x, double *y)
+{	*y= -*x;
+}
+
+static void complex_invert (double *x, double *xi, double *y, double *yi)
+{	*y= -*x;
+	*yi= -*xi;
+}
+
+void invert (header *hd)
+/***** invert
+	compute -matrix.
+*****/
+{	header *result,*st=hd;
+	hd=getvalue(hd);
+	if (error) return;
+	result=map1(real_invert,complex_invert,hd);
+	if (!error) moveresult(st,result);
+}
+
 
 /****************************************************************
  *	compare and boolean operator
@@ -957,7 +1198,7 @@ void marg (header *hd)
 }
 
 /****************************************************************
- *	math solvers
+ *	matrix ops
  ****************************************************************/
 /************************* object handling **********************/
 void msum (header *hd)
@@ -1951,8 +2192,1244 @@ void mmin1 (header *hd)
 	moveresult(st,result);
 }
 
-/*************** execute builtin functions ***********/
+void minmax (double *x, LONG n, double *min, double *max, 
+	int *imin, int *imax)
+/***** minmax
+	compute the total minimum and maximum of n double numbers.
+*****/
+{	LONG i;
+	if (n==0)
+	{	*min=0; *max=0; *imin=0; *imax=0; return; }
+	*min=*x; *max=*x; *imin=0; *imax=0; x++;
+	for (i=1; i<n; i++)
+	{	if (*x<*min) { *min=*x; *imin=(int)i; }
+		else if (*x>*max) { *max=*x; *imax=(int)i; }
+		x++;
+	}
+}
 
+void transpose (header *hd)
+/***** transpose 
+	transpose a matrix
+*****/
+{	header *hd1,*st=hd;
+	double *m,*m1,*mh;
+	int c,r,i,j;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_matrix)
+	{	getmatrix(hd,&r,&c,&m);
+		hd1=new_matrix(c,r,""); if (error) return;
+		m1=matrixof(hd1);
+		for (i=0; i<r; i++)
+		{	mh=m1+i;
+			for (j=0; j<c; j++)
+			{	*mh=*m++; mh+=r;
+			}
+		}
+	}
+	else if (hd->type==s_cmatrix)
+	{	getmatrix(hd,&r,&c,&m);
+		hd1=new_cmatrix(c,r,""); if (error) return;
+		m1=matrixof(hd1);
+		for (i=0; i<r; i++)
+        {   mh=m1+(LONG)2*i;
+			for (j=0; j<c; j++)
+			{	*mh=*m++; *(mh+1)=*m++;
+                mh+=(LONG)2*r;
+			}
+		}
+	}
+	else if (hd->type==s_real || hd->type==s_complex)
+	{	hd1=hd;
+	}
+	else
+	{	error=24; output("\' not defined for this value!\n");
+		return;
+	}
+	moveresult(st,hd1);
+}
+
+void vectorize (header *init, header *step, header *end)
+{	double vinit,vstep,vend,*m;
+	int count;
+	header *result,*st=init;
+	init=getvalue(init); step=getvalue(step); end=getvalue(end);
+	if (error) return;
+	if (init->type!=s_real || step->type!=s_real || end->type!=s_real)
+	{	output("The : allows only real arguments!\n");
+		error=15; return;
+	}
+	vinit=*realof(init); vstep=*realof(step); vend=*realof(end);
+	if (vstep==0)
+	{	output("A step size of 0 is not allowed in : ");
+		error=401; return;
+	}
+	if (fabs(vend-vinit)/fabs(vstep)+1+epsilon>INT_MAX)
+	{	output1("A vector can only have %d elements",INT_MAX);
+		error=402; return;
+	}
+	count=(int)(floor(fabs(vend-vinit)/fabs(vstep)+1+epsilon));
+	if ((vend>vinit && vstep<0) || (vend<vinit && vstep>0))
+		count=0;
+	result=new_matrix(1,count,""); if (error) return;
+	m=matrixof(result);
+	while (count>=0)
+	{	*m++=vinit;
+		vinit+=vstep;
+		count--;
+	}
+	moveresult(st,result);
+}
+
+void mfft (header *hd)
+{	header *st=hd,*result;
+	double *m,*mr;
+	int r,c;
+	hd=getvalue(hd);
+	if (error) return;
+	if (hd->type==s_real || hd->type==s_matrix)
+	{	make_complex(st); hd=st; }
+	getmatrix(hd,&r,&c,&m);
+	if (r!=1) wrong_arg("row vector expected");
+	result=new_cmatrix(1,c,"");
+	mr=matrixof(result);
+    memmove((char *)mr,(char *)m,(LONG)2*c*sizeof(double));
+	fft(mr,c,-1);
+	moveresult(st,result);
+}
+
+void mifft (header *hd)
+{	header *st=hd,*result;
+	double *m,*mr;
+	int r,c;
+	hd=getvalue(hd);
+	if (error) return;
+	if (hd->type==s_real || hd->type==s_matrix)
+	{	make_complex(st); hd=st; }
+	getmatrix(hd,&r,&c,&m);
+	if (r!=1) wrong_arg("row vector expected");
+	result=new_cmatrix(1,c,"");
+	mr=matrixof(result);
+    memmove((char *)mr,(char *)m,(LONG)2*c*sizeof(double));
+	fft(mr,c,1);
+	moveresult(st,result);
+}
+
+void mtridiag (header *hd)
+{	header *result,*st=hd,*result1;
+	double *m,*mr;
+	int r,c,*rows,i;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_matrix)
+	{	getmatrix(hd,&c,&r,&m);
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
+		result=new_matrix(c,c,""); if (error) return;
+		result1=new_matrix(1,c,""); if (error) return;
+		mr=matrixof(result);
+		memmove(mr,m,(LONG)c*c*sizeof(double));
+		tridiag(mr,c,&rows);
+		mr=matrixof(result1);
+		for (i=0; i<c; i++) *mr++=rows[i]+1;
+	}
+	else if (hd->type==s_cmatrix)
+	{	getmatrix(hd,&c,&r,&m);
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
+		result=new_cmatrix(c,c,""); if (error) return;
+		result1=new_matrix(1,c,""); if (error) return;
+		mr=matrixof(result);
+        memmove(mr,m,(LONG)c*c*(LONG)2*sizeof(double));
+		ctridiag(mr,c,&rows);
+		mr=matrixof(result1);
+		for (i=0; i<c; i++) *mr++=rows[i]+1;
+	}
+	else wrong_arg("matrix expected");
+	moveresult(st,result);
+	moveresult((header *)newram,result1);
+}
+
+void mcharpoly (header *hd)
+{	header *result,*st=hd,*result1;
+	double *m,*mr;
+	int r,c;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_matrix)
+	{	getmatrix(hd,&c,&r,&m);
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
+		result=new_matrix(c,c,""); if (error) return;
+		result1=new_matrix(1,c+1,""); if (error) return;
+		mr=matrixof(result);
+		memmove(mr,m,(LONG)c*c*sizeof(double));
+		charpoly(mr,c,matrixof(result1));
+	}
+	else if (hd->type==s_cmatrix)
+	{	getmatrix(hd,&c,&r,&m);
+		if (c!=r || c==0) wrong_arg("non 0-sized square matrix expected");
+		result=new_cmatrix(c,c,""); if (error) return;
+		result1=new_cmatrix(1,c+1,""); if (error) return;
+		mr=matrixof(result);
+        memmove(mr,m,(LONG)c*c*(LONG)2*sizeof(double));
+		ccharpoly(mr,c,matrixof(result1));
+	}
+	else wrong_arg("matrix expected");
+	moveresult(st,result1);
+}
+
+void mfind (header *hd)
+{	header *st=hd,*hd1,*result;
+	double *m,*m1,*mr;
+	int i,j,k,c,r,c1,r1;
+	hd=getvalue(hd);
+	hd1=getvalue(nextof(st));
+	if (error) return;
+	if ((hd->type!=s_matrix && hd->type!=s_real) || 
+	    (hd1->type!=s_matrix && hd1->type!=s_real)) wrong_arg("real value or matrix expected");
+	getmatrix(hd,&c,&r,&m);
+	getmatrix(hd1,&c1,&r1,&m1);
+	if (c!=1 && r!=1) wrong_arg("row or column vector expected");
+	if (r!=1) c=r;
+	result=new_matrix(c1,r1,""); if (error) return;
+	mr=matrixof(result);
+	for (i=0; i<r1; i++)
+		for (j=0; j<c1; j++)
+		{	k=0;
+			while (k<c && m[k]<=*m1) k++;
+			if (k==c && *m1<=m[c-1]) k=c-1;
+			*mr++=k; m1++;
+		}
+	moveresult(st,result);
+}
+
+void mdiag2 (header *hd)
+{	header *st=hd,*hd1,*result;
+	int c,r,i,n,l;
+	double *m,*mh,*mr;
+	hd1=next_param(hd);
+	hd=getvalue(hd); if (hd1) hd1=getvalue(hd1);
+	if (error) return;
+	if (hd1->type!=s_real) wrong_arg("2nd arg: real value expected");
+	n=(int)*realof(hd1);
+	if (hd->type==s_matrix || hd->type==s_real)
+	{	getmatrix(hd,&r,&c,&m);
+		result=new_matrix(1,r,""); if (error) return;
+		mr=matrixof(result); l=0;
+		for (i=0; i<r; i++)
+		{	if (i+n>=c) break;
+			if (i+n>=0) { l++; *mr++=*mat(m,c,i,i+n); }
+		}
+		dimsof(result)->c=l;
+		result->size=matrixsize(1,c);
+	}
+	else if (hd->type==s_cmatrix || hd->type==s_complex)
+	{	getmatrix(hd,&r,&c,&m);
+		result=new_cmatrix(1,r,""); if (error) return;
+		mr=matrixof(result); l=0;
+		for (i=0; i<r; i++)
+		{	if (i+n>=c) break;
+			if (i+n>=0) 
+			{	l++;
+				mh=cmat(m,c,i,i+n);
+				*mr++=*mh++;
+				*mr++=*mh;
+			}
+		}
+		dimsof(result)->c=l;
+		result->size=cmatrixsize(1,c);
+	}
+	else wrong_arg("1st arg: real or complex matrix expected");
+	moveresult(st,result);
+}
+
+void mband (header *hd)
+{	header *st=hd,*hd1,*hd2,*result;
+	int i,j,c,r,n1,n2;
+	double *m,*mr;
+	hd1=next_param(hd);
+	hd2=next_param(hd1);
+	hd=getvalue(hd); hd1=getvalue(hd1); hd2=getvalue(hd2);
+	if (error) return;
+	if (hd1->type!=s_real || hd2->type!=s_real) wrong_arg("2nd and 3rd args: real value expected");
+	n1=(int)*realof(hd1); n2=(int)*realof(hd2);
+	if (hd->type==s_matrix || hd->type==s_real)
+	{	getmatrix(hd,&r,&c,&m);
+		result=new_matrix(r,c,""); if (error) return;
+		mr=matrixof(result);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+			{	if (j-i>=n1 && j-i<=n2) *mr++=*m++;
+				else { *mr++=0.0; m++; }
+			}
+	}
+	else if (hd->type==s_cmatrix || hd->type==s_complex)
+	{	getmatrix(hd,&r,&c,&m);
+		result=new_cmatrix(r,c,""); if (error) return;
+		mr=matrixof(result);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+			{	if (j-i>=n1 && j-i<=n2) { *mr++=*m++; *mr++=*m++; }
+				else { *mr++=0.0; *mr++=0.0; m+=2; }
+			}
+	}
+	else wrong_arg("bad type");
+	moveresult(st,result);
+}
+
+void mdup (header *hd)
+{	header *result,*st=hd,*hd1;
+	double x,*m,*m1,*m2;
+	int c,i,n,j,r;
+	hd=getvalue(hd);
+	hd1=next_param(st);
+	if (!hd1) wrong_arg("needs a 2nd arg");
+	hd1=getvalue(hd1); if (error) return;
+	if (hd1->type!=s_real) wrong_arg("2nd arg: real value expected");
+	x=*realof(hd1); n=(int)x;
+	if (n<1 || x>=INT_MAX) wrong_arg("2nd arg: must be >= 1");
+	if (hd->type==s_matrix && dimsof(hd)->r==1)
+	{	c=dimsof(hd)->c;
+		result=new_matrix(n,c,"");
+		if (error) return;
+		m1=matrixof(hd); m2=matrixof(result);
+		for (i=0; i<n; i++)
+		{	m=mat(m2,c,i,0);
+			memmove((char *)m,(char *)m1,c*sizeof(double));
+		}
+	}
+	else if (hd->type==s_matrix && dimsof(hd)->c==1)
+	{	r=dimsof(hd)->r;
+		result=new_matrix(r,n,"");
+		if (error) return;
+		m1=matrixof(hd); m2=matrixof(result);
+		for (i=0; i<r; i++)
+		{
+			for (j=0; j<n; j++)
+				*mat(m2,n,i,j)=*mat(m1,1,i,0);
+		}
+	}
+	else if (hd->type==s_real)
+	{	result=new_matrix(n,1,""); if (error) return;
+		m1=matrixof(result);
+		for (i=0; i<n; i++) *m1++=*realof(hd);
+	}
+	else if (hd->type==s_cmatrix && dimsof(hd)->r==1)
+	{	c=dimsof(hd)->c;
+		result=new_cmatrix(n,c,"");
+		if (error) return;
+		m1=matrixof(hd); m2=matrixof(result);
+		for (i=0; i<n; i++)
+		{	m=cmat(m2,c,i,0);
+            memmove((char *)m,(char *)m1,(LONG)2*c*sizeof(double));
+		}
+	}
+	else if (hd->type==s_cmatrix && dimsof(hd)->c==1)
+	{	r=dimsof(hd)->r;
+		result=new_cmatrix(r,n,"");
+		if (error) return;
+		m1=matrixof(hd); m2=matrixof(result);
+		for (i=0; i<r; i++)
+		{
+			for (j=0; j<n; j++)
+				copy_complex(cmat(m2,n,i,j),cmat(m1,1,i,0));
+		}
+	}
+	else if (hd->type==s_complex)
+	{	result=new_cmatrix(n,1,""); if (error) return;
+		m1=matrixof(result);
+		for (i=0; i<n; i++) { *m1++=*realof(hd); *m1++=*imagof(hd); }
+	}
+	else wrong_arg("bad 1st arg");
+	moveresult(st,result);
+}
+
+void make_complex (header *hd)
+/**** make_complex
+	make a function argument complex.
+****/
+{	header *old=hd,*nextarg;
+	size_t size;
+	int r,c,i,j;
+	double *m,*m1;
+	hd=getvalue(hd);
+	if (hd->type==s_real)
+	{	size=sizeof(header)+2*sizeof(double);
+		nextarg=nextof(old);
+		if (newram+(size-old->size)>ramend)
+		{	output("Memory overflow!\n"); error=180; return; }
+		if (newram>(char *)nextarg)
+			memmove((char *)old+size,(char *)nextarg,
+				newram-(char *)nextarg);
+		newram+=size-old->size;
+		*(old->name)=0; old->size=size;
+		old->type=s_complex;
+		*realof(old)=*realof(hd);
+		*imagof(old)=0.0;
+	}
+	else if (hd->type==s_matrix)
+	{	getmatrix(hd,&r,&c,&m);
+		size=cmatrixsize(r,c);
+		nextarg=nextof(old);
+		if (newram+(size-old->size)>ramend)
+		{	output("Memory overflow!\n"); error=180; return; }
+		if (newram>(char *)nextarg)
+			memmove((char *)old+size,(char *)nextarg,
+				newram-(char *)nextarg);
+		newram+=size-old->size;
+		*(old->name)=0; old->size=size;
+		old->type=s_cmatrix;
+		dimsof(old)->r=r; dimsof(old)->c=c;
+		m1=matrixof(old);
+		for (i=r-1; i>=0; i--)
+			for (j=c-1; j>=0; j--)
+			{	*cmat(m1,c,i,j)=*mat(m,c,i,j);
+				*(cmat(m1,c,i,j)+1)=0.0;
+			}
+	}
+}
+
+void mvconcat (header *hd)
+{	header *st=hd,*hd1,*result;
+	double *m,*m1;
+	int r,c,r1,c1;
+	size_t size=0;
+	hd=getvalue(hd);
+	hd1=next_param(st);
+	if (!hd1) wrong_arg("");
+	hd1=getvalue(hd1); if (error) return;
+	if (hd->type==s_real || hd->type==s_matrix)
+	{	if (hd1->type==s_real || hd1->type==s_matrix)
+		{	getmatrix(hd,&r,&c,&m);
+			getmatrix(hd1,&r1,&c1,&m1);
+			if (r!=0 && (c!=c1 || (LONG)r+r1>INT_MAX)) wrong_arg("columns must agree");
+			result=new_matrix(r+r1,c1,"");
+			if (r!=0)
+			{	size=(LONG)r*c*sizeof(double);
+				memmove((char *)matrixof(result),(char *)m,
+					size);
+			}
+			memmove((char *)matrixof(result)+size,
+				(char *)m1,(LONG)r1*c1*sizeof(double));
+		}
+		else if (hd1->type==s_complex || hd1->type==s_cmatrix)
+		{	make_complex(st);
+			mvconcat(st);
+			return;
+		}
+		else wrong_arg("bad type");
+	}
+	else if (hd->type==s_complex || hd->type==s_cmatrix)
+	{	if (hd1->type==s_complex || hd1->type==s_cmatrix)
+		{	getmatrix(hd,&r,&c,&m);
+			getmatrix(hd1,&r1,&c1,&m1);
+			if (r!=0 && (c!=c1 || (LONG)r+r1>INT_MAX)) wrong_arg("columns must agree");
+			result=new_cmatrix(r+r1,c1,"");
+			if (r!=0)
+			{	size=(LONG)r*(LONG)2*c*sizeof(double);
+				memmove((char *)matrixof(result),(char *)m,
+					size);
+			}
+			memmove((char *)matrixof(result)+size,
+                (char *)m1,(LONG)r1*(LONG)2*c1*sizeof(double));
+		} 
+		else if (hd1->type==s_real || hd1->type==s_matrix)
+		{	make_complex(next_param(st));
+			mvconcat(st);
+			return;
+		}
+		else wrong_arg("bad type");
+	}	
+	else wrong_arg("bad type");
+	moveresult(st,result);
+}
+
+void mhconcat (header *hd)
+{	header *st=hd,*hd1,*result;
+	double *m,*m1,*mr;
+	int r,c,r1,c1,i;
+	hd=getvalue(hd);
+	hd1=next_param(st);
+	if (!hd1) wrong_arg("");
+	hd1=getvalue(hd1); if (error) return;
+	if (hd->type==s_string && hd1->type==s_string)
+	{	result=new_string(stringof(hd),
+			strlen(stringof(hd))+strlen(stringof(hd1))+1,"");
+		strcat(stringof(result),stringof(hd1));
+	}
+	else if (hd->type==s_real || hd->type==s_matrix)
+	{	if (hd1->type==s_real || hd1->type==s_matrix)
+		{	getmatrix(hd,&r,&c,&m);
+			getmatrix(hd1,&r1,&c1,&m1);
+			if (c!=0 && (r!=r1 || (LONG)c+c1>INT_MAX)) wrong_arg("rows must agree");
+			result=new_matrix(r1,c+c1,"");
+			mr=matrixof(result);
+			for (i=0; i<r1; i++)
+			{	if (c!=0) memmove((char *)mat(mr,c+c1,i,0),
+					(char *)mat(m,c,i,0),c*sizeof(double));
+				memmove((char *)mat(mr,c+c1,i,c),
+					(char *)mat(m1,c1,i,0),c1*sizeof(double));
+			}
+		}
+		else if (hd1->type==s_complex || hd1->type==s_cmatrix)
+		{	make_complex(st);
+			mhconcat(st);
+			return;
+		}
+		else wrong_arg("bad type");
+	}
+	else if (hd->type==s_complex || hd->type==s_cmatrix)
+	{	if (hd1->type==s_complex || hd1->type==s_cmatrix)
+		{	getmatrix(hd,&r,&c,&m);
+			getmatrix(hd1,&r1,&c1,&m1);
+			if (c!=0 && (r!=r1 || (LONG)c+c1>INT_MAX)) wrong_arg("rows must agree");
+			result=new_cmatrix(r1,c+c1,"");
+			mr=matrixof(result);
+			for (i=0; i<r1; i++)
+			{	if (c!=0) memmove((char *)cmat(mr,c+c1,i,0),
+                    (char *)cmat(m,c,i,0),c*(LONG)2*sizeof(double));
+				memmove((char *)cmat(mr,c+c1,i,c),
+                    (char *)cmat(m1,c1,i,0),c1*(LONG)2*sizeof(double));
+			}
+		}
+		else if (hd1->type==s_real || hd1->type==s_matrix)
+		{	make_complex(next_param(st)); if (error) return;
+			mhconcat(st);
+			return;
+		}
+		else wrong_arg("bad type");
+	}	
+	else wrong_arg("bad type");
+	moveresult(st,result);
+}
+
+void cscalp (double *s, double *si, double *x, double *xi,
+	double *y, double *yi);
+void ccopy (double *y, double *x, double *xi);
+
+void wmultiply (header *hd)
+/***** multiply
+	matrix multiplication for weakly nonzero matrices.
+*****/
+{	header *result,*st=hd,*hd1;
+	dims *d,*d1;
+	double *m,*m1,*m2,*mm1,*mm2,x,y,null=0.0;
+	int i,j,c,r,k;
+	hd=getvalue(hd); hd1=getvalue(nextof(st));
+	if (error) return;
+	if (hd->type==s_matrix && hd1->type==s_matrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_matrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+			{	mm1=mat(m1,d->c,i,0); mm2=m2+j;
+				x=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm1!=0.0)&&(*mm2!=0.0)) x+=(*mm1)*(*mm2);
+					mm1++; mm2+=d1->c;
+				}
+				*mat(m,c,i,j)=x;
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_matrix && hd1->type==s_cmatrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+            {   mm1=mat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm2!=0.0 || *(mm2+1)!=0.0) &&
+							(*mm1!=0.0))
+					cscalp(&x,&y,mm1,&null,mm2,mm2+1);
+					mm1++; mm2+=2*d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_cmatrix && hd1->type==s_matrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+			{	mm1=cmat(m1,d->c,i,0); mm2=m2+j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm2!=0.0) &&
+							(*mm1!=0.0 ||  *(mm1+1)!=0.0))
+					cscalp(&x,&y,mm1,mm1+1,mm2,&null);
+					mm1+=2; mm2+=d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_cmatrix && hd1->type==s_cmatrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=0; j<c; j++)
+            {   mm1=cmat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm2!=0.0 || *(mm2+1)!=0.0) &&
+							(*mm1!=0.0 || *(mm1+1)!=0.0))
+					cscalp(&x,&y,mm1,mm1+1,mm2,mm2+1);
+					mm1+=2; mm2+=2*d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	else wrong_arg("bad type");
+}
+
+void smultiply (header *hd)
+/***** multiply
+	matrix multiplication for weakly nonzero symmetric matrices.
+*****/
+{	header *result,*st=hd,*hd1;
+	dims *d,*d1;
+	double *m,*m1,*m2,*mm1,*mm2,x,y,null=0.0;
+	int i,j,c,r,k;
+	hd=getvalue(hd); hd1=getvalue(nextof(st));
+	if (error) return;
+	if (hd->type==s_matrix && hd1->type==s_matrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_matrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=i; j<c; j++)
+			{	mm1=mat(m1,d->c,i,0); mm2=m2+j;
+				x=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm1!=0.0)&&(*mm2!=0.0)) x+=(*mm1)*(*mm2);
+					mm1++; mm2+=d1->c;
+				}
+				*mat(m,c,i,j)=x;
+				*mat(m,c,j,i)=x;
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_matrix && hd1->type==s_cmatrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=i; j<c; j++)
+            {   mm1=mat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm2!=0.0 || *(mm2+1)!=0.0) &&
+							(*mm1!=0.0))
+					cscalp(&x,&y,mm1,&null,mm2,mm2+1);
+					mm1++; mm2+=2*d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y); y=-y;
+				ccopy(cmat(m,c,j,i),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_cmatrix && hd1->type==s_matrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=i; j<c; j++)
+			{	mm1=cmat(m1,d->c,i,0); mm2=m2+j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm2!=0.0) &&
+							(*mm1!=0.0 ||  *(mm1+1)!=0.0))
+					cscalp(&x,&y,mm1,mm1+1,mm2,&null);
+					mm1+=2; mm2+=d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y); y=-y;
+				ccopy(cmat(m,c,j,i),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	if (hd->type==s_cmatrix && hd1->type==s_cmatrix)
+	{	d=dimsof(hd);
+		d1=dimsof(hd1);
+		if (d->c != d1->r)
+		{	error=8; output("Cannot multiply these!\n");
+			return;
+		}
+		r=d->r; c=d1->c;
+		result=new_cmatrix(r,c,"");
+		if (error) return;
+		m=matrixof(result);
+		m1=matrixof(hd);
+		m2=matrixof(hd1);
+		for (i=0; i<r; i++)
+			for (j=i; j<c; j++)
+            {   mm1=cmat(m1,d->c,i,0); mm2=m2+(LONG)2*j;
+				x=0.0; y=0.0;
+				for (k=0; k<d->c; k++)
+				{	if ((*mm2!=0.0 || *(mm2+1)!=0.0) &&
+							(*mm1!=0.0 || *(mm1+1)!=0.0))
+					cscalp(&x,&y,mm1,mm1+1,mm2,mm2+1);
+					mm1+=2; mm2+=2*d1->c;
+				}
+				ccopy(cmat(m,c,i,j),&x,&y); 
+				y=-y;
+				ccopy(cmat(m,c,j,i),&x,&y);
+			}
+		moveresult(st,result);
+		return;
+	}
+	else wrong_arg("bad type");
+}
+
+/****************************************************************
+ *	polynom ops
+ ****************************************************************/
+#define max(x,y) ((x)>(y)?(x):(y))
+
+static double *polynom;
+static int degree,polreal;
+
+static double peval (double x)
+{	int i;
+	double *p=polynom+degree,res;
+	res=*p--;
+	for (i=degree-1; i>=0; i--) res=res*x+(*p--);
+	return res;
+}
+
+static void cpeval (double *x, double *xi, double *z, double *zi)
+{	int i;
+	double *p,h,hi;
+	p=polynom+(polreal?degree:(2l*degree));
+	*z=*p; *zi=(polreal)?0.0:*(p+1);
+	if (polreal) p--;
+	else p-=2;
+	for (i=degree-1; i>=0; i--)
+	{	complex_multiply(x,xi,z,zi,&h,&hi);
+		*z= h + *p;
+		if (!polreal) { *zi=hi+*(p+1); p--; }
+		else { *zi=hi; }
+		p--;
+	}
+}
+
+void polyval (header *hd)
+{	header *st=hd,*hd1;
+	int r,c;
+	hd1=next_param(hd);
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_real || hd->type==s_matrix)
+	{	getmatrix(hd,&r,&c,&polynom);
+		if (r!=1) wrong_arg("row vector expected");
+		degree=c-1;
+		if (degree<0) wrong_arg("non 0-sized vector expected");
+		polreal=1;
+	}
+	else if (hd->type==s_complex || hd->type==s_cmatrix)
+	{	make_complex(hd1);
+		getmatrix(hd,&r,&c,&polynom);
+		if (r!=1) wrong_arg("row vector expected");
+		degree=c-1;
+		if (degree<0) wrong_arg("non 0-sized vector expected");
+		polreal=0;
+	}	
+	else wrong_arg("bad type");
+	spread1(peval,cpeval,hd1);
+	moveresult(st,hd1);
+}
+
+static int testparams (header **hd1, header **hd2)
+{	header *h1=*hd1,*h2=*hd2;
+	*hd1=getvalue(h1); if (error) return 0;
+	*hd2=getvalue(h2); if (error) return 0;
+	if ((*hd1)->type==s_complex || (*hd1)->type==s_cmatrix
+		|| (*hd2)->type==s_complex || (*hd2)->type==s_cmatrix)
+	{	if ((*hd1)->type!=s_complex && (*hd1)->type!=s_cmatrix)
+		{	make_complex(h1); *hd1=h1; *hd2=nextof(h1);
+			*hd2=getvalue(*hd2);
+		}
+		else if ((*hd2)->type!=s_complex && (*hd2)->type!=s_cmatrix)
+		{	make_complex(h2); *hd2=h2;
+		}
+		return 1;
+	}
+	else return 0;
+}
+
+void polyadd (header *hd)
+{	header *st=hd,*hd1,*result;
+	int flag,c,c1,c2,i,r;
+	double *m1,*m2,*mr;
+	complex *mc1,*mc2,*mcr;
+	hd1=next_param(st);
+	flag=testparams(&hd,&hd1); if (error) return;
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	c=max(c1,c2);
+	if (flag) /* complex values */
+	{	mc1=(complex *)m1; mc2=(complex *)m2;
+		result=new_cmatrix(1,c,""); if (error) return;
+		mcr=(complex *)matrixof(result);
+		for (i=0; i<c; i++)
+		{	if (i>=c1) { c_copy(*mcr,*mc2); mcr++; mc2++; }
+			else if (i>=c2) { c_copy(*mcr,*mc1); mcr++; mc1++; }
+			else { c_add(*mc1,*mc2,*mcr); mc1++; mc2++; mcr++; }
+		}
+	}
+	else
+	{	result=new_matrix(1,c,""); if (error) return;
+		mr=matrixof(result);
+		for (i=0; i<c; i++)
+		{	if (i>=c1) { *mr++ = *m2++; }
+			else if (i>=c2) { *mr++ = *m1++; }
+			else { *mr++ = *m1++ + *m2++; }
+		}	
+	}
+	moveresult(st,result);
+}
+
+void polymult (header *hd)
+{	header *st=hd,*hd1,*result;
+	int flag,c,c1,c2,i,r,j,k;
+	double *m1,*m2,*mr,x;
+	complex *mc1,*mc2,*mcr,xc,hc;
+	hd1=next_param(st);
+	flag=testparams(&hd,&hd1); if (error) return;
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	if ((LONG)c1+c2-1>INT_MAX) wrong_arg("can't handle those large vectors");
+	c=c1+c2-1;
+	if (flag)
+	{	mc1=(complex *)m1; mc2=(complex *)m2;
+		result=new_cmatrix(1,c,""); if (error) return;
+		mcr=(complex *)matrixof(result);
+		c_copy(xc,*mc1); mc1++;
+		for (i=0; i<c2; i++) c_mult(xc,mc2[i],mcr[i]);
+		for (j=1; j<c1; j++)
+		{	c_copy(xc,*mc1); mc1++;
+			for (k=j,i=0; i<c2-1; i++,k++) 
+			{	c_mult(xc,mc2[i],hc);
+				c_add(hc,mcr[k],mcr[k]);
+			}
+			c_mult(xc,mc2[i],mcr[k]);
+		}
+	}
+	else
+	{	result=new_matrix(1,c,""); if (error) return;
+		mr=matrixof(result);
+		x=*m1++;
+		for (i=0; i<c2; i++) mr[i]=x*m2[i];
+		for (j=1; j<c1; j++)
+		{	x=*m1++;
+			for (k=j,i=0; i<c2-1; i++,k++) mr[k]+=x*m2[i];
+			mr[k]=x*m2[i];
+		}
+	}
+	moveresult(st,result);
+}
+
+void polydiv (header *hd)
+{	header *st=hd,*hd1,*result,*rest;
+	int flag,c1,c2,i,r,j;
+	double *m1,*m2,*mr,*mh,x,l;
+	complex *mc1,*mc2,*mcr,*mch,xc,lc,hc;
+	hd1=next_param(st);
+	flag=testparams(&hd,&hd1); if (error) return;
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	if (c1<c2)
+	{	result=new_real(0.0,"");
+		rest=(header *)newram;
+		moveresult(rest,hd1);
+	}
+	else if (flag)
+	{	mc1=(complex *)m1; mc2=(complex *)m2;
+		result=new_cmatrix(1,c1-c2+1,""); if (error) return;
+		mcr=(complex *)matrixof(result);
+		rest=new_cmatrix(1,c2,""); if (error) return;
+		mch=(complex *)newram;
+		if (newram+c1*sizeof(complex)>ramend)
+		{	output("Out of memory!\n"); error=190; return;
+		}
+		memmove((char *)mch,(char *)mc1,c1*sizeof(complex));
+		c_copy(lc,mc2[c2-1]);
+		if (lc[0]==0.0 && lc[1]==0.0) wrong_arg("");
+		for (i=c1-c2; i>=0; i--)
+		{	c_div(mch[c2+i-1],lc,xc); c_copy(mcr[i],xc);
+			for(j=0; j<c2; j++) 
+			{	c_mult(mc2[j],xc,hc);
+				c_sub(mch[i+j],hc,mch[i+j]);
+			}
+		}
+		memmove((char *)matrixof(rest),(char *)mch,c2*sizeof(complex));
+	}
+	else
+	{	result=new_matrix(1,c1-c2+1,""); if (error) return;
+		mr=matrixof(result);
+		rest=new_matrix(1,c2,""); if (error) return;
+		mh=(double *)newram;
+		if (newram+c1*sizeof(double)>ramend)
+		{	output("Out of memory!\n"); error=190; return;
+		}
+		memmove((char *)mh,(char *)m1,c1*sizeof(double));
+		l=m2[c2-1];
+		if (l==0.0) wrong_arg("");
+		for (i=c1-c2; i>=0; i--)
+		{	x=mh[c2+i-1]/l; mr[i]=x;
+			for(j=0; j<c2; j++) mh[i+j]-=m2[j]*x;
+		}
+		memmove((char *)matrixof(rest),(char *)mh,c2*sizeof(double));
+	}
+	moveresult(st,result);
+	moveresult(nextof(st),rest);
+}
+
+void dd (header *hd)
+{	header *st=hd,*hd1,*result;
+	int flag,c1,c2,i,j,r;
+	double *m1,*m2,*mr;
+	complex *mc1,*mc2,*mcr,hc1,hc2;
+	hd1=next_param(st);
+	flag=testparams(&hd,&hd1); if (error) return;
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	if (c1!=c2) wrong_arg("columns must agree");
+	if (flag) /* complex values */
+	{	mc1=(complex *)m1; mc2=(complex *)m2;
+		result=new_cmatrix(1,c1,""); if (error) return;
+		mcr=(complex *)matrixof(result);
+		memmove((char *)mcr,(char *)mc2,c1*sizeof(complex));
+		for (i=1; i<c1; i++)
+		{	for (j=c1-1; j>=i; j--)
+			{	if (mc1[j][0]==mc1[j-i][0] &&
+					mc1[j][1]==mc1[j-i][1]) wrong_arg("");
+				c_sub(mcr[j],mcr[j-1],hc1);
+				c_sub(mc1[j],mc1[j-i],hc2);
+				c_div(hc1,hc2,mcr[j]);
+			}
+		}	
+	}
+	else
+	{	result=new_matrix(1,c1,""); if (error) return;
+		mr=matrixof(result);
+		memmove((char *)mr,(char *)m2,c1*sizeof(double));
+		for (i=1; i<c1; i++)
+		{	for (j=c1-1; j>=i; j--)
+			{	if (m1[j]==m1[j-i]) wrong_arg("");
+				mr[j]=(mr[j]-mr[j-1])/(m1[j]-m1[j-i]);
+			}
+		}	
+	}
+	moveresult(st,result);
+}
+
+static double *divx,*divdif;
+//static int degree,polreal;
+
+static double rddeval (double x)
+{	int i;
+	double *p=divdif+degree,res;
+	res=*p--;
+	for (i=degree-1; i>=0; i--) res=res*(x-divx[i])+(*p--);
+	return res;
+}
+
+static void cddeval (double *x, double *xi, double *z, double *zi)
+{	int i;
+	double *p,h,hi,*dd,xh,xhi;
+	p=divdif+(polreal?degree:(2l*degree));
+	dd=divx+(polreal?(degree-1):(2l*(degree-1)));
+	*z=*p; *zi=(polreal)?0.0:*(p+1);
+	if (polreal) p--;
+	else p-=2;
+	for (i=degree-1; i>=0; i--)
+	{	xh=*x-*dd;
+		if (!polreal) { xhi=*xi-*(dd+1); dd--; }
+		else xhi=*xi;
+		dd--;
+		complex_multiply(&xh,&xhi,z,zi,&h,&hi);
+		*z= h + *p;
+		if (!polreal) { *zi=hi+*(p+1); p--; }
+		else { *zi=hi; }
+		p--;
+	}
+}
+
+void ddval (header *hd)
+{	header *st=hd,*hdd,*hd1;
+	int r,c,c1;
+	start: hdd=next_param(st);
+	hd1=next_param(hdd);
+	hd=getvalue(st); if (error) return;
+	hdd=getvalue(hdd); if (error) return;
+	if (hd->type==s_real || hd->type==s_matrix)
+	{	getmatrix(hd,&r,&c,&divx);
+		if (r!=1) wrong_arg("row vector expected");
+		degree=c-1;
+		if (degree<0) wrong_arg("non 0-sized vector expected");
+		polreal=1;
+		if (hdd->type!=s_real && hdd->type!=s_matrix)
+		{	if (hdd->type==s_complex || hdd->type==s_cmatrix)
+			{	make_complex(st); goto start; }
+			else wrong_arg("bad type");
+		}
+		getmatrix(hdd,&r,&c1,&divdif);
+		if (r!=1 || c1!=c) wrong_arg("");
+	}
+	else if (hd->type==s_complex || hd->type==s_cmatrix)
+	{	make_complex(hd1);
+		getmatrix(hd,&r,&c,&divx);
+		if (r!=1) wrong_arg("row vector expected");
+		degree=c-1;
+		if (degree<0) wrong_arg("non 0-sized vector expected");
+		polreal=0;
+		if (hdd->type!=s_complex && hdd->type!=s_cmatrix)
+		{	if (hdd->type==s_real || hdd->type==s_matrix)
+			{	make_complex(nextof(st)); goto start; }
+			else wrong_arg("bad type");
+		}
+		getmatrix(hdd,&r,&c1,&divdif);
+		if (r!=1 || c1!=c) wrong_arg("");
+	}
+	else wrong_arg("bad type");
+	spread1(rddeval,cddeval,hd1);
+	moveresult(st,hd1);
+}
+
+void polyzeros (header *hd)
+{	header *st=hd,*result;
+	int i,j,r,c;
+	double *m,*mr,x;
+	complex *mc,*mcr,xc,hc;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_real || hd->type==s_matrix)
+	{	getmatrix(hd,&r,&c,&m);
+		if (r!=1) wrong_arg("row vector expected");
+		result=new_matrix(1,c+1,""); if (error) return;
+		mr=matrixof(result);
+		mr[0]=-m[0]; mr[1]=1.0;
+		for (i=1; i<c; i++)
+		{	x=-m[i]; mr[i+1]=1.0;
+			for (j=i; j>=1; j--) mr[j]=mr[j-1]+x*mr[j];
+			mr[0]*=x;
+		}
+	}
+	else if (hd->type==s_complex || hd->type==s_cmatrix)
+	{	getmatrix(hd,&r,&c,&m); mc=(complex *)m;
+		if (r!=1) wrong_arg("row vector expected");
+		result=new_cmatrix(1,c+1,""); if (error) return;
+		mcr=(complex *)matrixof(result);
+		mcr[0][0]=-mc[0][0]; mcr[0][1]=-mc[0][1];
+		mcr[1][0]=1.0; mcr[1][1]=0.0;
+		for (i=1; i<c; i++)
+		{	xc[0]=-mc[i][0]; xc[1]=-mc[i][1];
+			mcr[i+1][0]=1.0; mcr[i+1][1]=0.0;
+			for (j=i; j>=1; j--) 
+			{	c_mult(xc,mcr[j],hc);
+				c_add(hc,mcr[j-1],mcr[j]);
+			}
+			c_mult(xc,mcr[0],mcr[0]);
+		}
+	}
+	else wrong_arg("bad type");
+	moveresult(st,result);
+}
+
+void polydd (header *hd)
+{	header *st=hd,*hd1,*result;
+	int flag,c1,c2,i,j,r;
+	double *m1,*m2,*mr,x;
+	complex *mc1,*mc2,*mcr,hc,xc;
+	hd1=next_param(st);
+	flag=testparams(&hd,&hd1); if (error) return;
+	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
+	if (c1!=c2) wrong_arg("columns must agree");
+	if (flag) /* complex values */
+	{	mc1=(complex *)m1; mc2=(complex *)m2;
+		result=new_cmatrix(1,c1,""); if (error) return;
+		mcr=(complex *)matrixof(result);
+		c_copy(mcr[c1-1],mc2[c1-1]);
+		for (i=c1-2; i>=0; i--)
+		{	c_copy(xc,mc1[i]);
+			c_mult(xc,mcr[i+1],hc);
+			c_sub(mc2[i],hc,mcr[i]);
+			for (j=i+1; j<c1-1; j++) 
+			{	c_mult(xc,mcr[j+1],hc);
+				c_sub(mcr[j],hc,mcr[j]);
+			}
+		}
+	}
+	else
+	{	result=new_matrix(1,c1,""); if (error) return;
+		mr=matrixof(result);
+		mr[c1-1]=m2[c1-1];
+		for (i=c1-2; i>=0; i--)
+		{	x=m1[i];
+			mr[i]=m2[i]-x*mr[i+1];
+			for (j=i+1; j<c1-1; j++) mr[j]=mr[j]-x*mr[j+1];
+		}
+	}
+	moveresult(st,result);
+}
+
+void polytrunc (header *hd)
+{	header *st=hd,*result;
+	double *m;
+	complex *mc;
+	int i;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_matrix && dimsof(hd)->r==1)
+	{	m=matrixof(hd);
+		for (i=dimsof(hd)->c-1; i>=0; i--)
+		{	if (fabs(m[i])>epsilon) break;
+		}
+		if (i<0) result=new_real(0.0,"");
+		else 
+		{	result=new_matrix(1,i+1,"");
+			memmove((char *)matrixof(result),(char *)matrixof(hd),
+				(i+1)*sizeof(double));
+		}
+	}
+	else if (hd->type==s_complex && dimsof(hd)->r==1)
+	{	mc=(complex *)matrixof(hd);
+		for (i=dimsof(hd)->c-1; i>=0; i--)
+		{	if (fabs(mc[i][0])>epsilon && fabs(mc[i][1])>epsilon) 
+				break;
+		}
+		if (i<0) result=new_complex(0.0,0.0,"");
+		else 
+		{	result=new_cmatrix(1,i+1,"");
+			memmove((char *)matrixof(result),(char *)matrixof(hd),
+				(i+1)*sizeof(complex));
+		}
+	}
+	else wrong_arg("bad type");
+	moveresult(st,result);
+}
+
+void mzeros (header *hd)
+{	header *st=hd,*result;
+	int r,c;
+	double *m;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_matrix) 
+	{	make_complex(st); if (error) return;
+		hd=getvalue(st); if (error) return; 
+	}
+	if (hd->type!=s_cmatrix || dimsof(hd)->r!=1 || dimsof(hd)->c<2)
+	{	output("Need a complex polynomial\n"); error=300; return; }
+	getmatrix(hd,&r,&c,&m);
+	result=new_cmatrix(1,c-1,""); if (error) return;
+	bauhuber(m,c-1,matrixof(result),1,0,0);
+	moveresult(st,result);
+}
+
+void mzeros1 (header *hd)
+{	header *st=hd,*hd1,*result;
+	int r,c;
+	double *m,xr,xi;
+	hd1=nextof(hd);
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_matrix)
+	{	make_complex(st); if (error) return;
+		hd=getvalue(st); if (error) return;
+	}
+	hd1=nextof(st);
+	hd1=getvalue(hd1); if (error) return;
+	if (hd1->type==s_real)
+	{	xr=*realof(hd1); xi=0;
+	}
+	else if (hd1->type==s_complex)
+	{	xr=*realof(hd1); xi=*(realof(hd1)+1);
+	}
+	else
+	{	output("Need a starting value!\n"); error=300; return; }
+	if (hd->type!=s_cmatrix || dimsof(hd)->r!=1 || dimsof(hd)->c<2)
+	{	output("Need a complex polynomial\n"); error=300; return; }
+	getmatrix(hd,&r,&c,&m);
+	result=new_complex(0,0,""); if (error) return;
+	bauhuber(m,c-1,realof(result),0,xr,xi);
+	moveresult(st,result);
+}
+
+
+/****************************************************************
+ *	builtin core
+ ****************************************************************/
 int builtin_count;
 
 extern builtintyp builtin_list[];
