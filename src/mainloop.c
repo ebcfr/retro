@@ -5,13 +5,14 @@
 #include <math.h>
 #include <float.h>
 #include <stdarg.h>
+#include <limits.h>
 
-#include "header.h"
 #include "sysdep.h"
+#include "header.h"
+#include "core.h"
 #include "funcs.h"
 #include "graphics.h"
-	
-char *ramstart,*ramend,*udfend,*startlocal,*endlocal,*newram;
+
 char *next,*udfline;
 
 FILE *metafile=0;
@@ -197,434 +198,6 @@ void clear (void)
 		if (*next==',') { next++; continue; }
 		else break;
 	}
-}
-
-int xor (char *n)
-/***** xor
-	compute a hashcode for the name n.
-*****/
-{	int r=0;
-	while (*n) r^=*n++;
-	return r;
-}
-
-void *make_header (stacktyp type, size_t size, char *name)
-/***** make_header
-	pushes a new element on the stack.
-	return the position after the header.
-******/
-{	header *hd;
-	char *erg;
-#ifdef SPECIAL_ALIGNMENT
-	size=(((size-1)/8)+1)*8;
-#endif
-	hd=(header *)(newram);
-	if (newram+size>ramend)
-	{	output("Stack overflow!\n"); error=2;
-		return 0;
-	}
-	hd=(header *)newram;
-	hd->size=size;
-	hd->type=type;
-	hd->flags=0;
-	if (*name)
-	{	strcpy(hd->name,name);
-		hd->xor=xor(name);
-	}
-	else
-	{	*(hd->name)=0;
-		hd->xor=0;
-	}
-	erg=newram+sizeof(header);
-	newram+=size;
-	return erg;
-}
-
-header *new_matrix (int rows, int columns, char *name)
-/***** new_matrix
-	pops a new matrix on the stack.
-*****/
-{	size_t size;
-	dims *d;
-	header *hd=(header *)newram;
-	size=matrixsize(rows,columns);
-	d=(dims *)make_header(s_matrix,size,name);
-	if (d) { d->c=columns; d->r=rows; }
-	return hd;
-}
-
-header *new_cmatrix (int rows, int columns, char *name)
-/***** new_matrix
-	pops a new matrix on the stack.
-*****/
-{	size_t size;
-	dims *d;
-	header *hd=(header *)newram;
-	size=matrixsize(rows,2*columns);
-	d=(dims *)make_header(s_cmatrix,size,name);
-	if (d) { d->c=columns; d->r=rows; }
-	return hd;
-}
-
-header *new_command (int no)
-/***** new_command
-	pops a command on stack.
-*****/
-{	size_t size;
-	int *d;
-	header *hd=(header *)newram;
-	size=sizeof(header)+sizeof(int);
-	d=(int *)make_header(s_command,size,"");
-	if (d) *d=no;
-	return hd;
-}
-
-header *new_real (double x, char *name)
-/***** new real
-	pops a double on stack.
-*****/
-{	size_t size;
-	double *d;
-	header *hd=(header *)newram;
-	size=sizeof(header)+sizeof(double);
-	d=(double *)make_header(s_real,size,name);
-	if (d) *d=x;
-	return hd;
-}
-
-header *new_string (char *s, size_t length, char *name)
-/***** new real
-	pops a string on stack.
-*****/
-{	size_t size;
-	char *d;
-	header *hd=(header *)newram;
-	size=sizeof(header)+((int)(length+1)/2+1)*2;
-	d=(char *)make_header(s_string,size,name);
-	if (d) {strncpy(d,s,length); d[length]=0;}
-	return hd;
-}
-
-header *new_udf (char *name)
-/***** new real
-	pops a udf on stack.
-*****/
-{	size_t size;
-	size_t *d;
-	header *hd=(header *)newram;
-    size=sizeof(header)+sizeof(size_t)+(LONG)2;
-	d=(size_t *)make_header(s_udf,size,name);
-	if (d) { *d=sizeof(header)+sizeof(size_t); *((char *)(d+1))=0; }
-	return hd;
-}
-
-header *new_complex (double x, double y, char *name)
-/***** new real
-	pushes a complex on stack.
-*****/
-{	size_t size;
-	double *d;
-	header *hd=(header *)newram;
-	size=sizeof(header)+2*sizeof(double);
-	d=(double *)make_header(s_complex,size,name);
-	if (d) {*d=x; *(d+1)=y;}
-	return hd;
-}
-
-header *new_reference (header *ref, char *name)
-{	size_t size;
-	header **d;
-	header *hd=(header *)newram;
-	size=sizeof(header)+sizeof(header *);
-	d=(header **)make_header(s_reference,size,name);
-	if (d) *d=ref;
-	return hd;
-}
-
-header *new_subm (header *var, LONG l, char *name)
-/* makes a new submatrix, which is a single element */
-{	size_t size;
-	header **d,*hd=(header *)newram;
-	dims *dim;
-	int *n,r,c;
-	size=sizeof(header)+sizeof(header *)+
-		sizeof(dims)+2*sizeof(int);
-	d=(header **)make_header(s_submatrix,size,name);
-	if (d) *d=var;
-	else return hd;
-	dim=(dims *)(d+1);
-	dim->r=1; dim->c=1;
-	n=(int *)(dim+1);
-	c=dimsof(var)->c;
-	if (c==0 || dimsof(var)->r==0)
-	{	output("Matrix is empty!\n"); error=1031; return hd;
-	}
-	else r=(int)(l/c);
-	*n++=r;
-	*n=(int)(l-(LONG)r*c-1);
-	return hd;
-}
-
-header *new_csubm (header *var, LONG l, char *name)
-/* makes a new submatrix, which is a single element */
-{	size_t size;
-	header **d,*hd=(header *)newram;
-	dims *dim;
-	int *n,r,c;
-	size=sizeof(header)+sizeof(header *)+
-		sizeof(dims)+2*sizeof(int);
-	d=(header **)make_header(s_csubmatrix,size,name);
-	if (d) *d=var;
-	else return hd;
-	dim=(dims *)(d+1);
-	dim->r=1; dim->c=1;
-	n=(int *)(dim+1);
-	c=dimsof(var)->c;
-	if (c==0 || dimsof(var)->r==0)
-	{	output("Matrix is empty!\n"); error=1031; return hd;
-	}
-	else r=(int)(l/c);
-	*n++=r;
-	*n=(int)(l-r*c-1);
-	return hd;
-}
-
-header *hnew_submatrix (header *var, header *rows, header *cols, 
-	char *name, int type)
-{	size_t size;
-	header **d;
-	double *mr,*mc=0,x,*mvar;
-	dims *dim;
-	int c,r,*n,i,c0,r0,cvar,rvar,allc=0,allr=0;
-	header *hd=(header *)newram;
-	getmatrix(var,&rvar,&cvar,&mvar);
-	if (rows->type==s_matrix)
-	{	if (dimsof(rows)->r==1) r=dimsof(rows)->c;
-		else if (dimsof(rows)->c==1) r=dimsof(rows)->r;
-		else
-		{	output("Illegal index!\n"); error=41; return 0;
-		}
-		mr=matrixof(rows);
-	}
-	else if (rows->type==s_real)
-	{	r=1; mr=realof(rows);
-	}
-	else if (rows->type==s_command && *commandof(rows)==c_allv)
-	{	allr=1; r=rvar;
-	}
-	else
-	{	output("Illegal index!\n"); error=41; return 0;
-	}
-	if (cols->type==s_matrix)
-	{	if (dimsof(cols)->r==1) c=dimsof(cols)->c;
-		else if (dimsof(cols)->c==1) c=dimsof(cols)->r;
-		else
-		{	output("Illegal index!\n"); error=41; return 0;
-		}
-		mc=matrixof(cols);
-	}
-	else if (cols->type==s_real)
-	{	c=1; mc=realof(cols);
-	}
-	else if (cols->type==s_command && *commandof(cols)==c_allv)
-	{	allc=1; c=cvar;
-	}
-	else
-	{	output("Illegal index!\n"); error=41; return 0;
-	}
-	size=sizeof(header)+sizeof(header *)+
-		sizeof(dims)+((LONG)r+c)*sizeof(int);
-	d=(header **)make_header(type,size,name);
-	if (d) *d=var;
-	else return hd;
-	dim = (dims *)(d+1);
-	n=(int *)(dim+1);
-	r0=0;
-	if (allr)
-	{	for (i=0; i<rvar; i++) *n++=i;
-		r0=rvar;
-	}
-	else for (i=0; i<r; i++)
-	{	x=(*mr++)-1;
-		if (!((x<0.0) || (x>=rvar)) )
-		{	*n++=(int)x; r0++;
-		}
-	}
-	c0=0;
-	if (allc)
-	{	for (i=0; i<cvar; i++) *n++=i;
-		c0=cvar;
-	}
-	else for (i=0; i<c; i++) 
-	{	x=(*mc++)-1;
-		if (!((x<0.0) || (x>=cvar))) 
-		{	*n++=(int)x; c0++;
-		}
-	}
-	dim->r=r0; dim->c=c0;
-	size=(char *)n-(char *)hd;
-#ifdef SPECIAL_ALIGNMENT
-	size=((size-1)/8+1)*8;
-#endif
-	newram=(char *)hd;
-	hd->size=size;
-	return hd;
-}
-
-header *built_csmatrix (header *var, header *rows, header *cols)
-/***** built_csmatrix
-	built a complex submatrix from the matrix hd on the stack.
-*****/
-{	double *mr,*mc=0,*mvar,*mh,*m;
-	int n,c,r,c0,r0,i,j,cvar,rvar,allc=0,allr=0,*pc,*pr,*nc,*nr;
-	header *hd;
-	char *ram;
-	getmatrix(var,&rvar,&cvar,&mvar);
-	if (rows->type==s_matrix)
-	{	if (dimsof(rows)->r==1) r=dimsof(rows)->c;
-		else if (dimsof(rows)->c==1) r=dimsof(rows)->r;
-		else
-		{	output("Illegal index!\n"); error=41; return 0;
-		}
-		mr=matrixof(rows);
-	}
-	else if (rows->type==s_real)
-	{	r=1; mr=realof(rows);
-	}
-	else if (rows->type==s_command && *commandof(rows)==c_allv)
-	{	allr=1; r=rvar;
-	}
-	else
-	{	output("Illegal index!\n"); error=41; return 0;
-	}
-	if (cols->type==s_matrix)
-	{	if (dimsof(cols)->r==1) c=dimsof(cols)->c;
-		else if (dimsof(cols)->c==1) c=dimsof(cols)->r;
-		else
-		{	output("Illegal index!\n"); error=41; return 0;
-		}
-		mc=matrixof(cols);
-	}
-	else if (cols->type==s_real)
-	{	c=1; mc=realof(cols);
-	}
-	else if (cols->type==s_command && *commandof(cols)==c_allv)
-	{	allc=1; c=cvar;
-	}
-	else
-	{	output("Illegal index!\n"); error=41; return 0;
-	}
-	ram=newram;
-	if (ram+((LONG)(c)+(LONG)(r))*sizeof(int)>ramend)
-	{	output("Out of memory!\n"); error=710; return 0;
-	}
-	nr=pr=(int *)ram; nc=pc=pr+r; newram=(char *)(pc+c);
-	c0=0; r0=0;
-	if (allc) { for (i=0; i<c; i++) pc[i]=i; c0=c; }
-	else for (i=0; i<c; i++)
-	{	n=(int)(*mc++)-1;
-		if (n>=0 && n<cvar) { *nc++=n; c0++; }
-	}
-	if (allr) { for (i=0; i<r; i++) pr[i]=i; r0=r; }
-	else for (i=0; i<r; i++) 
-	{	n=(int)(*mr++)-1;
-		if (n>=0 && n<rvar) { *nr++=n; r0++; }
-	}
-	if (c0==1 && r0==1)
-	{	m=cmat(mvar,cvar,pr[0],pc[0]);
-		return new_complex(*m,*(m+1),"");
-	}
-	hd=new_cmatrix(r0,c0,""); if (error) return 0;
-	m=matrixof(hd);
-	for (i=0; i<r0; i++)
-		for (j=0; j<c0; j++)
-		{	mh=cmat(mvar,cvar,pr[i],pc[j]);
-			*m++=*mh++;
-			*m++=*mh;
-		}
-	return hd;
-}
-
-header *built_smatrix (header *var, header *rows, header *cols)
-/***** built_smatrix
-	built a submatrix from the matrix hd on the stack.
-*****/
-{	double *mr,*mc=0,*mvar,*m;
-	int n,c,r,c0,r0,i,j,cvar,rvar,allc=0,allr=0,*pr,*pc,*nc,*nr;
-	header *hd;
-	char *ram;
-	getmatrix(var,&rvar,&cvar,&mvar);
-	if (rows->type==s_matrix)
-	{	if (dimsof(rows)->r==1) r=dimsof(rows)->c;
-		else if (dimsof(rows)->c==1) r=dimsof(rows)->r;
-		else
-		{	output("Illegal index!\n"); error=41; return 0;
-		}
-		mr=matrixof(rows);
-	}
-	else if (rows->type==s_real)
-	{	r=1; mr=realof(rows);
-	}
-	else if (rows->type==s_command && *commandof(rows)==c_allv)
-	{	allr=1; r=rvar;
-	}
-	else
-	{	output("Illegal index!\n"); error=41; return 0;
-	}
-	if (cols->type==s_matrix)
-	{	if (dimsof(cols)->r==1) c=dimsof(cols)->c;
-		else if (dimsof(cols)->c==1) c=dimsof(cols)->r;
-		else
-		{	output("Illegal index!\n"); error=41; return 0;
-		}
-		mc=matrixof(cols);
-	}
-	else if (cols->type==s_real)
-	{	c=1; mc=realof(cols);
-	}
-	else if (cols->type==s_command && *commandof(cols)==c_allv)
-	{	allc=1; c=cvar;
-	}
-	else
-	{	output("Illegal index!\n"); error=41; return 0;
-	}
-	ram=newram;
-	if (ram+((LONG)(c)+(LONG)(r))*sizeof(int)>ramend)
-	{	output("Out of memory!\n"); error=710; return 0;
-	}
-	nr=pr=(int *)ram; nc=pc=pr+r; newram=(char *)(pc+c);
-	c0=0; r0=0;
-	if (allc) { for (i=0; i<c; i++) pc[i]=i; c0=c; }
-	else for (i=0; i<c; i++)
-	{	n=(int)(*mc++)-1;
-		if (n>=0 && n<cvar) { *nc++=n; c0++; }
-	}
-	if (allr) { for (i=0; i<r; i++) pr[i]=i; r0=r; }
-	else for (i=0; i<r; i++) 
-	{	n=(int)(*mr++)-1;
-		if (n>=0 && n<rvar) { *nr++=n; r0++; }
-	}
-	if (c0==1 && r0==1)
-	{	return new_real(*mat(mvar,cvar,pr[0],pc[0]),"");
-	}
-	hd=new_matrix(r0,c0,""); if (error) return 0;
-	m=matrixof(hd);
-	for (i=0; i<r0; i++)
-		for (j=0; j<c0; j++)
-			*m++=*mat(mvar,cvar,pr[i],pc[j]);
-	return hd;
-}
-
-header *new_submatrix (header *hd, header *rows, header *cols, 
-	char *name)
-{	if (nosubmref) return built_smatrix(hd,rows,cols);
-	return hnew_submatrix(hd,rows,cols,name,s_submatrix);
-}
-
-header *new_csubmatrix (header *hd, header *rows, header *cols, 
-	char *name)
-{	if (nosubmref) return built_csmatrix(hd,rows,cols);
-	return hnew_submatrix(hd,rows,cols,name,s_csubmatrix);
 }
 
 /***************** support functions ************************/
@@ -943,236 +516,6 @@ void scan_name (char *name)
 	*name=0;
 }
 
-void getmatrix (header *hd, int *r, int *c, double **m)
-/***** getmatrix
-	get rows and columns from a matrix.
-*****/
-{	dims *d;
-	if (hd->type==s_real || hd->type==s_complex)
-	{	*r=*c=1;
-		*m=realof(hd);
-	}
-	else
-	{	d=dimsof(hd);
-		*m=matrixof(hd);
-		*r=d->r; *c=d->c;
-	}
-}
-
-header *searchvar (char *name)
-/***** searchvar
-	search a local variable, named "name".
-	return 0, if not found.
-*****/
-{	int r;
-	header *hd=(header *)startlocal;
-	r=xor(name);
-	while ((char *)hd<endlocal)
-	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
-		hd=nextof(hd);
-	}
-	return 0;
-}
-
-header *searchudf (char *name)
-/***** searchudf
-	search a udf, named "name".
-	return 0, if not found.
-*****/
-{	header *hd;
-	int r;
-	r=xor(name);
-	hd=(header *)ramstart;
-	while ((char *)hd<udfend && hd->type==s_udf)
-	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
-		hd=nextof(hd);
-	}
-	return 0;
-}
-
-void kill_local (char *name)
-/***** kill_local
-	kill a local variable name, if there is one.
-*****/
-{	size_t size,rest;
-	header *hd=(header *)startlocal;
-	while ((char *)hd<endlocal)
-	{	if (!strcmp(hd->name,name)) /* found! */
-		{	size=hd->size;
-			rest=newram-(char *)hd-size;
-			if (size) memmove((char *)hd,(char *)hd+size,rest);
-			endlocal-=size; newram-=size;
-			return;
-		}
-		hd=(header *)((char *)hd+hd->size);
-	}
-}
-
-void kill_udf (char *name)
-/***** kill_udf
-	kill a local variable name, if there is one.
-*****/
-{	size_t size,rest;
-	header *hd=(header *)ramstart;
-	while ((char *)hd<udfend)
-	{	if (!strcmp(hd->name,name)) /* found! */
-		{	size=hd->size;
-			rest=newram-(char *)hd-size;
-			if (size && rest) memmove((char *)hd,(char *)hd+size,rest);
-			endlocal-=size; startlocal-=size; newram-=size;
-			udfend-=size;
-			return;
-		}
-		hd=(header *)((char *)hd+hd->size);
-	}
-}
-
-int sametype (header *hd1, header *hd2)
-/***** sametype
-	returns true, if hd1 and hd2 have the same type and dimensions.
-*****/
-{	dims *d1,*d2;
-	if (hd1->type!=hd2->type || hd1->size!=hd2->size) return 0;
-	if (hd1->type==s_matrix)
-	{	d1=dimsof(hd1); d2=dimsof(hd2);
-			if (d1->r!=d2->r) return 0;
-	}
-	return 1;
-}
-
-header *assign (header *var, header *value)
-/***** assign
-	assign the value to the variable.
-*****/
-{	char name[MAXNAME],*nextvar;
-	size_t size,dif;
-	double *m,*mv,*m1,*m2;
-	int i,j,c,r,cv,rv,*rind,*cind;
-	dims *d;
-	header *help,*orig;
-	if (error) return 0;
-	size=value->size;
-	if (var->type==s_reference && !referenceof(var))
-		/* seems to be a new variable */
-	{	strcpy(name,var->name);
-		if (value->type==s_udf)
-		{	strcpy(value->name,name);
-			value->xor=xor(name);
-			if (newram+size>ramend)
-			{	output("Memory overflow.\n"); error=500; return value;
-			}
-			memmove(ramstart+size,ramstart,newram-ramstart);
-			newram+=size; endlocal+=size; startlocal+=size;
-			value=(header *)((char *)value+size);
-			udfend+=size;
-			memmove(ramstart,(char *)value,size);
-			return (header *)ramstart;
-		}
-		memmove(endlocal+size,endlocal,newram-endlocal);
-		value=(header *)((char *)value+size);
-		newram+=size;
-		memmove(endlocal,(char *)value,size);
-		strcpy(((header *)endlocal)->name,name);
-		((header *)endlocal)->xor=xor(name);
-		value=(header *)endlocal;
-		endlocal+=size;
-		return value;
-	}
-	else
-	{	while (var && var->type==s_reference) var=referenceof(var);
-		if (!var)
-		{	error=43; output("Internal variable error!\n"); return 0;
-		}
-		if (var->type!=s_udf && value->type==s_udf)
-		{	output("Cannot assign a UDF to a variable!\n"); error=320;
-			return var;
-		}
-		if (var->type==s_submatrix)
-		{	d=submdimsof(var);
-			if (value->type==s_complex || value->type==s_cmatrix)
-			{	orig=submrefof(var);
-				help=new_reference(orig,""); 
-				if (error) return 0;
-					mcomplex(help); if (error) return 0;
-				var->type=s_csubmatrix;
-				submrefof(var)=help;
-				assign(var,value); if (error) return 0;
-				submrefof(var)=orig;
-				assign(orig,help); 
-				return orig;
-			}
-			else if (value->type!=s_real && value->type!=s_matrix)
-			{	output("Illegal assignment!\n"); error=45; return 0;
-			}
-			getmatrix(value,&rv,&cv,&mv);
-			getmatrix(submrefof(var),&r,&c,&m);
-			if (d->r!=rv || d->c!=cv)
-			{	output("Illegal assignment!\n"); error=45; return 0;
-			}
-			rind=rowsof(var); cind=colsof(var);
-			for (i=0; i<d->r; i++)
-			{	m1=mat(m,c,rind[i],0);
-				m2=mat(mv,cv,i,0);
-				for (j=0; j<d->c; j++)
-				{	m1[cind[j]]=*m2++;
-				}
-			}
-			return submrefof(var);
-		}
-		else if (var->type==s_csubmatrix)
-		{	d=submdimsof(var);
-			if (value->type==s_real || value->type==s_matrix)
-			{	help=new_reference(value,""); if (error) return 0;
-				mcomplex(help); if (error) return 0;
-				assign(var,help);
-				return submrefof(var);
-			}
-			if (value->type!=s_complex && value->type!=s_cmatrix)
-			{	output("Illegal assignment!\n"); error=45; return 0;
-			}
-			getmatrix(value,&rv,&cv,&mv);
-			getmatrix(submrefof(var),&r,&c,&m);
-			if (d->r!=rv || d->c!=cv)
-			{	output("Illegal assignment!\n"); error=45; return 0;
-			}
-			rind=rowsof(var); cind=colsof(var);
-			for (i=0; i<d->r; i++)
-			{	m1=cmat(m,c,rind[i],0);
-				m2=cmat(mv,cv,i,0);
-				for (j=0; j<d->c; j++)
-                {   copy_complex(m1+(LONG)2*cind[j],m2); m2+=2;
-				}
-			}
-			return submrefof(var);
-		}		
-		else 
-		{	if ((char *)var<startlocal || (char *)var>endlocal) 
-			/* its not a local variable! */
-			{	if (!sametype(var,value))
-				{	output1("Cannot change type of non-local variable %s!\n",
-						var->name);
-					error=12; return 0;
-				}
-				memcpy((char *)(var+1),(char *)(value+1),
-					value->size-sizeof(header));
-				return var;
-			}
-			dif=value->size-var->size;
-			if (newram+dif>ramend)
-			{	output("Memory overflow\n"); error=501; return value;
-			}
-			nextvar=(char *)var+var->size;
-			if (dif!=0)
-				memmove(nextvar+dif,nextvar,newram-nextvar);
-			newram+=dif; endlocal+=dif;
-			value=(header *)((char *)value+dif);
-			strcpy(value->name,var->name);
-			value->xor=var->xor;
-			memmove((char *)var,(char *)value,value->size);
-		}
-	}
-	return var;
-}
 
 /********************* interpreter **************************/
 
@@ -2270,6 +1613,550 @@ int builtin (void)
 	return 0;
 }
 
+/***************** scanning ***************************/
+
+void copy_complex (double *x, double *y)
+{	*x++=*y++;
+	*x=*y;
+}
+
+static int scan_arguments (void)
+/* look ahead for arguments */
+{	int count=0,olds=nosubmref,nocount=0;
+	header *hd,*hdold;
+	nosubmref=1;
+	while (1)
+	{	scan_space();
+		if (*next==')' || *next==']') break;
+		if (*next==',')
+			hd=new_reference(0,"");
+		else
+		{	hd=scan(); scan_space();
+		}
+		if (*next=='=')
+		{	next++;
+			hdold=(header *)newram;
+			scan_value();
+			if (!error)
+			{	strcpy(hdold->name,hd->name);
+				hdold->xor=hd->xor;
+				moveresult(hd,hdold);
+				nocount=1;
+			}
+		}
+		else if (nocount)
+		{	output("Illegal parameter after named parameter!\n");
+			error=2700;
+		}
+		if (error)
+		{	nosubmref=olds;
+			return 0;
+		}
+		while (hd<(header *)newram)
+		{	if (!nocount) count++;
+			hd=nextof(hd);
+		}
+		if (count>=10)
+		{	output("Too many arguments!\n"); error=56; return 0; }
+		if (*next!=',') break;
+		next++;
+	}
+	if (*next!=')' && *next!=']')
+	{	output("Error in arguments!\n"); error=19; return 0; }
+	next++;
+	nosubmref=olds;
+	return count;
+}
+
+void scan_matrix (void)
+/***** scan_matrix
+	scan a matrix from input.
+	form: [x y z ... ; v w u ...],
+	where x,y,z,u,v,w are sums.
+*****/
+{	header *hd,*result;
+	dims *d;
+	int c,r,count,i,j,complex=0;
+	size_t ic;
+	size_t allcount;
+	double *m,*ms,cnull[2]={0,0};
+	hd=new_matrix(0,0,""); /* don't know how big it will be! */
+	if (error) return;
+	count=0;
+	getmatrix(hd,&r,&c,&m); ms=m;
+	r=0; c=0;
+	scan_space();
+	while (1)
+	{	scan_space();
+		if (*next==0) { next_line(); scan_space(); }
+			/* matrix is allowed to pass line ends */
+		if (*next==';' || *next==']') 
+			/* new column starts */
+		{	if (*next==';') next++;
+			if ((char *)(ms+count*(r+1))>=ramend)
+			{	output("Memory overflow!\n"); error=18; return;
+			}
+			if (count>c) /* this column is too long */
+			{	if (r>0) /* expand matrix */
+				{	for (j=count-1; j>=0; j--)
+					{	if (complex) copy_complex(cmat(ms,count,r,j),
+							cmat(ms,c,r,j));
+						else *mat(ms,count,r,j)=*mat(ms,c,r,j);
+					}
+					for (i=r-1; i>=0; i--)
+					{	if (i>0)
+						for (j=c-1; j>=0; j--)
+						{	if (complex) 
+								copy_complex(cmat(ms,count,i,j),
+									cmat(ms,c,i,j));
+							else *mat(ms,count,i,j)=*mat(ms,c,i,j);
+						}
+						for (j=c; j<count; j++)
+						if (complex) copy_complex(cmat(ms,count,i,j),
+							cnull);
+						else *mat(ms,count,i,j)=0.0;
+					}
+				}
+				c=count;
+			}
+			else if (count<c)
+			{	for (j=count; j<c; j++)
+					if (complex) copy_complex(cmat(ms,c,r,j),
+							cnull);
+					else *mat(ms,c,r,j)=0.0;
+			}
+            r++; newram=(char *)(ms+(complex?2l:1l)*(size_t)c*r);
+			m=(double *)newram;
+			count=0;
+		}
+		if (*next==']') break;
+		if (*next==',') next++;
+		if (*next==0) next_line();
+		result=scan_value(); if (error) return;
+		newram=(char *)result;
+		if (!complex && result->type==s_complex)
+		{	complex=1;
+			/* make matrix complex up to now (oh boy!) */
+			allcount=((char *)m-(char *)ms)/sizeof(double);
+			if (newram+allcount*sizeof(double)+result->size>ramend)
+			{	output("Memory overflow!\n"); error=16; return;
+			}
+			if (allcount)
+			{	memmove(newram+allcount*sizeof(double),newram,result->size);
+				result=(header *)((char *)result+allcount*sizeof(double));
+				for (ic=allcount-1; ic>0; ic--)
+                {   *(ms+(size_t)2*ic)=*(ms+ic); 
+                	*(ms+(size_t)2*ic+1)=0.0;
+				}
+				*(ms+1)=0.0;
+            newram=(char *)(ms+(size_t)2*allcount); m=(double *)newram;
+			}
+			hd->type=s_cmatrix;
+		}
+		else if (result->type==s_real);
+		else if (result->type==s_complex && complex);
+		else
+		{	error=-1; output("Illegal vector!\n"); return;
+		}
+		*m++=*realof(result); count++;
+		if (complex)
+		{	if (result->type==s_complex) *m++=*imagof(result);
+			else *m++=0.0;
+		}
+		if (count>=INT_MAX)
+		{	output1("Matrix has more than %d columns!\n",INT_MAX);
+			error=17; return;
+		}
+		newram=(char *)m;
+		if (newram>=ramend) 
+		{	output("Memory overflow!\n"); error=16; return; 
+		}
+	}
+	next++;
+	d=(dims *)(hd+1);
+	if (c==0) r=0;
+	d->c=c; d->r=r;
+	if (r>=INT_MAX)
+	{	output1("Matrix has more than %d rows!\n",INT_MAX);
+		error=18; return;
+	}
+	hd->size=complex?cmatrixsize(c,r):matrixsize(c,r);
+	newram=(char *)hd+hd->size;
+}
+
+void scan_elementary (void)
+/***** scan_elemtary
+	scan an elementary expression, like a value or variable.
+	scans also (...).
+*****/
+{	double x;
+	int n,nargs=0,hadargs=0;
+	header *hd=(header *)newram,*var;
+	char name[MAXNAME],*s;
+	scan_space();
+	if ((*next=='.' && isdigit(*(next+1))) || isdigit(*next))
+	{	sscanf(next,"%lf%n",&x,&n);
+		next+=n;
+		if (*next=='i') /* complex number! */
+		{	next++;
+			new_complex(0,x,"");
+		}
+		else new_real(x,"");
+	}
+	else if (*next==2) /* a double stored in binary form */
+	{	next++;
+#ifdef SPECIAL_ALIGNMENT
+		memmove((char *)(&x),next,sizeof(double));
+#else
+		x=*((double *)next);
+#endif
+		next+=sizeof(double);
+		if (*next=='i') /* complex number! */
+		{	next++;
+			new_complex(0,x,"");
+		}
+		else new_real(x,"");
+	}
+	else if (*next==3)
+	{	output("Command name used as variable!\n");
+		error=4000; return;
+	}
+	else if (isalpha(*next))
+	{	scan_name(name); if (error) return;
+		scan_space(); nargs=0;
+		if (*next=='{')
+		{	next++; scan(); if (error) return; scan_space();
+			if (*next!='}')
+			{	output("} missing!\n"); error=1010; return;
+			}
+			next++;
+			get_element1(name,hd);
+			goto after;
+		}
+		if (*next=='(' || *next=='[') /* arguments or indices */
+		{	hadargs=(*next=='[')?2:1;
+			next++; nargs=scan_arguments();
+			if (error) return;
+		}
+		if (hadargs==1 && exec_builtin(name,nargs,hd));
+		else
+		{	if (hadargs==2) var=searchvar(name);
+			else if (hadargs==1)
+			{	var=searchudf(name);
+				if (!var) var=searchvar(name);
+			}
+			else var=searchvar(name);
+			if (var && var->type==s_udf && hadargs==1)
+			{	interpret_udf(var,hd,nargs); if (error) return;
+			}
+			else if (!var && hadargs)
+			{	error=24;
+				if (hadargs==2)
+				output1("%s no variable!\n",name);
+				else
+				output1(
+			"%s no function or variable, or wrong argument number!\n",
+			name);
+				return;
+			}
+			else if (var && hadargs)
+			{	get_element(nargs,var,hd);
+			}
+			else hd=new_reference(var,name);
+		}
+	}
+	else if (*next=='#' && *(next+1)!='#')
+	{	next++; mindex(hd);
+	}
+	else if (*next=='+')
+	{	next++; scan_elementary();
+	}
+	else if (*next=='-')
+	{	next++; scan_elementary();
+		if (!error) invert(hd);
+	}
+	else if (*next=='(')
+	{	next++;
+		scan(); if (error) return;
+		scan_space();
+		if (*next!=')')
+		{	output("Closing bracket ) missing!\n");
+			error=5; return;
+		}
+		newram=(char *)nextof(hd);
+		next++;
+	}
+	else if (*next=='[')
+	{	next++;
+		scan_matrix();
+	}
+	else if (*next=='\"')
+	{	next++; s=next; 
+		while (*next!='\"' && *next!=0) next++;
+		hd=new_string(s,next-s,"");
+		if (*next!='\"') { output("\" missing\n"); error=1; return; }
+		next++;
+	}
+	else error=1;
+	after: if (error) return;
+	/* for things, that come after an elementary expression */
+	scan_space();
+	if (*next=='\'') { next++; transpose(hd); }
+	else if (*next=='^' || (*next=='*' && *(next+1)=='*'))
+	{	if (*next=='^') next++; 
+		else next+=2;
+		newram=(char *)nextof(hd);
+		scan_elementary();
+		if (error) return;
+		mpower(hd);
+	}
+}
+
+void scan_factor (void)
+{	scan_elementary();
+}
+
+void scan_summand (void)
+{	header *hd=(header *)newram,*hd1;
+	scan_space();
+	scan_factor();
+	if (error) return;
+	while (1)
+	{	hd1=(header *)newram;
+		scan_space();
+		if ((*next=='*' && *(next+1)!='*') 
+				|| (*next=='.' && *(next+1)=='*'))
+		{	if (*next=='*') next++;
+			else next+=2;
+			scan_factor();
+			if (!error) dotmultiply(hd,hd1);
+		}
+		else if (*next=='/' || (*next=='.' && *(next+1)=='/'))
+		{	if (*next=='/') next++;
+			else next+=2;
+			scan_factor();
+			if (!error) dotdivide(hd,hd1);
+		}
+		else if (*next=='.') 
+		{	next++;
+			scan_factor();
+			if (!error) multiply(hd,hd1);
+		}
+		else if (*next=='\\')
+		{	next++;
+			newram=(char *)nextof(hd);
+			scan_factor();
+			if (!error) msolve(hd);
+		}
+		else break;
+		if (error) break;
+	}
+}
+
+void scan_summe (void)
+{	header *hd=(header *)newram,*hd1;
+	scan_space();
+	scan_summand();
+	if (error) return;
+	while (1)
+	{	hd1=(header *)newram;
+		scan_space();
+		if (*next=='+')
+		{	next++;
+			scan_summand();
+			if (!error) add(hd,hd1);
+		}
+		else if (*next=='-')
+		{	next++;
+			scan_summand();
+			if (!error) subtract(hd,hd1);
+		}
+		else break;
+		if (error) break;
+	}
+}
+
+void scan_dp (void)
+{	header *hd=(header *)newram,*hd1,*hd2;
+	scan_space();
+	if (*next==':')
+	{	next++;
+		new_command(c_allv);
+		return;
+	}
+	scan_summe();
+	if (*next==':') /* a vector a:b:c or a:c */
+	{	next++;
+		hd1=(header *)newram; scan_summe();
+		if (error) return;
+		scan_space();
+		if (*next==':')
+		{	next++; hd2=(header *)newram; 
+			scan_summe(); if (error) return;
+		}
+		else
+		{	hd2=hd1; hd1=new_real(1.0,"");
+		}
+		if (error) return;
+		vectorize(hd,hd1,hd2);
+	}
+}
+
+void scan_compare (void)
+{	header *hd=(header *)newram;
+	scan_space();
+	if (*next=='!')
+	{	next++; scan_compare(); mnot(hd); return;
+	}
+	scan_dp(); if (error) return;
+	scan_space();
+	if (*next=='<')
+	{	next++;
+		newram=(char *)nextof(hd);
+		if (*next=='=')
+		{	next++; scan_dp(); if (error) return; mlesseq(hd); return;
+		}
+		else if (*next=='>')
+		{	next++; scan_dp(); if (error) return; munequal(hd); return;
+		}
+		scan_dp(); if (error) return;
+		mless(hd);
+	}
+	else if (*next=='>')
+	{	next++; 
+		newram=(char *)nextof(hd);
+		if (*next=='=')
+		{	next++; scan_dp(); if (error) return; mgreatereq(hd); return;
+		}
+		scan_dp(); if (error) return;
+		mgreater(hd);
+	}
+	else if (*next=='=' && *(next+1)=='=')
+	{	next+=2;
+		newram=(char *)nextof(hd);
+		scan_dp(); if (error) return;
+		mequal(hd);
+	}
+	else if (*next=='~' && *(next+1)=='=')
+	{	next+=2; 
+		newram=(char *)nextof(hd);
+		scan_dp(); if (error) return;
+		maboutequal(hd);
+	}
+	else if (*next=='!' && *(next+1)=='=')
+	{	next+=2; 
+		newram=(char *)nextof(hd);
+		scan_dp(); if (error) return;
+		munequal(hd);
+	}
+	else if (*next=='_')
+	{	next++;
+		newram=(char *)nextof(hd);
+		scan_compare(); if (error) return;
+		mvconcat(hd);
+	}
+	else if (*next=='|' && *(next+1)!='|')
+	{	next++;
+		newram=(char *)nextof(hd); 
+		scan_compare(); if (error) return;
+		mhconcat(hd);
+	}
+}
+
+void scan_logical (void)
+{	header *hd=(header *)newram;
+	scan_compare(); if (error) return;
+	scan_space();
+	if (*next=='|' && *(next+1)=='|')
+	{	next+=2; 
+		newram=(char *)nextof(hd);
+		scan_compare(); if (error) return;
+		mor(hd);
+	}
+	else if (*next=='&' && *(next+1)=='&')
+	{	next+=2; 
+		newram=(char *)nextof(hd);
+		scan_compare(); if (error) return;
+		mand(hd);
+	}
+}
+
+header *scan (void)
+{	header *result=(header *)newram;
+	scan_space();
+	if (*next=='{')
+	{	next++; scan_logical(); if (error) return result;
+		while (1)
+		{	scan_space();
+			if (*next=='}') { next++; return result; }
+			if (*next!=',')
+			{	output("Error in {}!\n"); error=104; return result;
+			}
+			next++; scan_logical();
+			if (error) return result;
+		}
+	}
+	else
+	{	scan_logical();
+	}
+	return result;
+}
+
+header *scan_value (void)
+{	header *result=(header *)newram,*hd,*hd1,*marker,*nextresult,
+		*endresults;
+	int oldnosubmref;
+	size_t size;
+	scan_space();
+	if (*next=='{')
+	{	next++; 
+		oldnosubmref=nosubmref; nosubmref=1; 
+		scan_logical(); nosubmref=oldnosubmref;
+		hd1=getvalue(result);
+		if (error) return result;
+		moveresult(result,hd1);
+		while (1)
+		{	scan_space();
+			if (*next=='}') { next++; return result; }
+			if (*next!=',')
+			{	output("Error in {}!\n"); error=104; return result;
+			}
+			next++; hd=(header *)newram; scan_value();
+			if (error) return result;
+			hd1=getvalue(hd); if (error) return result;
+			moveresult(hd,hd1);
+		}
+	}
+	else
+	{	scan_logical();
+		marker=result;
+		endresults=(header *)newram;
+		while (marker<endresults)
+		{	hd1=getvalue(marker);
+			if (error) return result;
+			nextresult=nextof(marker);
+			if (hd1!=marker)
+			{	if (nextresult==endresults)
+				{	memmove((char *)marker,(char *)hd1,hd1->size);
+					newram=(char *)nextof(marker);
+					break;
+				}
+				size=hd1->size-marker->size;
+				memmove((char *)nextresult+size,(char *)nextresult,
+					newram-(char *)nextresult);
+				if (hd1>nextresult) 
+					hd1=(header *)((char *)hd1+size);
+				nextresult=(header *)((char *)nextresult+size);
+				endresults=(header *)((char *)endresults+size);
+				memmove((char *)marker,(char *)hd1,hd1->size);
+				newram=(char *)endresults;
+			}
+			marker=nextresult;
+		}
+	}
+	return result;
+}
+
 header *scan_expression (void)
 /***** scan_expression
 	scans a variable, a value or a builtin command.
@@ -2405,11 +2292,6 @@ int command (void)
 }
 
 /******************* main functions ************************/
-
-void clear_fktext (void)
-{	int i;
-	for (i=0; i<12; i++) fktext[i][0]=0;
-}
 
 void main_loop (int argc, char *argv[])
 {	int i;

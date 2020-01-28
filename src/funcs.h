@@ -1,6 +1,23 @@
 #ifndef _FUNCS_H_
 #define _FUNCS_H_
 
+#include "core.h"
+
+
+typedef struct {
+	char *name;
+	int nargs;
+	void (*f) (header *);
+} builtintyp;
+
+extern builtintyp builtin_list[];
+
+/* udf */
+extern int udfon;
+extern header *running;
+
+void interpret_udf (header *var, header *args, int nargs);
+
 /* basic ops */
 void add (header *hd, header *hd1);
 void subtract (header *hd, header *hd1);
@@ -28,6 +45,12 @@ void mequal (header *hd);
 void munequal (header *hd);
 void maboutequal (header *hd);
 
+void mnot (header *hd);
+void mand (header *hd);
+void mor (header *hd);
+void mvconcat (header *hd);
+void mhconcat (header *hd);
+
 void msin (header *hd); 
 void mcos (header *hd);
 void mtan (header *hd);
@@ -46,15 +69,11 @@ void mcomplex (header *hd);
 
 void mpower (header *hd);
 
-int exec_builtin (char *name, int nargs, header *hd);
-builtintyp *find_builtin (char *name);
-void print_builtin (void);
-
 void msolve (header *hd);
 
 void mindex (header *hd);
 
-void minmax (double *x, LONG n, double *min, double *max,
+void minmax (double *x, size_t n, double *min, double *max,
 	int *imin, int *imax);
 void transpose (header *hd);
 void vectorize (header *init, header *step, header *end);
@@ -84,5 +103,10 @@ void polyzeros (header *hd);
 void polytrunc (header *hd);
 void mzeros (header *hd);
 void mzeros1 (header *hd);
+
+int exec_builtin (char *name, int nargs, header *hd);
+builtintyp *find_builtin (char *name);
+void print_builtin (void);
+void sort_builtin (void);
 
 #endif

@@ -1,5 +1,33 @@
-#ifndef __SYSDEP_H__
-#define __SYSDEP_H__
+#ifndef _SYSDEP_H_
+#define _SYSDEP_H_
+
+#define LONG size_t
+#define TAB 9
+
+#ifndef M_PI
+#define M_PI            3.14159265358979323846
+#endif
+
+#ifndef ALIGNMENT
+#define ALIGNMENT 8
+#endif
+
+#ifdef _WIN32
+#define PATH_DELIM_CHAR '\\'
+#define PATH_DELIM_STR "\\"
+#else
+#define PATH_DELIM_CHAR '/'
+#define PATH_DELIM_STR "/"
+#endif
+
+#define MAX_PATH	10
+
+extern char * path[MAX_PATH];
+extern int npath;
+
+#define EXTENSION ".e"
+
+extern char fktext[12][64];
 
 /* definiert in rmat.c */
 

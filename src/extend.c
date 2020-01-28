@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "header.h"
+#include "funcs.h"
 
 void mindex (header *hd);
 void mpi (header *hd);

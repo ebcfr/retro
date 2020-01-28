@@ -13,6 +13,11 @@ static int act_history=0,	/* number of actual entries in history */
            hist=0;			/* current line */
 extern int outputing;
 
+void clear_fktext (void)
+{	int i;
+	for (i=0; i<12; i++) fktext[i][0]=0;
+}
+
 static void cpy (char *dest, char *source)
 {	memmove(dest,source,strlen(source)+1);
 }

@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <ctype.h>
 
-#include "header.h"
+#include "core.h"
 #include "spread.h"
 
 #define isreal(hd) (((hd)->type==s_real || (hd)->type==s_matrix))
