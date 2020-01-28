@@ -40,3 +40,88 @@ function g(a)
 endfunction
 
 {x,y,z}=g(1)
+
+.. test global feature
+d=2
+function h(a,b=7,c)
+  global d;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+d=2
+function h(a,b=7,c)
+  global d;
+  d=3;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+d=2
+function h(a,b=7,c)
+  d=4;
+  global d;
+  d=3;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+d=2
+function h(a,b=7,c)
+  d=4;
+  global d;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+.. Cannot change type of a non-local variable
+d=2
+function h(a,b=7,c)
+  global d;
+  d=1:3;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+.. global d shadowed by local variable d
+d=2
+function h(a,b=7,c)
+  d=0;
+  global d;
+  d=1:3;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+.. since d global variable exists, d is a reference to it
+d=2
+function h(a,b=7,c)
+  global *
+  d=3;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+.. e is a local variable
+function h(a,b=7,c)
+  global *
+  e=4;
+  return a+2*b+c+e;
+endfunction
+
+h(5,,11)
+e

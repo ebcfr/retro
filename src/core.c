@@ -7,23 +7,25 @@
 #include "core.h"
 
 /* functions that manipulate the stack */
-char *ramstart,*ramend,*udfend,*startlocal,*endlocal,*newram;
+char *ramstart,*ramend,*udfend,*startlocal,*endlocal,*newram,
+     *startglobal, *endglobal;
 
-/* Organization of the stack                      when global
-                                                     scope
-   ----------------------------- <-- ramstart          |
-   udf (user defined functions)                        V
-   ----------------------------- <-- udfend      [startlocal]
-   global variables
-   ----------------------------- <-- startlocal  [endlocal]
-   running function local scope
-   ----------------------------- <-- newram = endlocal (top of stack)
-   
-   
-               free
-   
-   
-   ----------------------------- <-- ramend
+/* Organization of the stack
+	----------------------------- <-- ramend
+	   
+	   
+	            free
+	   
+	
+	----------------------------- <-- newram = endlocal (top of stack)
+	running function local scope
+	----------------------------- <-- startlocal = endglobal   [endlocal]
+	global variables
+	----------------------------- <-- udfend     = startglobal [startlocal]
+	udf (user defined functions)                                    ^
+	----------------------------- <-- ramstart                      |
+                                                               when global
+	                                                              scope
    
    the running function local is transient and exists only while
    the function is executed.
@@ -480,17 +482,34 @@ void getmatrix (header *hd, int *r, int *c, double **m)
 	}
 }
 
+int searchglobal=0;
+
 header *searchvar (char *name)
 /***** searchvar
 	search a local variable, named "name".
 	return 0, if not found.
 *****/
-{	int r;
+{/*	int r;
 	header *hd=(header *)startlocal;
 	r=xor(name);
 	while ((char *)hd<endlocal)
 	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
 		hd=nextof(hd);
+	}
+	return 0;*/
+	int r;
+	header *hd=(header *)startlocal;
+	r=xor(name);
+	while ((char *)hd<endlocal)
+	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
+		hd=nextof(hd);
+	}
+	if (startglobal!=startlocal && searchglobal)
+	{   hd=(header *)startglobal;
+		while ((char *)hd<endglobal)
+		{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
+			hd=nextof(hd);
+		}
 	}
 	return 0;
 }

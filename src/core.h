@@ -3,6 +3,8 @@
 
 extern char *ramstart,
             *ramend,
+            *startglobal,
+            *endglobal,
             *startlocal,
             *endlocal,
             *newram,
@@ -13,6 +15,7 @@ extern char *ramstart,
 extern int error,surpressed,udf,udfon,linelength,stringon;
 extern long loopindex;
 extern char *next,*udfline;
+extern int searchglobal;
 
 typedef enum {
 	s_real,

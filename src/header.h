@@ -46,8 +46,6 @@ void print_error (char *p);
 void main_loop (int argc, char *argv[]);
 
 void scan_space (void);
-void scan_name (char *name);
-void next_line (void);
 void trace_udfline(char *);
 
 void give_out (header *hd);

@@ -18,6 +18,9 @@ extern header *running;
 
 void interpret_udf (header *var, header *args, int nargs);
 
+/* line IO */
+void minput (header *hd);
+
 /* basic ops */
 void add (header *hd, header *hd1);
 void subtract (header *hd, header *hd1);

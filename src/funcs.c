@@ -170,12 +170,30 @@ static int actargn=0;
 void interpret_udf (header *var, header *args, int argn)
 /**** interpret_udf
 	interpret a user defined function.
+	context:
+	- udfline
+	- udfon status: 0=in global frame
+	                1=in a udf
+	                2=in the return statement
+	- searchglobal: search variables in the global frame as well?
+	- actargn     : actual number of arguments pushed on the stack
+	- startlocal  : beginning of the function frame used to access
+	                its arguments and local variables, on the stack.
+	- endlocal    : end of the function frame.
+	- running     : the current running function (header of the 
+	                function on the stack).
+	TODO: *var structure
 ****/
-{	int udfold,nargu,i,oldargn,defaults,oldtrace;
+{	int udfold,nargu,i,oldargn,defaults,oldtrace, oldsearchglobal;
 	char *oldnext=next,*oldstartlocal,*oldendlocal,*udflineold,*p;
 	header *result,*st=args,*hd=args,*hd1,*oldrunning;
+	
+	
+	/* function frame block */
 	p=helpof(var);
 	nargu=*((int *)p); p+=sizeof(int);
+	
+	/* dereference arguments, and set them default arg1, arg2 names */
 	for (i=0; i<argn; i++)
 	{	if (hd->type==s_reference && !referenceof(hd))
 		{	if (i<nargu && hd->name[0]==0 && *(int *)p)
@@ -209,14 +227,22 @@ void interpret_udf (header *var, header *args, int argn)
 		{	moveresult((header *)newram,(header *)p);
 			p=(char *)nextof((header *)p);
 		}
+/*		else
+		{	output1("Argument %s undefined.\n",name);
+			error=1; return;
+		}*/
 	}
-	udflineold=udfline;
+	/* Save context of the caller */
+	udflineold=udfline; udfold=udfon;
 	oldargn=actargn;
-	actargn=argn;
-	udfline=next=udfof(var); udfold=udfon; udfon=1;
 	oldstartlocal=startlocal; oldendlocal=endlocal;
-	startlocal=(char *)args; endlocal=newram;
-	oldrunning=running; running=var;
+	oldsearchglobal=searchglobal; searchglobal=0;
+	oldrunning=running; 
+	/* setup the new frame */
+	startlocal=(char *)args; endlocal=newram; running=var;
+	actargn=argn;
+	udfline=next=udfof(var); udfon=1;
+	
 	if ((oldtrace=trace)>0)
 	{	if (trace==2) trace=0;
 		if (trace>0) trace_udfline(next);
@@ -225,9 +251,10 @@ void interpret_udf (header *var, header *args, int argn)
 	{	trace=1;
 		if (trace>0) trace_udfline(next);
 	}
+	/* interpret the udf code */
 	while (!error && udfon==1)
 	{	command();
-		if (udfon==2)
+		if (udfon==2) /* handling of the return of multiple values */
 		{	result=scan_value(); 
 			if (error) 
 			{	output1("Error in function %s\n",var->name);
@@ -241,6 +268,7 @@ void interpret_udf (header *var, header *args, int argn)
 		{	output("User interrupted!\n"); error=58; break; 
 		}
 	}
+	/* function finished, restore the context of the caller */
 	endlocal=oldendlocal; startlocal=oldstartlocal;
 	running=oldrunning;
 	if (trace>=0) trace=oldtrace;
@@ -249,6 +277,7 @@ void interpret_udf (header *var, header *args, int argn)
 	{	output1("Return missing in %s!\n",var->name); error=55; }
 	udfon=udfold; next=oldnext; udfline=udflineold;
 	actargn=oldargn;
+	searchglobal=oldsearchglobal;
 }
 
 void mdo (header *hd)

@@ -1092,9 +1092,9 @@ endfunction
 function dir(pattern="*.*")
 ## dir(pattern) displays a directory.
 ## dir() is the same as dir("*.*").
-	s=searchfile(pattern), if stringcompare(s,"")==0; return 0; endif;
+	s=searchfile(pattern), if s=="" return 0; endif;
 	repeat
-		s=searchfile(), if stringcompare(s,"")==0; return 0; endif;
+		s=searchfile(), if s==""; return 0; endif;
 	end;
 endfunction
 

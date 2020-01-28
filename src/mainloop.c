@@ -6,7 +6,7 @@
 #include <float.h>
 #include <stdarg.h>
 #include <limits.h>
-
+	
 #include "sysdep.h"
 #include "header.h"
 #include "core.h"
@@ -74,38 +74,9 @@ void output1 (char *fmt, ...)
 	}
 }
 
-/*
-void output1hold (int f, char *fmt, ...)
-{	static char text [1024];
-	unsigned long si;
-	va_list v;
-	if (f==0) text[0]=0;
-	text_mode();
-	va_start(v,fmt);
-	vsprintf(text+strlen(text),fmt,v);
-	if (f<=0) return;
-	si=strlen(text);
-	if (si<f)
-	{	memmove(text+(f-si),text,si+1);
-		memset(text,' ',f-si);
-	}
-	if (outputbuffer)
-	{	output(text); return;
-	}
-	if (outputing || error) gprint(text);
-	if (outfile)
-	{   fprintf(outfile,text);
-		if (ferror(outfile))
-		{	output("Error on dump file (disk full?).\n");
-			error=200;
-			fclose(outfile); outfile=0;
-		}
-	}
-}
-*/
 /* help */
 
-extern commandtyp command_list[];
+static commandtyp command_list[];
 
 int extend(char* start, char extend[16][MAXNAME])
 /* extend
@@ -180,25 +151,6 @@ key is pressed.
    evaluated at the global level of the interpreter.
    
  */
-void kill_local (char *name);
-void clear (void)
-/***** clear
-	clears the stack and remove all variables and functions.
-*****/
-{	char name[32];
-	scan_space();
-	if (*next==';' || *next==',' || *next==0)
-	{	endlocal=startlocal;
-	}
-	else
-	while(1)
-	{	scan_name(name); if (error) return;
-		kill_local(name);
-		scan_space();
-		if (*next==',') { next++; continue; }
-		else break;
-	}
-}
 
 /***************** support functions ************************/
 
@@ -242,7 +194,7 @@ void print_error (char *p)
 	errorout=1;
 }
 
-char *type_udfline (char *start)
+static char *type_udfline (char *start)
 {	char outline[1024],*p=start,*q;
 	double x;
 	commandtyp *com;
@@ -271,8 +223,6 @@ char *type_udfline (char *start)
 	output(outline); output("\n");
 	return p+1;
 }
-
-void minput (header *hd);
 
 void trace_udfline (char *next)
 {	int oldtrace;
@@ -320,7 +270,7 @@ void trace_udfline (char *next)
 	}
 }
 
-void read_line (char *line)
+static void read_line (char *line)
 {	int count=0,input;
 	char *p=line;
 	while(1)
@@ -340,7 +290,7 @@ void read_line (char *line)
 	*p=0;
 }
 
-void next_line (void)
+static void next_line (void)
 /**** next_line
 	read a line from keyboard or file.
 ****/
@@ -366,155 +316,6 @@ void next_line (void)
 	}
 }
 
-void scan_space (void)
-{	start: while (*next==' ' || *next==TAB) next++;
-	if (!udfon && *next=='.' && *(next+1)=='.')
-		{	next_line(); if (error) return; goto start; }
-}
-
-void do_end (void);
-void do_loop (void);
-void do_repeat (void);
-void do_for (void);
-
-void scan_end (void)
-/***** scan_end
-	scan for "end".
-*****/
-{	commandtyp *com;
-	char *oldline=udfline;
-	while (1)
-	{	switch (*next)
-		{	case 1 : 
-				output("End missing!\n");
-				error=110; udfline=oldline; return;
-			case 0 : udfline=next+1; next++; break;
-			case 2 : next+=1+sizeof(double); break;
-			case 3 : next++; 
-				memmove((char *)(&com),next,sizeof(commandtyp *));
-				next+=sizeof(commandtyp *);
-				if (com->f==do_end)
-				{	if (trace>0) trace_udfline(udfline);
-					return;
-				}
-				else if (com->f==do_repeat || com->f==do_loop ||
-					com->f==do_for)
-				{	scan_end(); if (error) return; }
-				break;
-			default : next++;
-		}
-	}
-}
-
-void do_endif (void);
-void do_else (void);
-void do_if (void);
-
-void scan_endif (void)
-/***** scan_endif
-	scan for "endif".
-*****/
-{	commandtyp *com;
-	char *oldline=udfline;
-	while (1)
-	{	switch (*next)
-		{	case 1 : 
-				output("Endif missing, searching for endif!\n");
-				error=110; udfline=oldline; return;
-			case 0 : udfline=next+1; next++; break;
-			case 2 : next+=1+sizeof(double); break;
-			case 3 : next++; 
-				memmove((char *)(&com),next,sizeof(commandtyp *));
-				next+=sizeof(commandtyp *);
-				if (com->f==do_endif)
-				{	if (trace>0) trace_udfline(udfline);
-					return;
-				}
-				else if (com->f==do_if)
-				{	scan_endif(); if (error) return; }
-				break;
-			default : next++;
-		}
-	}
-}
-
-void scan_else (void)
-/***** scan_else
-	scan for "else".
-*****/
-{	commandtyp *com;
-	char *oldline=udfline;
-	while (1)
-	{	switch (*next)
-		{	case 1 : 
-				output("Endif missing, searching for else!\n");
-				error=110; udfline=oldline; return;
-			case 0 : udfline=next+1; next++; break;
-			case 2 : next+=1+sizeof(double); break;
-			case 3 : next++; 
-				memmove((char *)(&com),next,sizeof(commandtyp *));
-				next+=sizeof(commandtyp *);
-				if (com->f==do_endif || com->f==do_else)
-				{	if (trace>0) trace_udfline(udfline);
-					return;
-				}
-				else if (com->f==do_if)
-				{	scan_endif(); if (error) return; }
-				break;
-			default : next++;
-		}
-	}
-}
-
-void scan_filename (char *name, int lmax)
-{	int count=0;
-	if (*next=='\"')
-	{	next++;
-		while (*next!='\"' && *next)
-		{	*name++=*next++; count++;
-			if (count>=lmax-1)
-			{	output("Name too long!\n");
-				error=11; break;
-			}
-		}
-		if (*next=='\"') next++;
-		else
-		{
-			output("\" missing\n");
-			error=11;
-		}
-	}
-	else if (!isalpha(*next) && *next!='_' && *next!=PATH_DELIM_CHAR)
-	{   output1("Valid file name or path expected at:\n%s\n",next);
-		error=11; *name=0; return;
-	}
-	else
-	{	if (*next=='_') { *name++=*next++; count++; }
-		while (isalpha(*next) || isdigit(*next) || *next==PATH_DELIM_CHAR || *next=='-' || *next=='.')
-		{	*name++=*next++; count++;
-			if (count>=lmax-1)
-			{	output("Name too long!\n");
-				error=11; break;
-			}
-		}
-	}
-	*name=0;
-}
-
-void scan_name (char *name)
-{	int count=0;
-	if (!isalpha(*next))
-	{	error=11; *name=0; return;
-	}
-	while (isalpha(*next) || isdigit(*next))
-	{	*name++=*next++; count++;
-		if (count>=15)
-		{	output("Name too long!\n");
-			error=11; break;
-		}
-	}
-	*name=0;
-}
 
 
 /********************* interpreter **************************/
@@ -600,11 +401,17 @@ void give_out (header *hd)
 }
 
 /***************** some builtin commands *****************/
+static void scan_filename (char *name, int lmax);
+static void scan_name (char *name);
+static void scan_end (void);
+static void scan_endif (void);
+static void scan_else (void);
+
 
 char * path[MAX_PATH];
 int npath=0;
 
-void load_file (void)
+static void load_file (void)
 /***** load_file
 	inerpret a file.
 *****/
@@ -655,7 +462,13 @@ void load_file (void)
 	if (infile) {
 		strcpy(oldline,line); oldnext=next;
 		*line=0; next=line;
-		while (!error && infile && !quit) command();
+		while (!error && infile && !quit) {
+			/* reset global context for commands evaluated in the 
+	    	   lower level context */
+			startglobal=startlocal;
+			endglobal=endlocal;
+			command();
+		}
 		if (infile) fclose(infile);
 		infile=oldinfile;
 		strcpy(line,oldline); next=oldnext;
@@ -665,7 +478,7 @@ void load_file (void)
 	}
 }
 
-commandtyp *preview_command (size_t *l);
+static commandtyp *preview_command (size_t *l);
 
 void get_udf (void)
 /***** get_udf
@@ -811,7 +624,44 @@ void get_udf (void)
 	udf=0;
 }
 
-void do_return (void)
+static void do_global (void)
+{	char name[MAXNAME];
+	int r;
+	header *hd;
+	if (!udfon)	{
+		output("It makes no sense to use \"global\" outside of functions.\n");
+		error=500; return;
+	}
+	while (1)
+	{	scan_space();
+		/* parse 'global *' */
+		if (*next=='*' && (*(next+1)==';' || *(next+1)==0)) {
+			next++;
+			searchglobal=1;
+			return;
+		}
+		/* parse list of identifiers */
+		scan_name(name); r=xor(name);
+		hd=(header *)udfend;
+		if (hd==(header *)startlocal) break;
+		while ((char *)hd<startlocal)
+		{	if (r==hd->xor && !strcmp(hd->name,name)) break;
+			hd=nextof(hd);
+		}
+		if ((char *)hd>=startlocal)
+		{	output1("Variable %s not found!\n",name);
+			error=160; return;
+		}
+		newram=endlocal;
+		hd=new_reference(hd,name);
+		newram=endlocal=(char *)nextof(hd);
+		scan_space();
+		if (*next!=',') break;
+		else next++;
+	}
+}
+
+static void do_return (void)
 {	if (!udfon)
 	{	output("No user defined function active!\n");
 		error=56; return;
@@ -819,13 +669,13 @@ void do_return (void)
 	else udfon=2;
 }
 
-void do_break (void)
+static void do_break (void)
 {	if (!udfon)
 	{	output("End only allowed in functions!\n"); error=57;
 	}
 }
 
-void do_for (void)
+static void do_for (void)
 /***** do_for
 	do a for command in a UDF.
 	for i=value to value step value; .... ; end
@@ -901,7 +751,7 @@ void do_for (void)
 	end : kill_local(name);
 }
 
-void do_loop (void)
+static void do_loop (void)
 /***** do_loop
 	do a loop command in a UDF.
 	loop value to value; .... ; end
@@ -952,7 +802,7 @@ void do_loop (void)
 	end : loopindex=oldindex;
 }
 
-void do_repeat (void)
+static void do_repeat (void)
 /***** do_loop
 	do a loop command in a UDF.
 	for value to value; .... ; endfor
@@ -980,33 +830,33 @@ void do_repeat (void)
 	}
 }
 
-void do_end (void)
+static void do_end (void)
 {	if (!udfon)
 	{	output("End only allowed in functions!\n"); error=57;
 	}
 }
 
-void do_else (void)
+static void do_else (void)
 {	if (!udfon)
 	{	output("Else only allowed in functions!\n"); error=57; return;
 	}
 	scan_endif();
 }
 
-void do_elseif (void)
+static void do_elseif (void)
 {	if (!udfon)
 	{	output("Elseif only allowed in functions!\n"); error=57; return;
 	}
 	scan_endif();
 }
 
-void do_endif (void)
+static void do_endif (void)
 {	if (!udfon)
 	{	output("Endif only allowed in functions!\n"); error=57;
 	}
 }
 
-int ctest (header *hd)
+static int ctest (header *hd)
 /**** ctest
 	test, if a matrix contains nonzero elements.
 ****/
@@ -1033,7 +883,7 @@ int ctest (header *hd)
 	return 0;
 }
 
-void do_if (void)
+static void do_if (void)
 {	header *cond;
 	int flag;
 	if (!udfon)
@@ -1044,7 +894,47 @@ void do_if (void)
 	if (!flag) scan_else();
 }
 
-void do_clg (void)
+static void do_trace(void)
+/**** do_trace
+	toggles tracing or sets the trace bit of a udf.
+****/
+{	header *f;
+	char name[64];
+	scan_space();
+	if (!strncmp(next,"off",3))
+	{	trace=0; next+=3;
+	}
+	else if (!strncmp(next,"alloff",6))
+	{	next+=6;
+		f=(header *)ramstart;
+		while ((char *)f<udfend && f->type==s_udf)
+		{	f->flags&=~1;
+			f=nextof(f);
+		}
+		trace=0;
+	}	
+	else if (!strncmp(next,"on",2))
+	{	trace=1; next+=2;
+	}
+	else if (*next==';' || *next==',' || *next==0) trace=!trace;
+	else
+	{	if (*next=='"') next++;
+		scan_name(name); if (error) return;
+		if (*next=='"') next++;
+		f=searchudf(name);
+		if (!f || f->type!=s_udf)
+		{	output("Function not found!\n");
+			error=11021; return;
+		}
+		f->flags^=1;
+		if (f->flags&1) output1("Tracing %s\n",name);
+		else output1("No longer tracing %s\n",name);
+		scan_space();
+	}
+	if (*next==';' || *next==',') next++;
+}
+
+static void do_clg (void)
 {	graphic_mode(); clear_graphics(); gflush();
 }
 
@@ -1052,36 +942,31 @@ void do_cls (void)
 {	text_mode(); clear_screen();
 }
 
-void do_clear (void)
-{	if (udfon)
-	{	output("Cannot clear in a function!\n");
+static void do_clear (void)
+/***** clear
+	clears from the stack and remove all variables and functions.
+*****/
+{
+	char name[MAXNAME];
+	if (udfon)
+	{	output("Cannot use \"clear\" in a function!\n");
 		error=120; return;
 	}
-	clear();
-}
-
-void do_quit (void)
-{	quit=1;
-}
-
-void do_exec (void)
-{	header *name;
-	char *s;
-	name=scan_value(); if (error) return;
-	if (name->type!=s_string)
-	{	output("Cannot execute a number or matrix!\n");
-		error=130; return;
+	scan_space();
+	if (*next==';' || *next==',' || *next==0)
+	{	endlocal=startlocal;
 	}
-	s=stringof(name);
-	while (*s && !isspace(*s)) s++;
-	if (*s) *s++=0;
-	if (execute(stringof(name),s))
-	{	output("Execution failed or program returned a failure!\n");
-		error=131;
+	else
+	while(1)
+	{	scan_name(name); if (error) return;
+		kill_local(name);
+		scan_space();
+		if (*next==',') { next++; continue; }
+		else break;
 	}
 }
 
-void do_forget (void)
+static void do_forget (void)
 {	char name[MAXNAME];
 	header *hd;
 	int r;
@@ -1109,32 +994,7 @@ void do_forget (void)
 	}
 }
 
-void do_global (void)
-{	char name[MAXNAME];
-	int r;
-	header *hd;
-	while (1)
-	{	scan_space(); scan_name(name); r=xor(name);
-		hd=(header *)udfend;
-		if (hd==(header *)startlocal) break;
-		while ((char *)hd<startlocal)
-		{	if (r==hd->xor && !strcmp(hd->name,name)) break;
-			hd=nextof(hd);
-		}
-		if ((char *)hd>=startlocal)
-		{	output1("Variable %s not found!\n",name);
-			error=160; return;
-		}
-		newram=endlocal;
-		hd=new_reference(hd,name);
-		newram=endlocal=(char *)nextof(hd);
-		scan_space();
-		if (*next!=',') break;
-		else next++;
-	}
-}
-
-void print_commands (void);
+static void print_commands (void);
 
 static void do_list (void)
 {	header *hd;
@@ -1202,7 +1062,7 @@ static void do_listvar (void)
 	}
 }
 
-void do_type (void)
+static void do_type (void)
 {	char name[16];
 	header *hd;
 	char *p,*pnote;
@@ -1246,7 +1106,7 @@ void do_type (void)
 	}
 }
 
-void do_help (void)
+static void do_help (void)
 {	char name[16];
 	header *hd;
 	int count,i,defaults;
@@ -1297,7 +1157,7 @@ void do_help (void)
 	}
 }
 
-void do_dump (void)
+static void do_dump (void)
 {	header *file;
 	if (outfile)
 	{	if (fclose(outfile))
@@ -1319,7 +1179,7 @@ void do_dump (void)
 	}
 }
 
-void do_meta (void)
+static void do_meta (void)
 {	header *file;
 	if (metafile)
 	{	if (fclose(metafile))
@@ -1341,7 +1201,7 @@ void do_meta (void)
 	}
 }
 
-void do_remove (void)
+static void do_remove (void)
 {	header *file;
 	file=scan_value();
 	if (error || file->type!=s_string)
@@ -1351,7 +1211,7 @@ void do_remove (void)
 	remove(stringof(file));
 }
 
-void do_do (void)
+static void do_do (void)
 {	int udfold;
 	char name[16];
 	char *oldnext=next,*udflineold;
@@ -1377,7 +1237,7 @@ void do_do (void)
 	else { next=line; *next=0; }
 }
 
-void do_mdump (void)
+static void do_mdump (void)
 {	header *hd;
 	output1("ramstart : 0\nstartlocal : %ld\n",startlocal-ramstart);
 	output1("endlocal : %ld\n",endlocal-ramstart);
@@ -1393,18 +1253,18 @@ void do_mdump (void)
 	}
 }
 
-void hex_out1 (int n)
+static void hex_out1 (int n)
 {	if (n<10) output1("%c",n+'0');
 	else output1("%c",n-10+'A');
 }
 
-void hex_out (unsigned int n)
+static void hex_out (unsigned int n)
 {	hex_out1(n/16);
 	hex_out1(n%16);
 	output(" ");
 }
 
-void string_out (unsigned char *p)
+static void string_out (unsigned char *p)
 {	int i;
 	unsigned char a;
 	for (i=0; i<16; i++) 
@@ -1413,7 +1273,7 @@ void string_out (unsigned char *p)
 	}
 }
 
-void do_hexdump (void)
+static void do_hexdump (void)
 {	char name[16];
 	unsigned char *p,*end;
 	int i=0,j;
@@ -1438,7 +1298,7 @@ void do_hexdump (void)
 	output("\n");
 }
 
-void do_output (void)
+static void do_output (void)
 /**** do_output
 	toggles output.
 ****/
@@ -1452,7 +1312,7 @@ void do_output (void)
 	else outputing=!outputing;
 }
 
-void do_comment (void)
+static void do_comment (void)
 {	FILE *fp=infile;
 	if (!fp || udfon)
 	{	output("comment illegal at this place");
@@ -1468,49 +1328,30 @@ void do_comment (void)
 	next_line();
 }
 
-void do_trace(void)
-/**** do_trace
-	toggles tracing or sets the trace bit of a udf.
-****/
-{	header *f;
-	char name[64];
-	scan_space();
-	if (!strncmp(next,"off",3))
-	{	trace=0; next+=3;
-	}
-	else if (!strncmp(next,"alloff",6))
-	{	next+=6;
-		f=(header *)ramstart;
-		while ((char *)f<udfend && f->type==s_udf)
-		{	f->flags&=~1;
-			f=nextof(f);
-		}
-		trace=0;
-	}	
-	else if (!strncmp(next,"on",2))
-	{	trace=1; next+=2;
-	}
-	else if (*next==';' || *next==',' || *next==0) trace=!trace;
-	else
-	{	if (*next=='"') next++;
-		scan_name(name); if (error) return;
-		if (*next=='"') next++;
-		f=searchudf(name);
-		if (!f || f->type!=s_udf)
-		{	output("Function not found!\n");
-			error=11021; return;
-		}
-		f->flags^=1;
-		if (f->flags&1) output1("Tracing %s\n",name);
-		else output1("No longer tracing %s\n",name);
-		scan_space();
-	}
-	if (*next==';' || *next==',') next++;
+static void do_quit (void)
+{	quit=1;
 }
 
-int command_count;
+static void do_exec (void)
+{	header *name;
+	char *s;
+	name=scan_value(); if (error) return;
+	if (name->type!=s_string)
+	{	output("Cannot execute a number or matrix!\n");
+		error=130; return;
+	}
+	s=stringof(name);
+	while (*s && !isspace(*s)) s++;
+	if (*s) *s++=0;
+	if (execute(stringof(name),s))
+	{	output("Execution failed or program returned a failure!\n");
+		error=131;
+	}
+}
 
-commandtyp command_list[] = {
+static int command_count;
+
+static commandtyp command_list[] = {
 	{"quit",c_quit,do_quit},
 	{"hold",c_hold,ghold},
 	{"shg",c_shg,show_graphics},
@@ -1548,7 +1389,7 @@ commandtyp command_list[] = {
 	{0,0,0}
 };
 
-void print_commands (void)
+static void print_commands (void)
 {	int i, c, cend, lw=linelength/MAXNAME;
 	
 	for (i=0; i<command_count; i+=lw) {
@@ -1563,18 +1404,18 @@ void print_commands (void)
 	output("\n");
 }
 
-int command_compare (const commandtyp *p1, const commandtyp *p2)
+static int command_compare (const commandtyp *p1, const commandtyp *p2)
 {	return strcmp(p1->name,p2->name);
 }
 
-void sort_command (void)
+static void sort_command (void)
 {	command_count=0;
 	while (command_list[command_count].name) command_count++;
 	qsort(command_list,command_count,sizeof(commandtyp),
 		(int (*)(const void *, const void *))command_compare);
 }
 
-commandtyp *preview_command (size_t *l)
+static commandtyp *preview_command (size_t *l)
 {	commandtyp h;
 	char name[MAXNAME],*a,*n;
 	*l=0;
@@ -1586,7 +1427,7 @@ commandtyp *preview_command (size_t *l)
 		(int (*)(const void *, const void *))command_compare);
 }
 
-int builtin (void)
+static int builtin (void)
 /***** builtin
 	interpret a builtin command, number no.
 *****/
@@ -1614,6 +1455,151 @@ int builtin (void)
 }
 
 /***************** scanning ***************************/
+void scan_space (void)
+{	start: while (*next==' ' || *next==TAB) next++;
+	if (!udfon && *next=='.' && *(next+1)=='.')
+		{	next_line(); if (error) return; goto start; }
+}
+
+static void do_end (void);
+static void do_loop (void);
+static void do_repeat (void);
+static void do_for (void);
+
+static void scan_end (void)
+/***** scan_end
+	scan for "end".
+*****/
+{	commandtyp *com;
+	char *oldline=udfline;
+	while (1)
+	{	switch (*next)
+		{	case 1 : 
+				output("End missing!\n");
+				error=110; udfline=oldline; return;
+			case 0 : udfline=next+1; next++; break;
+			case 2 : next+=1+sizeof(double); break;
+			case 3 : next++; 
+				memmove((char *)(&com),next,sizeof(commandtyp *));
+				next+=sizeof(commandtyp *);
+				if (com->f==do_end)
+				{	if (trace>0) trace_udfline(udfline);
+					return;
+				}
+				else if (com->f==do_repeat || com->f==do_loop ||
+					com->f==do_for)
+				{	scan_end(); if (error) return; }
+				break;
+			default : next++;
+		}
+	}
+}
+
+static void scan_endif (void)
+/***** scan_endif
+	scan for "endif".
+*****/
+{	commandtyp *com;
+	char *oldline=udfline;
+	while (1)
+	{	switch (*next)
+		{	case 1 : 
+				output("Endif missing, searching for endif!\n");
+				error=110; udfline=oldline; return;
+			case 0 : udfline=next+1; next++; break;
+			case 2 : next+=1+sizeof(double); break;
+			case 3 : next++; 
+				memmove((char *)(&com),next,sizeof(commandtyp *));
+				next+=sizeof(commandtyp *);
+				if (com->f==do_endif)
+				{	if (trace>0) trace_udfline(udfline);
+					return;
+				}
+				else if (com->f==do_if)
+				{	scan_endif(); if (error) return; }
+				break;
+			default : next++;
+		}
+	}
+}
+
+static void scan_else (void)
+/***** scan_else
+	scan for "else".
+*****/
+{	commandtyp *com;
+	char *oldline=udfline;
+	while (1)
+	{	switch (*next)
+		{	case 1 : 
+				output("Endif missing, searching for else!\n");
+				error=110; udfline=oldline; return;
+			case 0 : udfline=next+1; next++; break;
+			case 2 : next+=1+sizeof(double); break;
+			case 3 : next++; 
+				memmove((char *)(&com),next,sizeof(commandtyp *));
+				next+=sizeof(commandtyp *);
+				if (com->f==do_endif || com->f==do_else)
+				{	if (trace>0) trace_udfline(udfline);
+					return;
+				}
+				else if (com->f==do_if)
+				{	scan_endif(); if (error) return; }
+				break;
+			default : next++;
+		}
+	}
+}
+
+static void scan_filename (char *name, int lmax)
+{	int count=0;
+	if (*next=='\"')
+	{	next++;
+		while (*next!='\"' && *next)
+		{	*name++=*next++; count++;
+			if (count>=lmax-1)
+			{	output("Name too long!\n");
+				error=11; break;
+			}
+		}
+		if (*next=='\"') next++;
+		else
+		{
+			output("\" missing\n");
+			error=11;
+		}
+	}
+	else if (!isalpha(*next) && *next!='_' && *next!=PATH_DELIM_CHAR)
+	{   output1("Valid file name or path expected at:\n%s\n",next);
+		error=11; *name=0; return;
+	}
+	else
+	{	if (*next=='_') { *name++=*next++; count++; }
+		while (isalpha(*next) || isdigit(*next) || *next==PATH_DELIM_CHAR || *next=='-' || *next=='.')
+		{	*name++=*next++; count++;
+			if (count>=lmax-1)
+			{	output("Name too long!\n");
+				error=11; break;
+			}
+		}
+	}
+	*name=0;
+}
+
+static void scan_name (char *name)
+{	int count=0;
+	if (!isalpha(*next))
+	{	error=11; *name=0; return;
+	}
+	while (isalpha(*next) || isdigit(*next))
+	{	*name++=*next++; count++;
+		if (count>=15)
+		{	output("Name too long!\n");
+			error=11; break;
+		}
+	}
+	*name=0;
+}
 
 void copy_complex (double *x, double *y)
 {	*x++=*y++;
@@ -1668,7 +1654,7 @@ static int scan_arguments (void)
 	return count;
 }
 
-void scan_matrix (void)
+static void scan_matrix (void)
 /***** scan_matrix
 	scan a matrix from input.
 	form: [x y z ... ; v w u ...],
@@ -1784,7 +1770,7 @@ void scan_matrix (void)
 	newram=(char *)hd+hd->size;
 }
 
-void scan_elementary (void)
+static void scan_elementary (void)
 /***** scan_elemtary
 	scan an elementary expression, like a value or variable.
 	scans also (...).
@@ -1912,11 +1898,11 @@ void scan_elementary (void)
 	}
 }
 
-void scan_factor (void)
+static void scan_factor (void)
 {	scan_elementary();
 }
 
-void scan_summand (void)
+static void scan_summand (void)
 {	header *hd=(header *)newram,*hd1;
 	scan_space();
 	scan_factor();
@@ -1953,7 +1939,7 @@ void scan_summand (void)
 	}
 }
 
-void scan_summe (void)
+static void scan_summe (void)
 {	header *hd=(header *)newram,*hd1;
 	scan_space();
 	scan_summand();
@@ -1976,7 +1962,7 @@ void scan_summe (void)
 	}
 }
 
-void scan_dp (void)
+static void scan_dp (void)
 {	header *hd=(header *)newram,*hd1,*hd2;
 	scan_space();
 	if (*next==':')
@@ -2002,7 +1988,7 @@ void scan_dp (void)
 	}
 }
 
-void scan_compare (void)
+static void scan_compare (void)
 {	header *hd=(header *)newram;
 	scan_space();
 	if (*next=='!')
@@ -2063,7 +2049,7 @@ void scan_compare (void)
 	}
 }
 
-void scan_logical (void)
+static void scan_logical (void)
 {	header *hd=(header *)newram;
 	scan_compare(); if (error) return;
 	scan_space();
@@ -2157,7 +2143,7 @@ header *scan_value (void)
 	return result;
 }
 
-header *scan_expression (void)
+static header *scan_expression (void)
 /***** scan_expression
 	scans a variable, a value or a builtin command.
 *****/
@@ -2167,7 +2153,7 @@ header *scan_expression (void)
 
 #define addsize(hd,size) ((header *)((char *)(hd)+size))
 
-void do_assignment (header *var)
+static void do_assignment (header *var)
 /***** do_assignment
 	assign a value to a variable.
 *****/
@@ -2307,7 +2293,11 @@ void main_loop (int argc, char *argv[])
 		strcat(line,"\";");
 	}
 	while (!quit)
-	{	command();	/* interpret until "quit" */
+	{	/* reset global context for commands evaluated in the 
+	       lower level context */
+		startglobal=startlocal;
+		endglobal=endlocal;
+		command();	/* interpret until "quit" */
 		if (trace<0) trace=0;
 	}
 }
