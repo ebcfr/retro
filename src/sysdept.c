@@ -71,12 +71,6 @@ int memory_init (void)
 	return 1;
 }
 
-int shrink (size_t size)
-/**** allows shrinking of memory for single task systems.
-simply return 1 if you do not support this or set NOSHRINK in funcs.c
-*****/
-{	return 1;
-}
 
 /******************** writing the meta file ************/
 

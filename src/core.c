@@ -149,7 +149,8 @@ header *new_udf (char *name)
 {	size_t size;
 	size_t *d;
 	header *hd=(header *)newram;
-    size=sizeof(header)+sizeof(size_t)+(size_t)2;
+//    size=sizeof(header)+sizeof(size_t)+(size_t)2;
+    size=sizeof(header)+sizeof(size_t);
 	d=(size_t *)make_header(s_udf,size,name);
 	if (d) { *d=sizeof(header)+sizeof(size_t); *((char *)(d+1))=0; }
 	return hd;

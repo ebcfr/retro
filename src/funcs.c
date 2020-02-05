@@ -89,14 +89,21 @@ void minput (header *hd)
 	char input[1024],*oldnext;
 	hd=getvalue(hd); if (error) return;
 	if (hd->type!=s_string) wrong_arg("string expected");
-	retry: output(stringof(hd)); output("? ");
-	edit(input);
-	stringon=1;
-	oldnext=next; next=input; result=scan_value(); next=oldnext;
-	stringon=0;
-	if (error) 
-	{	output("Error in input!\n"); error=0; goto retry;
-	}
+	do {
+		output(stringof(hd)); output("? ");
+		
+		// !! BUG: LIMIT THE INPUT LENGTH
+		edit(input);
+		error=0;
+		stringon=1;
+		oldnext=next; next=input; result=scan_value(); next=oldnext;
+		stringon=0;
+	
+		if (error) {
+			output("Error in input!\n");
+		}
+	} while (error);
+	
 	moveresult(st,result);
 }
 
@@ -188,7 +195,6 @@ void interpret_udf (header *var, header *args, int argn)
 	char *oldnext=next,*oldstartlocal,*oldendlocal,*udflineold,*p;
 	header *result,*st=args,*hd=args,*hd1,*oldrunning;
 	
-	
 	/* function frame block */
 	p=helpof(var);
 	nargu=*((int *)p); p+=sizeof(int);
@@ -238,7 +244,7 @@ void interpret_udf (header *var, header *args, int argn)
 	oldstartlocal=startlocal; oldendlocal=endlocal;
 	oldsearchglobal=searchglobal; searchglobal=0;
 	oldrunning=running; 
-	/* setup the new frame */
+	/* setup the new scope */
 	startlocal=(char *)args; endlocal=newram; running=var;
 	actargn=argn;
 	udfline=next=udfof(var); udfon=1;

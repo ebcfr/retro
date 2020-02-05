@@ -19,8 +19,15 @@ FILE *metafile=0;
 
 double epsilon;
 
-int error,quit,surpressed,udf=0,errorout,outputing=1,stringon=0,
+int error,			/* error code */
+    quit,
+    surpressed,
+    udf=0,			/* set prompt to udf input prompt */
+    errorout,
+    outputing=1,
+    stringon=0,		/* interpret a single string : no assignment, no nextline!, see input(), interpret() and errorlevel() builtin functions */
 	trace=0;
+	
 char line[MAXLINE];
 
 long loopindex=0;
@@ -294,17 +301,18 @@ static void next_line (void)
 /**** next_line
 	read a line from keyboard or file.
 ****/
-{	if (udfon)
-	{	while (*next) next++;
+{
+	if (udfon) {
+		while (*next) next++;
 		next++;
 		if (*next==1) udfon=0; else udfline=next;
 		if (trace>0) trace_udfline(next);
 		return;
-	}
-	else
-	{	if (trace==-1) trace=1;
-		if (stringon)
-		{	error=2300; output("Input ended in string!\n");
+	} else {
+		if (trace==-1) trace=1;
+		if (stringon) {
+			/* interpreting a single string. So, no nextline! */
+			error=2300; output("Input ended in string!\n");
 			return;
 		}
 		if (!infile) {
@@ -464,7 +472,7 @@ static void load_file (void)
 		*line=0; next=line;
 		while (!error && infile && !quit) {
 			/* reset global context for commands evaluated in the 
-	    	   lower level context */
+	    	   lower level context (global scope) */
 			startglobal=startlocal;
 			endglobal=endlocal;
 			command();
@@ -480,9 +488,23 @@ static void load_file (void)
 
 static commandtyp *preview_command (size_t *l);
 
-void get_udf (void)
-/***** get_udf
+static void parse_udf (void)
+/***** parse_udf
 	define a user defined function.
+
+   user defined function on the stack
+   udf header			size (of the udf),name[MAXNAME],xor,s_udf,flags=0
+   int paramcnt			parameter count
+   -------------- parameter list ----------------
+   int  has_default		
+   char param_name[16]	parameter name
+   int  param_xor
+   header+data			parameter object for default value
+   ...
+   ------------------- body ---------------------
+   function body
+   with constants precompiled: char=2+double value
+   and pointers to basic statement handlers: char=3+handler pointer
 *****/
 {	char name[MAXNAME],argu[MAXNAME],*p,*firstchar,*startp;
 	int *ph,*phh,count=0,n;
@@ -496,36 +518,39 @@ void get_udf (void)
 		error=60; return;
 	}
 	scan_space(); scan_name(name); if (error) return;
-	kill_udf(name);
-	var=new_reference(0,name); if (error) return;
-	result=new_udf(""); if (error) return;
-	p=udfof(result); udf=1; /* udf is for the prompt! */
-	scan_space(); 
-	ph=(int *)p; p+=sizeof(int);
-	if (*next=='(')
+	kill_udf(name);									/* kill any udf already defined with his name */
+	var=new_reference(0,name); if (error) return;	/* push an empty reference */
+	result=new_udf(""); if (error) return;			/* create a new function */
+	udf=1;											/* switch to udf input prompt! */
+	p=udfof(result);								/* start of function header and body */
+	ph=(int *)p; p+=sizeof(int);					/* leave room for parameter count, keep the pointer ph to this place */
+	scan_space();
+
+	if (*next=='(')									/* parse parameter list */
 	{	while(1)
 		{	next++;
 			scan_space();
 			if (*next==')') break;
-			phh=(int *)p; *phh=0; p+=sizeof(int);
-			scan_name(argu); if (error) goto aborted;
+			phh=(int *)p; *phh=0; p+=sizeof(int);	/* leave room for parameter default flag */
+			scan_name(argu); if (error) goto aborted;	
 			count++;
-			strcpy(p,argu); p+=16; 
+			strcpy(p,argu); p+=MAXNAME;				/* copy the name */
 			*((int *)p)=xor(argu); p+=sizeof(int);
-			test: scan_space();
+			scan_space();
 			if (*next==')') break;
-			else if (*next=='=')
+			if (*next=='=')							/* parse parameter default value */
 			{	next++;
-				*phh=1;
+				*phh=1;								/* set the default flag of the parmeter */
 				newram=p;
 				hd=(header *)p;
-				scan_value(); if (error) goto aborted;
+				scan_value(); if (error) goto aborted;	/* push the parameter value */
 				strcpy(hd->name,argu);
 				hd->xor=xor(argu);
-				p=newram;
-				goto test;
+				p=newram;							/* update pointer for the next parameter */
+				scan_space();
 			}
-			else if (*next==',') continue;
+			if (*next==',') continue;
+			else if (*next==')') break;
 			else 
 			{	output("Error in parameter list!\n"); error=701;
 				goto aborted;
@@ -535,7 +560,9 @@ void get_udf (void)
 	}
 	*ph=count;
 	if (*next==0) { next_line(); }
-	while (1) /* help section of the udf */
+	
+	/* parse for the help section of the udf */
+	while (1)
 	{	if (*next=='#' && *(next+1)=='#')
 		{	while (*next)
 			{	*p++=*next++;
@@ -551,6 +578,8 @@ void get_udf (void)
 			error=2200; goto stop;
 		}
 	}
+	
+	/* parse the body of the function */
 	*udfstartof(result)=(p-(char *)result);
 	startp=p;
 	firstchar=next;
@@ -577,16 +606,19 @@ void get_udf (void)
 			}
 			else if (isdigit(*next) || 
 				     	(*next=='.' && isdigit(*(next+1))) )
+			/* precompile numbers */
 			{	if (next!=firstchar && isalpha(*(next-1)))
 				{	*p++=*next++;
 					while (isdigit(*next)) *p++=*next++;
 				}
 				else
-				{
+				{	/* align for even position (not necessary)
+					   write 2 to signal a precompiled float */
 					if ((p-(char *)result)%2==0) *p++=' ';
 					*p++=2;
 		   			sscanf(next,"%lg%n",&x,&n);
 		   			next+=n;
+					// push the number to the function body
 		   			memmove(p,(char *)(&x),sizeof(double));
 		   			p+=sizeof(double);
 			   	}
@@ -594,10 +626,12 @@ void get_udf (void)
 			else if (isalpha(*next) &&
 				(next==firstchar || !isalpha(*(next-1))) &&
 				(com=preview_command(&l))!=0)
-			/* Try to find a builtin command */
-			{	
+			/* try to find a command */
+			{	/* align for even position (not necessary)
+				   write 3 to signal a precompiled command */
 				if ((p-(char *)result)%2==0) *p++=' ';
 				*p++=3;
+				/* push address of the command handling function to the function body */
 				memmove(p,(char *)(&com),sizeof(commandtyp *));
 				p+=sizeof(commandtyp *);
 				next+=l;
@@ -612,7 +646,7 @@ void get_udf (void)
 		{	output("Memory overflow!\n"); error=210; goto stop;
 		}
 	}
-	stop:
+stop:
 	udf=0; if (error) return;
 	result->size=((p-(char *)result)/2+1)*2;
 #ifdef SPECIAL_ALIGNMENT
@@ -620,7 +654,7 @@ void get_udf (void)
 #endif
 	newram=(char *)result+result->size;
 	assign(var,result);
-	aborted:
+aborted:
 	udf=0;
 }
 
@@ -1021,8 +1055,8 @@ static void do_list (void)
 
 static void do_listvar (void)
 {	header *hd=(header *)startlocal;
-	while (hd<(header*)endlocal)
-	{	switch (hd->type) {
+	while (hd<(header*)endlocal) {
+		switch (hd->type) {
 		case s_real:
 			output1("%-20sType: %s\n",hd->name,"Real");
 			break;
@@ -1356,7 +1390,7 @@ static commandtyp command_list[] = {
 	{"hold",c_hold,ghold},
 	{"shg",c_shg,show_graphics},
 	{"load",c_load,load_file},
-	{"function",c_udf,get_udf},
+	{"function",c_udf,parse_udf},
 	{"return",c_return,do_return},
 	{"for",c_for,do_for},
 	{"endif",c_endif,do_endif},
@@ -1420,7 +1454,7 @@ static commandtyp *preview_command (size_t *l)
 	char name[MAXNAME],*a,*n;
 	*l=0;
 	a=next; n=name;
-	while (*l<15 && isalpha(*a)) { *n++=*a++; *l+=1; }
+	while (*l<MAXNAME && isalpha(*a)) { *n++=*a++; *l+=1; }
 	*n++=0; if (isalpha(*a)) return 0;
 	h.name=name;
 	return bsearch(&h,command_list,command_count,sizeof(commandtyp),
@@ -2094,7 +2128,7 @@ header *scan_value (void)
 	int oldnosubmref;
 	size_t size;
 	scan_space();
-	if (*next=='{')
+	if (*next=='{')		/* parse {val1, val2, ... }*/
 	{	next++; 
 		oldnosubmref=nosubmref; nosubmref=1; 
 		scan_logical(); nosubmref=oldnosubmref;
@@ -2176,7 +2210,7 @@ static void do_assignment (header *var)
 			}
 			variable[varcount]=var; var=nextof(var); varcount++;
 			if (varcount>=8)
-			{	output("To many commas!\n"); error=100; return;
+			{	output("Too many commas!\n"); error=100; return;
 			}
 		}
 		/* count and note the values, that are assigned to the
@@ -2186,7 +2220,7 @@ static void do_assignment (header *var)
 		{	rightside[rscount]=rs;
 			rs=nextof(rs); rscount++;
 			if (rscount>=8)
-			{	output("To many commas!\n"); error=101; return;
+			{	output("Too many commas!\n"); error=101; return;
 			}
 		}
 		/* cannot assign 2 values to 3 variables , e.g. */
@@ -2294,7 +2328,7 @@ void main_loop (int argc, char *argv[])
 	}
 	while (!quit)
 	{	/* reset global context for commands evaluated in the 
-	       lower level context */
+	       lower level context (global scope) */
 		startglobal=startlocal;
 		endglobal=endlocal;
 		command();	/* interpret until "quit" */

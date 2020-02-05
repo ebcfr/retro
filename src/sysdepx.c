@@ -396,12 +396,6 @@ int memory_init (void)
 	return 1;
 }
 
-int shrink (size_t size)
-{	
-	if (size==0) return 0;
-	return 1;
-}
-
 /******************** some graphic support functions ************/
 
 int column (double c)

@@ -43,6 +43,27 @@ endfunction
 
 .. test global feature
 d=2
+function h(a,b,c)
+  global d;
+  c=3;
+  return a+2*b+c+d;
+endfunction
+
+h(5,7,11)
+d
+
+.. test global feature
+d=2
+function h(a,b=7,c)
+  global d;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+.. test global feature
+d=2
 function h(a,b=7,c)
   global d;
   return a+2*b+c+d;
@@ -125,3 +146,28 @@ endfunction
 
 h(5,,11)
 e
+
+d=2
+function h(a,b=7,c)
+  global *
+  d=3;
+  return a+2*b+c+d;
+endfunction
+
+h(5,,11)
+d
+
+f0=1e3;m=0.2;T0=2;j=1i;
+function T(f)
+  return T0/(1+j*2*m*f/f0+(j*f/f0)^2);
+endfunction
+abs(T(1000))
+
+f0=1e3;m=0.2;T0=2;j=1i;
+function T(f)
+  f0=100;
+  global *
+  return T0/(1+j*2*m*f/f0+(j*f/f0)^2);
+endfunction
+abs(T(1000))
+

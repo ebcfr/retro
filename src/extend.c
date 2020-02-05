@@ -237,9 +237,6 @@ builtintyp builtin_list[] = {
 	{"cumsum",1,mcumsum},
 	{"cumprod",1,mcumprod},
 	{"free",0,mfree},
-#if 0
-	{"shrink",1,mshrink},
-#endif
 	{"input",1,minput},
 	{"max",1,mmax1},
 	{"min",1,mmin1},
