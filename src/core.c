@@ -36,11 +36,11 @@ char *ramstart,*ramend,*udfend,*startlocal,*endlocal,*newram,
    
  */
 
-int xor (char *n)
+char xor (char *n)
 /***** xor
 	compute a hashcode for the name n.
 *****/
-{	int r=0;
+{	char r=0;
 	while (*n) r^=*n++;
 	return r;
 }
@@ -498,9 +498,8 @@ header *searchvar (char *name)
 		hd=nextof(hd);
 	}
 	return 0;*/
-	int r;
+	char r=xor(name);
 	header *hd=(header *)startlocal;
-	r=xor(name);
 	while ((char *)hd<endlocal)
 	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
 		hd=nextof(hd);
@@ -520,10 +519,8 @@ header *searchudf (char *name)
 	search a udf, named "name".
 	return 0, if not found.
 *****/
-{	header *hd;
-	int r;
-	r=xor(name);
-	hd=(header *)ramstart;
+{	char r=xor(name);
+	header* hd=(header *)ramstart;
 	while ((char *)hd<udfend && hd->type==s_udf)
 	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
 		hd=nextof(hd);

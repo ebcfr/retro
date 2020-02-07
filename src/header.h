@@ -38,7 +38,7 @@ scantyp edit (char *s);
 extern int nosubmref,trace;
 
 extern char *argname[];
-extern int xors[];
+extern char xors[];
 
 void print_error (char *p);
 #define wrong_arg(x) { error=26; output1("Wrong argument: %s\n", (x)); return; }

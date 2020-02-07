@@ -13,7 +13,7 @@ extern char *ramstart,
             *newram,
             *udfend;
 	
-#define MAXNAME		16			/* Maximum length of an identifier */
+#define MAXNAME		15			/* Maximum length of an identifier */
 
 extern int error,surpressed,udf,udfon,linelength,stringon;
 extern long loopindex;
@@ -35,7 +35,7 @@ typedef enum {
 
 typedef struct {
 	char			name[MAXNAME];
-	int				xor;
+	char			xor;
 	ULONG			size;
 	stacktyp		type;
 	unsigned int	flags;
@@ -74,7 +74,7 @@ typedef struct { header hd; double val; } realtyp;
 #define matrixsize(c,r) (sizeof(header)+sizeof(dims)+(c)*(ULONG)(r)*sizeof(double))
 #define cmatrixsize(c,r) (sizeof(header)+sizeof(dims)+2l*(c)*(ULONG)(r)*sizeof(double))
 
-int xor (char *n);
+char xor (char *n);
 
 header *new_matrix (int c, int r, char *name);
 header *new_cmatrix (int c, int r, char *name);

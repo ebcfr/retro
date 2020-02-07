@@ -508,6 +508,27 @@ static void parse_udf (void)
    with constants precompiled: char=2+double value
    and pointers to basic statement handlers: char=3+handler pointer
    byte = 1 			endfunction encountered
+   
+   
+   
+   udf header			size (of the udf),name[MAXNAME],xor,s_udf,flags=0
+   int offset			offset to the beginning of the code
+   int paramcnt			parameter count
+   unsigned def_bitmap	bitmap showing parameter with default value (32 max)
+   -------------- parameter list ----------------
+   int  has_default		
+   char param_name[16]	parameter name
+   int  param_xor
+   header+data			parameter object for default value
+   ...
+   ------------------- body ---------------------
+   function body
+   with constants precompiled: char=2+double value
+   and pointers to basic statement handlers: char=3+handler pointer
+   byte = 1 			endfunction encountered
+   
+   
+   
 *****/
 {	char name[MAXNAME],argu[MAXNAME],*p,*firstchar,*startp;
 	int *ph,*phh,count=0,n;
@@ -538,7 +559,7 @@ static void parse_udf (void)
 			scan_name(argu); if (error) goto aborted;	
 			count++;
 			strcpy(p,argu); p+=MAXNAME;				/* copy the name */
-			*((int *)p)=xor(argu); p+=sizeof(int);
+			*((char*)p)=xor(argu); p+=sizeof(int);
 			scan_space();
 			if (*next==')') break;
 			if (*next=='=')							/* parse parameter default value */
@@ -663,7 +684,7 @@ aborted:
 
 static void do_global (void)
 {	char name[MAXNAME];
-	int r;
+	char r;
 	header *hd;
 	if (!udfon)	{
 		output("It makes no sense to use \"global\" outside of functions.\n");
@@ -1006,7 +1027,7 @@ static void do_clear (void)
 static void do_forget (void)
 {	char name[MAXNAME];
 	header *hd;
-	int r;
+	char r;
 	if (udfon)
 	{	output("Cannot forget functions in a function!\n");
 		error=720; return;

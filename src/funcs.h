@@ -13,6 +13,14 @@ typedef struct {
 extern builtintyp builtin_list[];
 
 /* udf */
+
+typedef struct {
+	char	name[MAXNAME-1];
+	char	xor;
+} udf_arg_t;
+
+#define next_arg(hd, hasval)  ((udf_arg_t*) ( (hasval) ? nextof((header*)hd) : (char*)(hd)+sizeof(udf_arg_t)))
+
 extern int udfon;
 extern header *running;
 

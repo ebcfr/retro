@@ -163,7 +163,7 @@ void msetkey (header *hd)
 char *argname[] =
 	{ "arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9",
 		"arg10" } ;
-int xors[10];
+char xors[10];
 
 void make_xors (void)
 {	int i;
@@ -299,7 +299,7 @@ void interpret_udf (header *var, header *args, int argn)
 				p+=MAXNAME+2*sizeof(int);
 			} else {
 				defaults=*(int *)p; p+=sizeof(int);
-				strcpy(hd->name,p); hd->xor=*((int *)(p+MAXNAME));
+				strcpy(hd->name,p); hd->xor=*((char*)(p+MAXNAME));
 				p+=MAXNAME+sizeof(int);
 				arg_bitmap |= 1<<i;
 			}
@@ -324,7 +324,7 @@ void interpret_udf (header *var, header *args, int argn)
 		p=helpof(var)+sizeof(int);
 		for (i=0; i<nargu; i++) {
 			defaults=*(int *)p; p+=sizeof(int);
-			if ( (hd->xor==*(int*)(p+MAXNAME)) && (strcmp(hd->name,p)==0) ) {
+			if ( (hd->xor==*(char*)(p+MAXNAME)) && (strcmp(hd->name,p)==0) ) {
 				if (arg_bitmap & (1<<i)) {	/* error! parameter set twice */
 					output1("parameter %s already set by standard parameter\n",hd->name);
 					error=701; return;
@@ -358,10 +358,15 @@ void interpret_udf (header *var, header *args, int argn)
 				moveresult((header *)newram,(header *)p);
 				p=(char *)nextof((header *)p);
 				arg_bitmap |= 1<<i;
-			} /*else {
+#ifndef STRICT
+			}	/* allows required parameter to not be set */
+#else
+			} else {
+				/* checks that all required parameters are set */
 				output1("Argument %s undefined.\n", name);
 				error=1; return;
-			}*/
+			}
+#endif
 		}
 	}
 #endif
