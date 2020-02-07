@@ -212,98 +212,21 @@ void interpret_udf (header *var, header *args, int argn)
 	/* set p to point to the start of the formal parameter block */
 	p=helpof(var);
 	nargu=*((int *)p); p+=sizeof(int);
+	unsigned int def_bitmap = *(unsigned int*)p; p+=sizeof(unsigned int);
 	
-//fprintf(stderr,"FUNCTION %s\n  formal params: %d\n  actual params: %d\n",var->name,nargu,argn);
-
-#if 0
-	/* standard parameter checking
-	   if an empty reference is passed (no parameter value)
-	     try to get the default value if any
-	     else skip the parameter
-	   else (we get a parameter)
-	   
-	   dereference arguments, and set them default arg1, arg2 names */
-	for (i=0; i<argn; i++)
-	{
-		header* hd1;
-		if (hd->type==s_reference && !referenceof(hd))
-		{	if (i<nargu && hd->name[0]==0 && *(int *)p)
-			{	/* no actual parameter passed (parse_arguments function
-				   pushed an empty reference) and the corresponding 
-				   formal parameter has a default value, fall back to
-				   the default value */
-				p+=MAXNAME+2*sizeof(int);
-				moveresult((header *)newram,(header *)p);
-				p=(char *)nextof((header *)p);
-				hd=nextof(hd);
-				arg_bitmap |= 1<<i;
-				continue;
-			}
-			else
-			{	/* try to get a reference to a non-existant
-				   variable: will always raise an error
-				   
-				   TODO: out the message and raise the error ?? */
-				hd1=getvalue(hd); if (error) return;
-			}
-		}
-		else
-		{	/* there is an argument */
-			hd1=hd;
-		}
-		if (i<nargu)
-		{	/* standard parameter: set to them the name according
-		       to the position in the parameter list in the 
-		       function definition */
-			defaults=*(int *)p; p+=sizeof(int);
-			strcpy(hd1->name,p); hd1->xor=*((int *)(p+MAXNAME));
-			p+=MAXNAME+sizeof(int);
-			if (defaults) p=(char *)nextof((header *)p);
-			arg_bitmap |= 1<<i;
-		}
-		else
-		{	/* extra parameter: name is 'arg#' with # the position
-			   in the parameter list */
-			strcpy(hd1->name,argname[i]);
-			hd1->xor=xors[i];
-		}
-		hd=nextof(hd);
-	}
-	
-	/* deal with named parameters: check if it provides values for 
-	   missing parameters, else these are just extra local variables */
-	for (i=argn; i<nargu; i++)
-	{	/* we have less actual parameters than formal parameters,
-		   try to get default parameters instead*/
-		defaults=*(int *)p;
-//		char* name=p+sizeof(int);
-		p+=MAXNAME+2*sizeof(int);
-		if (defaults)
-		{	moveresult((header *)newram,(header *)p);
-			p=(char *)nextof((header *)p);
-		}
-/*		else
-		{	output1("Argument %s undefined.\n", name);
-			error=1; return;
-		}*/
-	}
-#else
 	/* name actual parameters according to the formal ones defined
 	   in the function parameter list */
 	for (i=0; i<argn; i++) {
 		if (i<nargu) {	/* standard parameters */
-			defaults=*(int *)p;
 			if (hd->type==s_reference && !referenceof(hd) && hd->name[0]==0) {
 				/* empty reference parameter: skip for now
 				   look later for named parameter or default val */
-				p+=MAXNAME+2*sizeof(int);
 			} else {
-				defaults=*(int *)p; p+=sizeof(int);
-				strcpy(hd->name,p); hd->xor=*((char*)(p+MAXNAME));
-				p+=MAXNAME+sizeof(int);
+				udf_arg* arg=(udf_arg*)p;
+				strcpy(hd->name,arg->name); hd->xor=arg->xor;
 				arg_bitmap |= 1<<i;
 			}
-			if (defaults) p=(char *)nextof((header *)p);
+			p=next_arg(p, def_bitmap & (1<<i));
 		} else {		/* extra parameters */
 			if (hd->type==s_reference && !referenceof(hd) && hd->name[0]==0) {
 				output1("Empty extra parameter in function %s (useless!)\n", var->name);
@@ -321,10 +244,10 @@ void interpret_udf (header *var, header *args, int argn)
 	/* try to see if named parameters set on the stack correspond
 	   to unset parameters. Alert on duplicate parameter setups */
 	while (hd!=(header*)newram) {
-		p=helpof(var)+sizeof(int);
+		p=helpof(var)+sizeof(int)+sizeof(unsigned int);
 		for (i=0; i<nargu; i++) {
-			defaults=*(int *)p; p+=sizeof(int);
-			if ( (hd->xor==*(char*)(p+MAXNAME)) && (strcmp(hd->name,p)==0) ) {
+			udf_arg* arg=(udf_arg*)p;
+			if ( (hd->xor==arg->xor) && (strcmp(hd->name,arg->name)==0) ) {
 				if (arg_bitmap & (1<<i)) {	/* error! parameter set twice */
 					output1("parameter %s already set by standard parameter\n",hd->name);
 					error=701; return;
@@ -332,44 +255,35 @@ void interpret_udf (header *var, header *args, int argn)
 					arg_bitmap|=1<<i;
 				}
 			}
-			/* next arg in the function parameter list */
-			p+=MAXNAME+sizeof(int);						/* skip the parameter field */
-			if (defaults) p=(char *)nextof((header *)p);/* skip the default value */
+			/* next arg in the function formal parameter list */
+			p=next_arg(p, def_bitmap & (1<<i));
 		}	
 		hd=nextof(hd);
 	}
 	
 	/* check if all required parameters have values, try to use
 	   the default value, if any, for those unset. */
-	p=helpof(var)+sizeof(int);
+	p=helpof(var)+sizeof(int)+sizeof(unsigned int);
 	for (i=0; i<nargu; i++) {
 		
-		if (arg_bitmap & (1<<i)) {
-			/* this parameter has a value set, skip it */
-			defaults=*(int *)p;
-			p+=MAXNAME+2*sizeof(int);					/* skip the parameter field */
-			if (defaults) p=(char *)nextof((header *)p);/* skip the default value */
-		} else {
-			/* this one has not, try to put the default value */
-			defaults=*(int *)p;
-			char* name=p+sizeof(int);
-			p+=MAXNAME+2*sizeof(int);
-			if (defaults) {
+		if ((arg_bitmap & (1<<i))==0) {
+			/* this has no value, try to put the default value */
+			if (def_bitmap & (1<<i)) {
 				moveresult((header *)newram,(header *)p);
-				p=(char *)nextof((header *)p);
 				arg_bitmap |= 1<<i;
 #ifndef STRICT
 			}	/* allows required parameter to not be set */
 #else
 			} else {
 				/* checks that all required parameters are set */
-				output1("Argument %s undefined.\n", name);
+				udf_arg* arg=(udf_arg*)p;
+				output1("Argument %s undefined.\n", arg->name);
 				error=1; return;
 			}
 #endif
-		}
+		}	/* else, this parameter has a value set, skip it */
+		p=next_arg(p, def_bitmap & (1<<i));
 	}
-#endif
 	
 	/* Save context of the caller */
 	udflineold=udfline; udfold=udfon;

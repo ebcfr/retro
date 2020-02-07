@@ -166,7 +166,7 @@ void print_error (char *p)
 	char *q,outline[1024];
 	double x;
 	commandtyp *com;
-fprintf(stderr,"Error: %d\n", error);
+//fprintf(stderr,"Error: %d\n", error);
 	if (errorout) return;
 	if (line<=p && line+1024>p)
 	{	output1("error in:\n%s\n",line);
@@ -494,32 +494,19 @@ static void parse_udf (void)
 	define a user defined function.
 
    user defined function on the stack
-   udf header			size (of the udf),name[MAXNAME],xor,s_udf,flags=0
-   int offset			offset to the beginning of the code
-   int paramcnt			parameter count
-   -------------- parameter list ----------------
-   int  has_default		
-   char param_name[16]	parameter name
-   int  param_xor
-   header+data			parameter object for default value
-   ...
-   ------------------- body ---------------------
-   function body
-   with constants precompiled: char=2+double value
-   and pointers to basic statement handlers: char=3+handler pointer
-   byte = 1 			endfunction encountered
-   
-   
    
    udf header			size (of the udf),name[MAXNAME],xor,s_udf,flags=0
-   int offset			offset to the beginning of the code
+   ULONG offset			offset to the beginning of the code
    int paramcnt			parameter count
    unsigned def_bitmap	bitmap showing parameter with default value (32 max)
    -------------- parameter list ----------------
-   int  has_default		
-   char param_name[16]	parameter name
-   int  param_xor
-   header+data			parameter object for default value
+   udf_arg				just a formal parameter (name+xor)
+     or
+   header+data			includes the formal parameter name+xor, but also, the 
+   						complete header and data for the default value.
+   						
+   						parameter list can be run through with the next_arg()
+   						macro
    ...
    ------------------- body ---------------------
    function body
@@ -530,8 +517,10 @@ static void parse_udf (void)
    
    
 *****/
-{	char name[MAXNAME],argu[MAXNAME],*p,*firstchar,*startp;
-	int *ph,*phh,count=0,n;
+{	char name[MAXNAME],*p,*firstchar,*startp;
+	int n;
+	int *pcount, count=0;				/* argument counter */
+	unsigned int *pdefmap,defmap=0;		/* pointer to the default value bitmap */ 
 	int l;
 	header *var,*result,*hd;
 	FILE *actfile=infile;
@@ -541,48 +530,56 @@ static void parse_udf (void)
 	{	output("Cannot define a function in a function!\n");
 		error=60; return;
 	}
-	scan_space(); scan_name(name); if (error) return;
+	scan_space(); scan_name(name); if (error) return;	/* get the function name */
 	kill_udf(name);									/* kill any udf already defined with his name */
 	var=new_reference(0,name); if (error) return;	/* push an empty reference */
 	result=new_udf(""); if (error) return;			/* create a new function */
 	udf=1;											/* switch to udf input prompt! */
 	p=udfof(result);								/* start of function header and body */
-	ph=(int *)p; p+=sizeof(int);					/* leave room for parameter count, keep the pointer ph to this place */
+	pcount=(int *)p; p+=sizeof(int);				/* leave room for parameter count, keep the pointer ph to this place */
+	pdefmap=(unsigned int*)p; p+=sizeof(unsigned int); /* leave room for defaut value bitmap */
+
 	scan_space();
 
-	if (*next=='(')									/* parse parameter list */
-	{	while(1)
-		{	next++;
+	if (*next=='(') {			/* parse parameter list */
+		while(1) {
+			next++;
 			scan_space();
-			if (*next==')') break;
-			phh=(int *)p; *phh=0; p+=sizeof(int);	/* leave room for parameter default flag */
-			scan_name(argu); if (error) goto aborted;	
-			count++;
-			strcpy(p,argu); p+=MAXNAME;				/* copy the name */
-			*((char*)p)=xor(argu); p+=sizeof(int);
-			scan_space();
-			if (*next==')') break;
-			if (*next=='=')							/* parse parameter default value */
-			{	next++;
-				*phh=1;								/* set the default flag of the parmeter */
-				newram=p;
-				hd=(header *)p;
-				scan_value(); if (error) goto aborted;	/* push the parameter value */
-				strcpy(hd->name,argu);
-				hd->xor=xor(argu);
-				p=newram;							/* update pointer for the next parameter */
-				scan_space();
+			if (*next==')') {	/* no parameter */
+				break;
 			}
+			scan_name(name); if (error) goto aborted;	/* get an argument name */
+			scan_space();
+			if (*next=='=') {	/* parameter with default value */
+				next++;
+				newram=p;
+				hd=(header *)p;						/* get header + data */
+				scan_value(); if (error) goto aborted;	/* push the parameter value */
+				strcpy(hd->name,name);
+				hd->xor=xor(name);
+				p=newram;							/* update pointer for the next parameter */
+				defmap |= 1<<count;					/* update the default value bitmap */
+				scan_space();
+			} else {			/* parameter without default value */			
+				udf_arg* arg=(udf_arg*)p;
+				strcpy(arg->name,name);
+				arg->xor=xor(name);
+				p+=sizeof(udf_arg);					/* update pointers */
+				newram=p;
+			}
+			count++;
 			if (*next==',') continue;
 			else if (*next==')') break;
-			else 
-			{	output("Error in parameter list!\n"); error=701;
+			else {
+				output("Error in parameter list!\n"); error=701;
 				goto aborted;
 			}
 		}
 		next++;
 	}
-	*ph=count;
+	*pcount=count;
+	*pdefmap=defmap;
+	
 	if (*next==0) { next_line(); }
 	
 	/* parse for the help section of the udf */
@@ -1121,38 +1118,40 @@ static void do_listvar (void)
 }
 
 static void do_type (void)
-{	char name[MAXNAME];
+{
+	char name[MAXNAME];
 	header *hd;
 	char *p,*pnote;
-	int i,count,defaults;
+	int i,count;
+	unsigned int defaults;
 	scan_space();
 	scan_name(name); hd=searchudf(name);
-	if (hd && hd->type==s_udf)
-	{	output1("function %s (",name);
+	if (hd && hd->type==s_udf) {
+		output1("function %s (",name);
 		p=helpof(hd);
-		count=*((int *)p);
-		p+=sizeof(int);
+		/* get the number of arguments */
+		count=*((int *)p); p+=sizeof(int);
+		/* get the default value bitmap */
+		defaults=*(unsigned int*)p; p+=sizeof(unsigned int);
 		pnote=p;
-		for (i=0; i<count; i++)
-		{	defaults=*(int *)p; p+=sizeof(int);
-			output1("%s",p);
-			p+=MAXNAME+sizeof(int);
-			if (defaults)
-			{	output("=...");
-				p=(char *)(nextof((header *)p));
+		for (i=0; i<count; i++) {
+			udf_arg* arg=(udf_arg*)p;
+			output1("%s",arg->name);
+			if (defaults & (1<<i)) {
+				output("=...");
 			}
 			if (i!=count-1) output(",");
+			p=next_arg(p, defaults & 1<<i);
 		}
 		output(")\n");
 		p=pnote;
-		for (i=0; i<count; i++)
-		{	defaults=*(int *)p; p+=sizeof(int);
-			if (defaults) output1("## Default for %s :\n",p);
-			p+=MAXNAME+sizeof(int);
-			if (defaults)
-			{	give_out((header *)p);
-				p=(char *)nextof((header *)p);
+		for (i=0; i<count; i++) {
+			if (defaults & 1<<i) {
+				header* arg=(header*)p;
+				output1("## Default for %s :\n",arg->name);
+				give_out(arg);
 			}
+			p=next_arg(p, defaults & 1<<i);
 		}
 		p=udfof(hd);
 		while (*p!=1 && p<(char *)nextof(hd))
@@ -1165,9 +1164,11 @@ static void do_type (void)
 }
 
 static void do_help (void)
-{	char name[MAXNAME];
+{
+	char name[MAXNAME];
 	header *hd;
-	int count,i,defaults;
+	int count,i;
+	unsigned int defaults;
 	char *p,*end,*pnote;
 	scan_space();
 	scan_name(name); hd=searchudf(name);
@@ -1175,30 +1176,28 @@ static void do_help (void)
 	{	output1("function %s (",name);
 		end=udfof(hd);
 		p=helpof(hd);
-		count=*((int *)p);
-		p+=sizeof(int);
+		count=*((int *)p); p+=sizeof(int);
+		defaults=*((unsigned int *)p); p+=sizeof(unsigned int);
 		pnote=p;
-		for (i=0; i<count; i++)
-		{	defaults=*(int *)p; p+=sizeof(int);
-			output1("%s",p);
-			p+=MAXNAME+sizeof(int);
-			if (defaults)
-			{	output("=...");
-				p=(char *)nextof((header *)p);
+		for (i=0; i<count; i++) {
+			udf_arg* arg=(udf_arg*)p;
+			output1("%s",arg->name);
+			if (defaults & (1<<i)) {
+				output("=...");
 			}
 			if (i!=count-1) output(",");
+			p=next_arg(p, defaults & 1<<i);
 		}
 		output(")\n");
 		p=pnote;
-		for (i=0; i<count; i++)
-		{	defaults=*(int *)p; p+=sizeof(int);
-			if (defaults) output1("## Default for %s :\n",p);
-			p+=MAXNAME+sizeof(int);
-			if (defaults)
-			{	give_out((header *)p);
-				p=(char *)nextof((header *)p);
+		for (i=0; i<count; i++) {
+			if (defaults & 1<<i) {
+				header* arg=(header*)p;
+				output1("## Default for %s :\n",arg->name);
+				give_out(arg);
 			}
-		}		
+			p=next_arg(p, defaults & 1<<i);
+		}
 		while (*p!=1 && p<end)
 		{	output(p); output("\n");
 			p+=strlen(p); p++;

@@ -81,10 +81,10 @@ header *new_matrix (int rows, int columns, char *name)
 /***** new_matrix
 	pops a new matrix on the stack.
 *****/
-{	ULONG size;
+{
 	dims *d;
 	header *hd=(header *)newram;
-	size=matrixsize(rows,columns);
+	ULONG size=matrixsize(rows,columns);
 	d=(dims *)make_header(s_matrix,size,name);
 	if (d) { d->c=columns; d->r=rows; }
 	return hd;
@@ -94,10 +94,10 @@ header *new_cmatrix (int rows, int columns, char *name)
 /***** new_matrix
 	pops a new matrix on the stack.
 *****/
-{	ULONG size;
+{
 	dims *d;
 	header *hd=(header *)newram;
-	size=matrixsize(rows,2*columns);
+	ULONG size=matrixsize(rows,2*columns);
 	d=(dims *)make_header(s_cmatrix,size,name);
 	if (d) { d->c=columns; d->r=rows; }
 	return hd;
@@ -107,10 +107,10 @@ header *new_command (int no)
 /***** new_command
 	pops a command on stack.
 *****/
-{	ULONG size;
+{
 	int *d;
 	header *hd=(header *)newram;
-	size=sizeof(header)+sizeof(int);
+	ULONG size=sizeof(header)+sizeof(int);
 	d=(int *)make_header(s_command,size,"");
 	if (d) *d=no;
 	return hd;
@@ -120,12 +120,25 @@ header *new_real (double x, char *name)
 /***** new real
 	pops a double on stack.
 *****/
-{	ULONG size;
+{
 	double *d;
 	header *hd=(header *)newram;
-	size=sizeof(header)+sizeof(double);
+	ULONG size=sizeof(header)+sizeof(double);
 	d=(double *)make_header(s_real,size,name);
 	if (d) *d=x;
+	return hd;
+}
+
+header *new_complex (double x, double y, char *name)
+/***** new real
+	pushes a complex on stack.
+*****/
+{
+	double *d;
+	header *hd=(header *)newram;
+	ULONG size=sizeof(header)+2*sizeof(double);
+	d=(double *)make_header(s_complex,size,name);
+	if (d) {*d=x; *(d+1)=y;}
 	return hd;
 }
 
@@ -133,10 +146,10 @@ header *new_string (char *s, ULONG length, char *name)
 /***** new real
 	pops a string on stack.
 *****/
-{	ULONG size;
+{
 	char *d;
 	header *hd=(header *)newram;
-	size=sizeof(header)+((int)(length+1)/2+1)*2;
+	ULONG size=sizeof(header)+((int)(length+1)/2+1)*2;
 	d=(char *)make_header(s_string,size,name);
 	if (d) {strncpy(d,s,length); d[length]=0;}
 	return hd;
@@ -146,34 +159,24 @@ header *new_udf (char *name)
 /***** new real
 	pops a udf on stack.
 *****/
-{	ULONG size;
+{
 	ULONG *d;
 	header *hd=(header *)newram;
 //    size=sizeof(header)+sizeof(ULONG)+(ULONG)2;
-    size=sizeof(header)+sizeof(ULONG);
+    ULONG size=sizeof(header)+sizeof(ULONG);
 	d=(ULONG *)make_header(s_udf,size,name);
-	if (d) { *d=sizeof(header)+sizeof(ULONG); *((char *)(d+1))=0; }
-	return hd;
-}
-
-header *new_complex (double x, double y, char *name)
-/***** new real
-	pushes a complex on stack.
-*****/
-{	ULONG size;
-	double *d;
-	header *hd=(header *)newram;
-	size=sizeof(header)+2*sizeof(double);
-	d=(double *)make_header(s_complex,size,name);
-	if (d) {*d=x; *(d+1)=y;}
+	if (d) {
+		*d=sizeof(header)+sizeof(ULONG);
+//		*((char *)(d+1))=0;
+	}
 	return hd;
 }
 
 header *new_reference (header *ref, char *name)
-{	ULONG size;
+{
 	header **d;
 	header *hd=(header *)newram;
-	size=sizeof(header)+sizeof(header *);
+	ULONG size=sizeof(header)+sizeof(header *);
 	d=(header **)make_header(s_reference,size,name);
 	if (d) *d=ref;
 	return hd;
@@ -181,11 +184,11 @@ header *new_reference (header *ref, char *name)
 
 header *new_subm (header *var, ULONG l, char *name)
 /* makes a new submatrix, which is a single element */
-{	ULONG size;
+{
 	header **d,*hd=(header *)newram;
 	dims *dim;
 	int *n,r,c;
-	size=sizeof(header)+sizeof(header *)+
+	ULONG size=sizeof(header)+sizeof(header *)+
 		sizeof(dims)+2*sizeof(int);
 	d=(header **)make_header(s_submatrix,size,name);
 	if (d) *d=var;
@@ -205,11 +208,11 @@ header *new_subm (header *var, ULONG l, char *name)
 
 header *new_csubm (header *var, ULONG l, char *name)
 /* makes a new submatrix, which is a single element */
-{	ULONG size;
+{
 	header **d,*hd=(header *)newram;
 	dims *dim;
 	int *n,r,c;
-	size=sizeof(header)+sizeof(header *)+
+	ULONG size=sizeof(header)+sizeof(header *)+
 		sizeof(dims)+2*sizeof(int);
 	d=(header **)make_header(s_csubmatrix,size,name);
 	if (d) *d=var;
