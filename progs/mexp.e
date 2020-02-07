@@ -171,3 +171,21 @@ function T(f)
 endfunction
 abs(T(1000))
 
+function f(x, y=3)
+## une petite fonction
+## yes!
+  return x+2*y;
+endfunction
+
+f(2)
+
+function f(x,y,z)
+## une petite fonction
+## yes!
+  return x+y+z;
+endfunction
+
+f(2,3,4)
+f(2,3)
+f(2,,3)
+f(2,z=3)

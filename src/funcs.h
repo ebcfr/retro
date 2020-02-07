@@ -76,7 +76,7 @@ void msolve (header *hd);
 
 void mindex (header *hd);
 
-void minmax (double *x, size_t n, double *min, double *max,
+void minmax (double *x, ULONG n, double *min, double *max,
 	int *imin, int *imax);
 void transpose (header *hd);
 void vectorize (header *init, header *step, header *end);

@@ -1,6 +1,9 @@
 #ifndef _CORE_H_
 #define _CORE_H_
 
+#define ULONG	unsigned
+#define LONG	int
+
 extern char *ramstart,
             *ramend,
             *startglobal,
@@ -31,11 +34,11 @@ typedef enum {
 } stacktyp;
 
 typedef struct {
-	size_t size;
-	char name[MAXNAME];
-	int xor;
-	stacktyp type;
-	int flags;
+	char			name[MAXNAME];
+	int				xor;
+	ULONG			size;
+	stacktyp		type;
+	unsigned int	flags;
 } header;
 
 typedef struct {
@@ -55,16 +58,21 @@ typedef struct { header hd; double val; } realtyp;
 #define submrefof(hd) (*((header **)((hd)+1)))
 #define submdimsof(hd) ((dims *)((header **)((hd)+1)+1))
 #define stringof(hd) ((char *)((hd)+1))
-#define udfof(hd) ((char *)(hd)+(*((size_t *)((hd)+1))))
-#define udfstartof(hd) ((size_t *)((hd)+1))
-#define helpof(hd) ((char *)(hd)+sizeof(header)+sizeof(size_t))
+/* get the starting address of the udf code */
+#define udfof(hd) ((char *)(hd)+(*((ULONG *)((hd)+1))))
+/* get the address of the offset to jump to the start of udf code */
+#define udfstartof(hd) ((ULONG *)((hd)+1))
+/* get the address of the parameter section of the udf */
+#define helpof(hd) ((char *)(hd)+sizeof(header)+sizeof(ULONG))
+/* get the address of the next object on the stack */
 #define nextof(hd) ((header *)((char *)(hd)+(hd)->size))
 
-#define mat(m,c,i,j) (m+(((size_t)(c))*(i)+(j)))
-#define cmat(m,c,i,j) (m+(2*(((size_t)(c))*(i)+(j))))
 
-#define matrixsize(c,r) (sizeof(header)+sizeof(dims)+(c)*(size_t)(r)*sizeof(double))
-#define cmatrixsize(c,r) (sizeof(header)+sizeof(dims)+2l*(c)*(size_t)(r)*sizeof(double))
+#define mat(m,c,i,j) (m+(((ULONG)(c))*(i)+(j)))
+#define cmat(m,c,i,j) (m+(2*(((ULONG)(c))*(i)+(j))))
+
+#define matrixsize(c,r) (sizeof(header)+sizeof(dims)+(c)*(ULONG)(r)*sizeof(double))
+#define cmatrixsize(c,r) (sizeof(header)+sizeof(dims)+2l*(c)*(ULONG)(r)*sizeof(double))
 
 int xor (char *n);
 
@@ -78,10 +86,10 @@ header *new_submatrix (header *hd, header *cols, header *rows,
 header *new_csubmatrix (header *hd, header *cols, header *rows,
 	char *name);
 header *new_command (int no);
-header *new_string (char *s, size_t size, char *name);
+header *new_string (char *s, ULONG size, char *name);
 header *new_udf (char *name);
-header *new_subm (header *var, size_t l, char *name);
-header *new_csubm (header *var, size_t l, char *name);
+header *new_subm (header *var, ULONG l, char *name);
+header *new_csubm (header *var, ULONG l, char *name);
 
 void getmatrix (header *hd, int *r, int *c, double **m);
 void get_element (int nargs, header *var, header *hd);

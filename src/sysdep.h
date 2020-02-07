@@ -1,7 +1,7 @@
 #ifndef _SYSDEP_H_
 #define _SYSDEP_H_
 
-#define LONG size_t
+//#define LONG size_t
 #define TAB 9
 
 #ifndef M_PI

@@ -94,7 +94,7 @@ void mplot (header *hd)
 			return;
 		}
 		hd1=next_param(st);
-		if (hd1) hd1=getvalue(hd1); if (error) return;
+		if (hd1) {hd1=getvalue(hd1); if (error) return;}
 		if (hd1->type!=s_matrix && hd1->type!=s_real)
 		{	error=11001; output("Wrong arguments for plot!\n");
 			return;
@@ -119,7 +119,7 @@ void mplotarea (header *hd)
 			return;
 		}
 		hd1=next_param(st);
-		if (hd1) hd1=getvalue(hd1); if (error) return;
+		if (hd1) {hd1=getvalue(hd1); if (error) return;}
 		if (hd1->type!=s_matrix && hd1->type!=s_real)
 		{	error=11000; output("Wrong arguments for plotarea!\n"); return;
 		}
@@ -160,7 +160,7 @@ void mmark (header *hd)
 		return;
 	}
 	hd1=next_param(st);
-	if (hd1) hd1=getvalue(hd1); if (error) return;
+	if (hd1) {hd1=getvalue(hd1); if (error) return;}
 	if (hd1->type!=s_matrix && hd->type!=s_real)
 	{	error=-1; output("Not yet implemented!\n"); return;
 	}
@@ -419,7 +419,7 @@ int compare (const recttyp **r1, const recttyp **r2)
 
 void msolid (header *hd)
 {	double *screen_col,*screen_row;
-	size_t col,size,n,ind;
+	ULONG col,size,n,ind;
 	double *mx,*my,*mz,z;
 	int c,r,i,j;
 	double cc[8];
@@ -488,7 +488,7 @@ void msolid (header *hd)
 
 void msolidh (header *hd)
 {	double *screen_col,*screen_row;
-	size_t col,size,n,ind;
+	ULONG col,size,n,ind;
 	double *mx,*my,*mz,*mh,z;
 	int c,r,i,j;
 	double cc[8];
@@ -555,7 +555,7 @@ void msolidh (header *hd)
 
 void msolid1 (header *hd)
 {	double *screen_col,*screen_row;
-	size_t col,size,n,ind;
+	ULONG col,size,n,ind;
 	double *mx,*my,*mz,z,*mult;
 	int c,r,i,j,multc,multr,multi,multn,norectp=0;
 	double cc[8];
@@ -935,7 +935,7 @@ void mctext (header *hd)
 {	header *hd1;
 	hd1=next_param(hd);
 	hd=getvalue(hd); if (error) return;
-	if (hd1)  hd1=getvalue(hd1); if (error) return;
+	if (hd1) {hd1=getvalue(hd1); if (error) return;}
 	if (hd->type!=s_string || hd1->type!=s_matrix || 
 		dimsof(hd1)->r!=1 || dimsof(hd1)->c!=2)
 	{	output("Ctext needs a string and a vector [x y]!\n");
@@ -951,7 +951,7 @@ void mrtext (header *hd)
 {	header *hd1;
 	hd1=next_param(hd);
 	hd=getvalue(hd); if (error) return;
-	if (hd1)  hd1=getvalue(hd1); if (error) return;
+	if (hd1) {hd1=getvalue(hd1); if (error) return;}
 	if (hd->type!=s_string || hd1->type!=s_matrix || 
 		dimsof(hd1)->r!=1 || dimsof(hd1)->c!=2)
 	{	output("Ctext needs a string and a vector [x y]!\n");
@@ -967,7 +967,7 @@ void mtext (header *hd)
 {	header *hd1;
 	hd1=next_param(hd);
 	hd=getvalue(hd); if (error) return;
-	if (hd1)  hd1=getvalue(hd1); if (error) return;
+	if (hd1) {hd1=getvalue(hd1); if (error) return;}
 	if (hd->type!=s_string || hd1->type!=s_matrix || 
 		dimsof(hd1)->r!=1 || dimsof(hd1)->c!=2)
 	{	output("Text needs a string and a vector [x y]!\n");

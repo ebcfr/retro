@@ -916,7 +916,7 @@ function demos
 	return 0;
 endfunction;
 
-function demo (del)
+function demo (del=5)
 	global demodelay;
 	if argn==1;
 		demodelay=del;

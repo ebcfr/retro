@@ -166,6 +166,7 @@ void print_error (char *p)
 	char *q,outline[1024];
 	double x;
 	commandtyp *com;
+fprintf(stderr,"Error: %d\n", error);
 	if (errorout) return;
 	if (line<=p && line+1024>p)
 	{	output1("error in:\n%s\n",line);
@@ -207,13 +208,13 @@ static char *type_udfline (char *start)
 	commandtyp *com;
 	q=outline;
 	while (*p)
-	{	if (*p==2)
+	{	if (*p==2)	/* a constant in IEEE double precision, convert it back */
 		{	p++; memmove((char *)(&x),p,sizeof(double));
 			p+=sizeof(double);
 			sprintf(q,"%g",x);
 			q+=strlen(q);
 		}
-		else if (*p==3)
+		else if (*p==3)	/* a command */
 		{	p++;
 			memmove((char *)(&com),p,sizeof(commandtyp *));
 			p+=sizeof(commandtyp *);
@@ -486,7 +487,7 @@ static void load_file (void)
 	}
 }
 
-static commandtyp *preview_command (size_t *l);
+static commandtyp *preview_command (int *l);
 
 static void parse_udf (void)
 /***** parse_udf
@@ -494,6 +495,7 @@ static void parse_udf (void)
 
    user defined function on the stack
    udf header			size (of the udf),name[MAXNAME],xor,s_udf,flags=0
+   int offset			offset to the beginning of the code
    int paramcnt			parameter count
    -------------- parameter list ----------------
    int  has_default		
@@ -505,10 +507,11 @@ static void parse_udf (void)
    function body
    with constants precompiled: char=2+double value
    and pointers to basic statement handlers: char=3+handler pointer
+   byte = 1 			endfunction encountered
 *****/
 {	char name[MAXNAME],argu[MAXNAME],*p,*firstchar,*startp;
 	int *ph,*phh,count=0,n;
-	size_t l;
+	int l;
 	header *var,*result,*hd;
 	FILE *actfile=infile;
 	commandtyp *com;
@@ -614,7 +617,7 @@ static void parse_udf (void)
 				else
 				{	/* align for even position (not necessary)
 					   write 2 to signal a precompiled float */
-					if ((p-(char *)result)%2==0) *p++=' ';
+//					if ((p-(char *)result)%2==0) *p++=' ';
 					*p++=2;
 		   			sscanf(next,"%lg%n",&x,&n);
 		   			next+=n;
@@ -629,7 +632,7 @@ static void parse_udf (void)
 			/* try to find a command */
 			{	/* align for even position (not necessary)
 				   write 3 to signal a precompiled command */
-				if ((p-(char *)result)%2==0) *p++=' ';
+//				if ((p-(char *)result)%2==0) *p++=' ';
 				*p++=3;
 				/* push address of the command handling function to the function body */
 				memmove(p,(char *)(&com),sizeof(commandtyp *));
@@ -1097,7 +1100,7 @@ static void do_listvar (void)
 }
 
 static void do_type (void)
-{	char name[16];
+{	char name[MAXNAME];
 	header *hd;
 	char *p,*pnote;
 	int i,count,defaults;
@@ -1112,7 +1115,7 @@ static void do_type (void)
 		for (i=0; i<count; i++)
 		{	defaults=*(int *)p; p+=sizeof(int);
 			output1("%s",p);
-			p+=16+sizeof(int);
+			p+=MAXNAME+sizeof(int);
 			if (defaults)
 			{	output("=...");
 				p=(char *)(nextof((header *)p));
@@ -1124,12 +1127,12 @@ static void do_type (void)
 		for (i=0; i<count; i++)
 		{	defaults=*(int *)p; p+=sizeof(int);
 			if (defaults) output1("## Default for %s :\n",p);
-			p+=16+sizeof(int);
+			p+=MAXNAME+sizeof(int);
 			if (defaults)
 			{	give_out((header *)p);
 				p=(char *)nextof((header *)p);
 			}
-		}		
+		}
 		p=udfof(hd);
 		while (*p!=1 && p<(char *)nextof(hd))
 			p=type_udfline(p);
@@ -1141,7 +1144,7 @@ static void do_type (void)
 }
 
 static void do_help (void)
-{	char name[16];
+{	char name[MAXNAME];
 	header *hd;
 	int count,i,defaults;
 	char *p,*end,*pnote;
@@ -1157,7 +1160,7 @@ static void do_help (void)
 		for (i=0; i<count; i++)
 		{	defaults=*(int *)p; p+=sizeof(int);
 			output1("%s",p);
-			p+=16+sizeof(int);
+			p+=MAXNAME+sizeof(int);
 			if (defaults)
 			{	output("=...");
 				p=(char *)nextof((header *)p);
@@ -1169,7 +1172,7 @@ static void do_help (void)
 		for (i=0; i<count; i++)
 		{	defaults=*(int *)p; p+=sizeof(int);
 			if (defaults) output1("## Default for %s :\n",p);
-			p+=16+sizeof(int);
+			p+=MAXNAME+sizeof(int);
 			if (defaults)
 			{	give_out((header *)p);
 				p=(char *)nextof((header *)p);
@@ -1311,7 +1314,7 @@ static void do_hexdump (void)
 {	char name[16];
 	unsigned char *p,*end;
 	int i=0,j;
-	size_t count=0;
+	ULONG count=0;
 	header *hd;
 	scan_space(); scan_name(name); if (error) return;
 	hd=searchvar(name);
@@ -1449,7 +1452,7 @@ static void sort_command (void)
 		(int (*)(const void *, const void *))command_compare);
 }
 
-static commandtyp *preview_command (size_t *l)
+static commandtyp *preview_command (int *l)
 {	commandtyp h;
 	char name[MAXNAME],*a,*n;
 	*l=0;
@@ -1465,7 +1468,7 @@ static int builtin (void)
 /***** builtin
 	interpret a builtin command, number no.
 *****/
-{	size_t l;
+{	int l;
 	commandtyp *p;
 	if (*next==3)
 	{	next++;
@@ -1654,10 +1657,15 @@ static int scan_arguments (void)
 		{	hd=scan(); scan_space();
 		}
 		if (*next=='=')
-		{	next++;
+		{
+			if (error || hd->type!=s_reference) {
+				output("Bad parameter: variable name expected!\n");
+				error=19; return 0;
+			}
+			next++;
 			hdold=(header *)newram;
 			scan_value();
-			if (!error)
+			if (!error && hd->type==s_reference)
 			{	strcpy(hdold->name,hd->name);
 				hdold->xor=hd->xor;
 				moveresult(hd,hdold);
@@ -1697,8 +1705,8 @@ static void scan_matrix (void)
 {	header *hd,*result;
 	dims *d;
 	int c,r,count,i,j,complex=0;
-	size_t ic;
-	size_t allcount;
+	ULONG ic;
+	ULONG allcount;
 	double *m,*ms,cnull[2]={0,0};
 	hd=new_matrix(0,0,""); /* don't know how big it will be! */
 	if (error) return;
@@ -1745,7 +1753,7 @@ static void scan_matrix (void)
 							cnull);
 					else *mat(ms,c,r,j)=0.0;
 			}
-            r++; newram=(char *)(ms+(complex?2l:1l)*(size_t)c*r);
+            r++; newram=(char *)(ms+(complex?2l:1l)*(ULONG)c*r);
 			m=(double *)newram;
 			count=0;
 		}
@@ -1765,11 +1773,11 @@ static void scan_matrix (void)
 			{	memmove(newram+allcount*sizeof(double),newram,result->size);
 				result=(header *)((char *)result+allcount*sizeof(double));
 				for (ic=allcount-1; ic>0; ic--)
-                {   *(ms+(size_t)2*ic)=*(ms+ic); 
-                	*(ms+(size_t)2*ic+1)=0.0;
+                {   *(ms+(ULONG)2*ic)=*(ms+ic); 
+                	*(ms+(ULONG)2*ic+1)=0.0;
 				}
 				*(ms+1)=0.0;
-            newram=(char *)(ms+(size_t)2*allcount); m=(double *)newram;
+            newram=(char *)(ms+(ULONG)2*allcount); m=(double *)newram;
 			}
 			hd->type=s_cmatrix;
 		}
@@ -2126,7 +2134,7 @@ header *scan_value (void)
 {	header *result=(header *)newram,*hd,*hd1,*marker,*nextresult,
 		*endresults;
 	int oldnosubmref;
-	size_t size;
+	ULONG size;
 	scan_space();
 	if (*next=='{')		/* parse {val1, val2, ... }*/
 	{	next++; 
@@ -2193,7 +2201,7 @@ static void do_assignment (header *var)
 *****/
 {	header *variable[8],*rightside[8],*rs,*v,*mark;
 	int rscount,varcount,i,j;
-	size_t offset,oldoffset,dif;
+	LONG offset,oldoffset,dif;
 	char *oldendlocal;
 	scan_space();
 	if (*next=='=')
@@ -2326,6 +2334,9 @@ void main_loop (int argc, char *argv[])
 		strcat(line,argv[i]);
 		strcat(line,"\";");
 	}
+	
+//	fprintf(stderr,"sizeof(header) = %lu\nsizeof(stacktyp) = %lu\n", sizeof(header), sizeof(stacktyp));
+	
 	while (!quit)
 	{	/* reset global context for commands evaluated in the 
 	       lower level context (global scope) */

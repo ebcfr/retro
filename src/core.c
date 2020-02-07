@@ -45,7 +45,7 @@ int xor (char *n)
 	return r;
 }
 
-static void *make_header (stacktyp type, size_t size, char *name)
+static void *make_header (stacktyp type, ULONG size, char *name)
 /***** make_header
 	pushes a new element on the stack.
 	return the position after the header.
@@ -81,7 +81,7 @@ header *new_matrix (int rows, int columns, char *name)
 /***** new_matrix
 	pops a new matrix on the stack.
 *****/
-{	size_t size;
+{	ULONG size;
 	dims *d;
 	header *hd=(header *)newram;
 	size=matrixsize(rows,columns);
@@ -94,7 +94,7 @@ header *new_cmatrix (int rows, int columns, char *name)
 /***** new_matrix
 	pops a new matrix on the stack.
 *****/
-{	size_t size;
+{	ULONG size;
 	dims *d;
 	header *hd=(header *)newram;
 	size=matrixsize(rows,2*columns);
@@ -107,7 +107,7 @@ header *new_command (int no)
 /***** new_command
 	pops a command on stack.
 *****/
-{	size_t size;
+{	ULONG size;
 	int *d;
 	header *hd=(header *)newram;
 	size=sizeof(header)+sizeof(int);
@@ -120,7 +120,7 @@ header *new_real (double x, char *name)
 /***** new real
 	pops a double on stack.
 *****/
-{	size_t size;
+{	ULONG size;
 	double *d;
 	header *hd=(header *)newram;
 	size=sizeof(header)+sizeof(double);
@@ -129,11 +129,11 @@ header *new_real (double x, char *name)
 	return hd;
 }
 
-header *new_string (char *s, size_t length, char *name)
+header *new_string (char *s, ULONG length, char *name)
 /***** new real
 	pops a string on stack.
 *****/
-{	size_t size;
+{	ULONG size;
 	char *d;
 	header *hd=(header *)newram;
 	size=sizeof(header)+((int)(length+1)/2+1)*2;
@@ -146,13 +146,13 @@ header *new_udf (char *name)
 /***** new real
 	pops a udf on stack.
 *****/
-{	size_t size;
-	size_t *d;
+{	ULONG size;
+	ULONG *d;
 	header *hd=(header *)newram;
-//    size=sizeof(header)+sizeof(size_t)+(size_t)2;
-    size=sizeof(header)+sizeof(size_t);
-	d=(size_t *)make_header(s_udf,size,name);
-	if (d) { *d=sizeof(header)+sizeof(size_t); *((char *)(d+1))=0; }
+//    size=sizeof(header)+sizeof(ULONG)+(ULONG)2;
+    size=sizeof(header)+sizeof(ULONG);
+	d=(ULONG *)make_header(s_udf,size,name);
+	if (d) { *d=sizeof(header)+sizeof(ULONG); *((char *)(d+1))=0; }
 	return hd;
 }
 
@@ -160,7 +160,7 @@ header *new_complex (double x, double y, char *name)
 /***** new real
 	pushes a complex on stack.
 *****/
-{	size_t size;
+{	ULONG size;
 	double *d;
 	header *hd=(header *)newram;
 	size=sizeof(header)+2*sizeof(double);
@@ -170,7 +170,7 @@ header *new_complex (double x, double y, char *name)
 }
 
 header *new_reference (header *ref, char *name)
-{	size_t size;
+{	ULONG size;
 	header **d;
 	header *hd=(header *)newram;
 	size=sizeof(header)+sizeof(header *);
@@ -179,9 +179,9 @@ header *new_reference (header *ref, char *name)
 	return hd;
 }
 
-header *new_subm (header *var, size_t l, char *name)
+header *new_subm (header *var, ULONG l, char *name)
 /* makes a new submatrix, which is a single element */
-{	size_t size;
+{	ULONG size;
 	header **d,*hd=(header *)newram;
 	dims *dim;
 	int *n,r,c;
@@ -199,13 +199,13 @@ header *new_subm (header *var, size_t l, char *name)
 	}
 	else r=(int)(l/c);
 	*n++=r;
-	*n=(int)(l-(size_t)r*c-1);
+	*n=(int)(l-(ULONG)r*c-1);
 	return hd;
 }
 
-header *new_csubm (header *var, size_t l, char *name)
+header *new_csubm (header *var, ULONG l, char *name)
 /* makes a new submatrix, which is a single element */
-{	size_t size;
+{	ULONG size;
 	header **d,*hd=(header *)newram;
 	dims *dim;
 	int *n,r,c;
@@ -229,7 +229,7 @@ header *new_csubm (header *var, size_t l, char *name)
 
 header *hnew_submatrix (header *var, header *rows, header *cols, 
 	char *name, int type)
-{	size_t size;
+{	ULONG size;
 	header **d;
 	double *mr,*mc=0,x,*mvar;
 	dims *dim;
@@ -271,7 +271,7 @@ header *hnew_submatrix (header *var, header *rows, header *cols,
 	{	output("Illegal index!\n"); error=41; return 0;
 	}
 	size=sizeof(header)+sizeof(header *)+
-		sizeof(dims)+((size_t)r+c)*sizeof(int);
+		sizeof(dims)+((ULONG)r+c)*sizeof(int);
 	d=(header **)make_header(type,size,name);
 	if (d) *d=var;
 	else return hd;
@@ -353,7 +353,7 @@ static header *built_csmatrix (header *var, header *rows, header *cols)
 	{	output("Illegal index!\n"); error=41; return 0;
 	}
 	ram=newram;
-	if (ram+((size_t)(c)+(size_t)(r))*sizeof(int)>ramend)
+	if (ram+((ULONG)(c)+(ULONG)(r))*sizeof(int)>ramend)
 	{	output("Out of memory!\n"); error=710; return 0;
 	}
 	nr=pr=(int *)ram; nc=pc=pr+r; newram=(char *)(pc+c);
@@ -427,7 +427,7 @@ static header *built_smatrix (header *var, header *rows, header *cols)
 	{	output("Illegal index!\n"); error=41; return 0;
 	}
 	ram=newram;
-	if (ram+((size_t)(c)+(size_t)(r))*sizeof(int)>ramend)
+	if (ram+((ULONG)(c)+(ULONG)(r))*sizeof(int)>ramend)
 	{	output("Out of memory!\n"); error=710; return 0;
 	}
 	nr=pr=(int *)ram; nc=pc=pr+r; newram=(char *)(pc+c);
@@ -535,7 +535,7 @@ void kill_local (char *name)
 /***** kill_local
 	kill a local variable name, if there is one.
 *****/
-{	size_t size,rest;
+{	ULONG size,rest;
 	header *hd=(header *)startlocal;
 	while ((char *)hd<endlocal)
 	{	if (!strcmp(hd->name,name)) /* found! */
@@ -553,7 +553,7 @@ void kill_udf (char *name)
 /***** kill_udf
 	kill a local variable name, if there is one.
 *****/
-{	size_t size,rest;
+{	ULONG size,rest;
 	header *hd=(header *)ramstart;
 	while ((char *)hd<udfend)
 	{	if (!strcmp(hd->name,name)) /* found! */
@@ -586,7 +586,7 @@ header *assign (header *var, header *value)
 	assign the value to the variable.
 *****/
 {	char name[MAXNAME],*nextvar;
-	size_t size,dif;
+	LONG size,dif;
 	double *m,*mv,*m1,*m2;
 	int i,j,c,r,cv,rv,*rind,*cind;
 	dims *d;
@@ -681,7 +681,7 @@ header *assign (header *var, header *value)
 			{	m1=cmat(m,c,rind[i],0);
 				m2=cmat(mv,cv,i,0);
 				for (j=0; j<d->c; j++)
-                {   copy_complex(m1+(size_t)2*cind[j],m2); m2+=2;
+                {   copy_complex(m1+(ULONG)2*cind[j],m2); m2+=2;
 				}
 			}
 			return submrefof(var);
@@ -699,6 +699,8 @@ header *assign (header *var, header *value)
 				return var;
 			}
 			dif=value->size-var->size;
+//fprintf(stderr,"var->name: %s\n",var->name);
+//fprintf(stderr,"var->size: %d\nval->size: %d\n\n",var->size, value->size);
 			if (newram+dif>ramend)
 			{	output("Memory overflow\n"); error=501; return value;
 			}
@@ -782,7 +784,7 @@ header *getvalue (header *hd)
 			m1=cmat(mr,d->c,i,0);
 			m2=cmat(m,c,*rind,0);
 			for (j=0; j<d->c; j++)
-            {   m3=m2+(size_t)2*(*cind1);
+            {   m3=m2+(ULONG)2*(*cind1);
 				*m1++=*m3++; *m1++=*m3;
 				cind1++;
 			}
@@ -851,7 +853,7 @@ void moveresult1 (header *stack, header *result)
 /***** moveresult
 	move several results to the start of stack.
 *****/
-{	size_t size;
+{	ULONG size;
 	if (stack==result) return;
 	size=newram-(char *)result;
 	memmove((char *)stack,(char *)result,size);
@@ -905,7 +907,7 @@ void get_element1 (char *name, header *hd)
    where the matrix is dentified with a vector of same length
 */
 {	header *st=hd,*result,*var;
-	size_t n,l;
+	ULONG n,l;
 	int r,c;
 	double *m;
 	hd=getvalue(hd);
@@ -928,8 +930,8 @@ void get_element1 (char *name, header *hd)
 	}
 	else if (var->type==s_matrix)
 	{	getmatrix(var,&r,&c,&m);
-		l=(size_t)(*realof(hd));
-		n=(size_t)r*c;
+		l=(ULONG)(*realof(hd));
+		n=(ULONG)r*c;
 		if (l>n) l=n;
 		if (l<1) l=1;
 		if (nosubmref) result=new_real(*(m+l-1),"");
@@ -937,15 +939,15 @@ void get_element1 (char *name, header *hd)
 	}
 	else if (var->type==s_cmatrix)
 	{	getmatrix(var,&r,&c,&m);
-		l=(size_t)(*realof(hd));
-		n=(size_t)r*c;
+		l=(ULONG)(*realof(hd));
+		n=(ULONG)r*c;
 		if (n==0)
 		{	output("Matrix is empty!\n"); error=1030; return;
 		}
 		if (l>n) l=n;
 		if (l<1) l=1;
 		if (nosubmref)
-        {   m+=(size_t)2*(l-1);
+        {   m+=(ULONG)2*(l-1);
 			result=new_complex(*m,*(m+1),"");
 		}
 		else result=new_csubm(var,l,"");
