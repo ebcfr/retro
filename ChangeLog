@@ -1,0 +1,34 @@
+TODO:
+review the parsing of matrix indexes
+review the parsing of multiple result return
+review the parsing of numbers and format output
+review header.h
+review plotting functions, log graph, subplots,
+  get export to png/eps/svg?
+  Lout compatible plotting
+  support for gnuplot for the command-line version
+review util.e
+sound io and play
+signal and control mini-toolboxes
+bare-meta port to a microcontroller
+allow choice between simple and double precision numbers at compile
+  time? (for microcontroller support)
+make user defined functions first class objects?
+generic data io?
+image io and processing?
+string ops?
+more C coded math solvers?
+list object type and ops?
+unit test / test bench?
+get support for notebooks back?
+Tk/gtk/Qt GUIs back?
+
+1.00
+fix of condition eval in boolean test
+review of the encoding of buitin commands in user defined functions
+review of the encoding of formal parameters and add a switch for
+  strict or relaxed checking of actual parameters
+xor hash code on 1 byte
+size variable type given by LONG for easier modification
+documentation converted to markdown
+project reorganized: x11 and command-line support.

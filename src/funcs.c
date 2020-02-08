@@ -204,7 +204,7 @@ void interpret_udf (header *var, header *args, int argn)
 	- the 'argn' actual parameters are pushed on the stack by the
 	  calling env and are available from address 'args'
 ****/
-{	int udfold,nargu,i,oldargn,defaults,oldtrace, oldsearchglobal;
+{	int udfold,nargu,i,oldargn,oldtrace, oldsearchglobal;
 	char *oldnext=next,*oldstartlocal,*oldendlocal,*udflineold,*p;
 	header *result,*st=args,*hd=args,*oldrunning;
 	unsigned int arg_bitmap=0;
@@ -1418,7 +1418,7 @@ void mprod (header *hd)
 		result=new_cmatrix(r,1,""); if (error) return;
 		mr=matrixof(result);
 		for (i=0; i<r; i++) 
-		{	s=1.0;
+		{	s=1.0; si=0.0;
 			for (j=0; j<c; j++) 
 			{	complex_multiply(&s,&si,m,m+1,&h,&hi);
 				s=h; si=hi; m+=2; 

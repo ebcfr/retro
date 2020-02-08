@@ -21,13 +21,19 @@ void output1(char *fmt, ...);
 
 extern double epsilon;
 
-typedef enum { c_none, c_allv, c_quit, c_hold, 
-		c_shg, c_load, c_udf, c_return, c_for, c_end, c_break,
-		c_loop, c_if, c_repeat, c_endif, c_else, c_elseif,
-		c_clear, c_clg, c_cls, c_exec, c_forget, c_global } 
-	comtyp;
+/* commands */
+typedef enum {
+	c_none, c_allv, c_quit, c_hold, 
+	c_shg, c_load, c_udf, c_return, c_for, c_end, c_break,
+	c_loop, c_if, c_repeat, c_endif, c_else, c_elseif,
+	c_clear, c_clg, c_cls, c_exec, c_forget, c_global
+} comtyp;
 
-typedef struct { char *name; comtyp nr; void (*f)(void); } commandtyp;
+typedef struct {
+	char*	name;
+	comtyp	nr;
+	void 	(*f)(void);
+} commandtyp;
 
 /* edit.c */
 

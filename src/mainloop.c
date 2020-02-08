@@ -6,7 +6,7 @@
 #include <float.h>
 #include <stdarg.h>
 #include <limits.h>
-	
+
 #include "sysdep.h"
 #include "header.h"
 #include "core.h"
@@ -165,7 +165,7 @@ void print_error (char *p)
 {	int i;
 	char *q,outline[1024];
 	double x;
-	commandtyp *com;
+	short cmd;
 //fprintf(stderr,"Error: %d\n", error);
 	if (errorout) return;
 	if (line<=p && line+1024>p)
@@ -185,9 +185,9 @@ void print_error (char *p)
 			}
 			else if (*p==3)
 			{	p++;
-				memmove((char *)(&com),p,sizeof(commandtyp *));
-				p+=sizeof(commandtyp *);
-				sprintf(q,"%s",com->name);
+				memmove((char *)(&cmd),p,sizeof(short));
+				p+=sizeof(short);
+				sprintf(q,"%s",command_list[cmd].name);
 				q+=strlen(q);
 			}
 			else *q++=*p++;
@@ -205,7 +205,7 @@ void print_error (char *p)
 static char *type_udfline (char *start)
 {	char outline[1024],*p=start,*q;
 	double x;
-	commandtyp *com;
+	short cmd;
 	q=outline;
 	while (*p)
 	{	if (*p==2)	/* a constant in IEEE double precision, convert it back */
@@ -216,9 +216,9 @@ static char *type_udfline (char *start)
 		}
 		else if (*p==3)	/* a command */
 		{	p++;
-			memmove((char *)(&com),p,sizeof(commandtyp *));
-			p+=sizeof(commandtyp *);
-			sprintf(q,"%s",com->name);
+			memmove((char *)(&cmd),p,sizeof(short));
+			p+=sizeof(short);
+			sprintf(q,"%s",command_list[cmd].name);
 			q+=strlen(q);
 		}
 		else *q++=*p++;
@@ -291,7 +291,7 @@ static void read_line (char *line)
 		if (count>=1023) 
 		{	output("Line too long!\n"); error=50; *line=0; return;
 		}
-		if ((char)input>=' ' || (signed char)input<0 || (char)input==TAB)
+		if ((char)input>=' ' || (signed char)input<0 || (char)input=='\t')
 		{	*p++=(char)input; count++;
 		}
 	}
@@ -409,12 +409,12 @@ void give_out (header *hd)
 	}
 }
 
-/***************** some builtin commands *****************/
+/***************** some commands *****************/
 static void scan_filename (char *name, int lmax);
 static void scan_name (char *name);
 static void scan_end (void);
 static void scan_endif (void);
-static void scan_else (void);
+static int  scan_else (void);
 
 
 char * path[MAX_PATH];
@@ -487,7 +487,8 @@ static void load_file (void)
 	}
 }
 
-static commandtyp *preview_command (int *l);
+static short command_find (int *l);
+
 
 static void parse_udf (void)
 /***** parse_udf
@@ -524,8 +525,9 @@ static void parse_udf (void)
 	int l;
 	header *var,*result,*hd;
 	FILE *actfile=infile;
-	commandtyp *com;
+	short cmd;
 	double x;
+	
 	if (udfon==1)
 	{	output("Cannot define a function in a function!\n");
 		error=60; return;
@@ -633,9 +635,7 @@ static void parse_udf (void)
 					while (isdigit(*next)) *p++=*next++;
 				}
 				else
-				{	/* align for even position (not necessary)
-					   write 2 to signal a precompiled float */
-//					if ((p-(char *)result)%2==0) *p++=' ';
+				{	/* write byte=0x02 to signal a precompiled float */
 					*p++=2;
 		   			sscanf(next,"%lg%n",&x,&n);
 		   			next+=n;
@@ -646,15 +646,15 @@ static void parse_udf (void)
 			}
 			else if (isalpha(*next) &&
 				(next==firstchar || !isalpha(*(next-1))) &&
-				(com=preview_command(&l))!=0)
-			/* try to find a command */
-			{	/* align for even position (not necessary)
-				   write 3 to signal a precompiled command */
-//				if ((p-(char *)result)%2==0) *p++=' ';
+				(cmd=command_find(&l))!=-1)
+			{	/* new command found: cmd = cmd index in command_list table
+				   cast cmd to short ==> no more than 32767 commands can be 
+				   handled (It leaves quite some room) */
+				short scmd=(short)cmd;
+				/* push byte=0x03 to signal a precompiled command */
 				*p++=3;
-				/* push address of the command handling function to the function body */
-				memmove(p,(char *)(&com),sizeof(commandtyp *));
-				p+=sizeof(commandtyp *);
+				memmove(p,(char *)(&scmd),sizeof(short));
+				p+=sizeof(short);
 				next+=l;
 			}
 			else if (*next=='.' && *(next+1)=='.')
@@ -920,33 +920,34 @@ static int ctest (header *hd)
 	hd=getvalue(hd); if (error) return 0;
 	if (hd->type==s_string) return (*stringof(hd)!=0);
 	if (hd->type==s_real) return (*realof(hd)!=0.0);
-	if (hd->type==s_complex) return (*realof(hd)!=0.0 &&
+	if (hd->type==s_complex) return (*realof(hd)!=0.0 ||
 		*imagof(hd)!=0.0);
 	if (hd->type==s_matrix)
 	{	n=(LONG)(dimsof(hd)->r)*dimsof(hd)->c;
 		m=matrixof(hd);
-		for (i=0; i<n; i++) if (*m++==0.0) return 0;
-		return 1;
+		for (i=0; i<n; i++) if (*m++!=0.0) return 1;
+		return 0;
 	}
 	if (hd->type==s_cmatrix)
 	{	n=(LONG)(dimsof(hd)->r)*dimsof(hd)->c;
 		m=matrixof(hd);
 		for (i=0; i<n; i++) 
-		{	if (*m==0.0 && *m==0.0) return 0; m+=2; }
-		return 1;
+		{	if (*m!=0.0 || *(m+1)!=0.0) return 1; m+=2; }
+		return 0;
 	}
 	return 0;
 }
 
 static void do_if (void)
-{	header *cond;
+{
 	int flag;
-	if (!udfon)
-	{	output("If only allowed in functions!\n"); error=111; return;
+	if (!udfon) {
+		output("If only allowed in functions!\n"); error=111; return;
 	}
-	cond=scan(); if (error) return;
-	flag=ctest(cond); if (error) return;
-	if (!flag) scan_else();
+	do {
+		header* cond=scan(); if (error) return;
+		flag=ctest(cond); if (error) return;
+	} while (!flag && scan_else());
 }
 
 static void do_trace(void)
@@ -1049,7 +1050,7 @@ static void do_forget (void)
 	}
 }
 
-static void print_commands (void);
+static void command_print (void);
 
 static void do_list (void)
 {	header *hd;
@@ -1057,7 +1058,7 @@ static void do_list (void)
 	output("  *** Builtin functions:\n");
 	print_builtin();
 	output("  *** Commands:\n");
-	print_commands();
+	command_print();
 	output("  *** Your functions:\n");
 	hd=(header *)ramstart;
 	while ((char*)hd<udfend)
@@ -1443,10 +1444,9 @@ static commandtyp command_list[] = {
 	{"meta",c_global,do_meta},
 	{"comment",c_global,do_comment},
 	{"trace",c_global,do_trace},
-	{0,0,0}
 };
 
-static void print_commands (void)
+static void command_print (void)
 {	int i, c, cend, lw=linelength/MAXNAME;
 	
 	for (i=0; i<command_count; i+=lw) {
@@ -1465,47 +1465,55 @@ static int command_compare (const commandtyp *p1, const commandtyp *p2)
 {	return strcmp(p1->name,p2->name);
 }
 
-static void sort_command (void)
+static void command_sort (void)
 {	command_count=0;
-	while (command_list[command_count].name) command_count++;
+	command_count=sizeof(command_list)/sizeof(commandtyp);
 	qsort(command_list,command_count,sizeof(commandtyp),
 		(int (*)(const void *, const void *))command_compare);
 }
 
-static commandtyp *preview_command (int *l)
+static short command_find (int *l)
 {	commandtyp h;
 	char name[MAXNAME],*a,*n;
 	*l=0;
+	/* parse the name of the command */
 	a=next; n=name;
 	while (*l<MAXNAME && isalpha(*a)) { *n++=*a++; *l+=1; }
-	*n++=0; if (isalpha(*a)) return 0;
+	*n++=0;
+	/* name too long! */
+	if (isalpha(*a)) return -1;
+	/* look for name in the command_list table */
 	h.name=name;
-	return bsearch(&h,command_list,command_count,sizeof(commandtyp),
+	a=bsearch(&h,command_list,command_count,sizeof(commandtyp),
 		(int (*)(const void *, const void *))command_compare);
+	
+	if (a) return (a-(char*)command_list)/sizeof(commandtyp);
+	
+	return -1;
 }
 
-static int builtin (void)
-/***** builtin
+static int command_run (void)
+/***** command_run
 	interpret a builtin command, number no.
 *****/
 {	int l;
-	commandtyp *p;
-	if (*next==3)
-	{	next++;
+	short cmd=-1;
+	if (*next==3) {		/* run a command from a user defined function */
+		next++;
 #ifdef SPECIAL_ALIGNMENT
-		memmove((char *)(&p),next,sizeof(commandtyp *));
+		memmove((char *)(&cmd),next,sizeof(short));
 #else
-		p=*((commandtyp **)next);
+		cmd=*((short*)next);
 #endif
-		l=sizeof(commandtyp *);
+		l=sizeof(short);
 	}
 	else if (udfon) return 0;
-	else p=preview_command(&l);
-	if (p)
+	else cmd=command_find(&l);
+	if (cmd!=-1)
 	{	next+=l;
-		p->f();
+		command_list[cmd].f();
 		if (*next==';' || *next==',') next++;
-		commandtype=p->nr;
+		commandtype=command_list[cmd].nr;
 		return 1;
 	}
 	return 0;
@@ -1513,7 +1521,7 @@ static int builtin (void)
 
 /***************** scanning ***************************/
 void scan_space (void)
-{	start: while (*next==' ' || *next==TAB) next++;
+{	start: while (*next==' ' || *next=='\t') next++;
 	if (!udfon && *next=='.' && *(next+1)=='.')
 		{	next_line(); if (error) return; goto start; }
 }
@@ -1527,8 +1535,11 @@ static void scan_end (void)
 /***** scan_end
 	scan for "end".
 *****/
-{	commandtyp *com;
+{
+	short cmd;
+	void (*f)(void);
 	char *oldline=udfline;
+
 	while (1)
 	{	switch (*next)
 		{	case 1 : 
@@ -1536,15 +1547,15 @@ static void scan_end (void)
 				error=110; udfline=oldline; return;
 			case 0 : udfline=next+1; next++; break;
 			case 2 : next+=1+sizeof(double); break;
-			case 3 : next++; 
-				memmove((char *)(&com),next,sizeof(commandtyp *));
-				next+=sizeof(commandtyp *);
-				if (com->f==do_end)
+			case 3 : next++;
+				memmove((char *)(&cmd),next,sizeof(short));
+				next+=sizeof(short);
+				f=command_list[cmd].f;
+				if (f==do_end)
 				{	if (trace>0) trace_udfline(udfline);
 					return;
 				}
-				else if (com->f==do_repeat || com->f==do_loop ||
-					com->f==do_for)
+				else if (f==do_repeat || f==do_loop || f==do_for)
 				{	scan_end(); if (error) return; }
 				break;
 			default : next++;
@@ -1556,7 +1567,9 @@ static void scan_endif (void)
 /***** scan_endif
 	scan for "endif".
 *****/
-{	commandtyp *com;
+{
+	short cmd;
+	void (*f)(void);
 	char *oldline=udfline;
 	while (1)
 	{	switch (*next)
@@ -1566,13 +1579,14 @@ static void scan_endif (void)
 			case 0 : udfline=next+1; next++; break;
 			case 2 : next+=1+sizeof(double); break;
 			case 3 : next++; 
-				memmove((char *)(&com),next,sizeof(commandtyp *));
-				next+=sizeof(commandtyp *);
-				if (com->f==do_endif)
+				memmove((char *)(&cmd),next,sizeof(short));
+				next+=sizeof(short);
+				f=command_list[cmd].f;
+				if (f==do_endif)
 				{	if (trace>0) trace_udfline(udfline);
 					return;
 				}
-				else if (com->f==do_if)
+				else if (f==do_if)
 				{	scan_endif(); if (error) return; }
 				break;
 			default : next++;
@@ -1580,28 +1594,33 @@ static void scan_endif (void)
 	}
 }
 
-static void scan_else (void)
+static int scan_else (void)
 /***** scan_else
 	scan for "else".
 *****/
-{	commandtyp *com;
+{
+	short cmd;
+	void (*f)(void);
 	char *oldline=udfline;
-	while (1)
-	{	switch (*next)
-		{	case 1 : 
+	while (1) {
+		switch (*next) {
+			case 1 : 
 				output("Endif missing, searching for else!\n");
-				error=110; udfline=oldline; return;
+				error=110; udfline=oldline; return 0;
 			case 0 : udfline=next+1; next++; break;
 			case 2 : next+=1+sizeof(double); break;
 			case 3 : next++; 
-				memmove((char *)(&com),next,sizeof(commandtyp *));
-				next+=sizeof(commandtyp *);
-				if (com->f==do_endif || com->f==do_else)
-				{	if (trace>0) trace_udfline(udfline);
-					return;
+				memmove((char *)(&cmd),next,sizeof(short));
+				next+=sizeof(short);
+				f=command_list[cmd].f;
+				if (f==do_endif || f==do_else) {
+					if (trace>0) trace_udfline(udfline);
+					return 0;
+				} else if (f==do_elseif) {
+					return 1;
+				} else if (f==do_if) {
+					scan_endif(); if (error) return 0;
 				}
-				else if (com->f==do_if)
-				{	scan_endif(); if (error) return; }
 				break;
 			default : next++;
 		}
@@ -2207,9 +2226,9 @@ header *scan_value (void)
 
 static header *scan_expression (void)
 /***** scan_expression
-	scans a variable, a value or a builtin command.
+	scans a variable, a value or a command.
 *****/
-{	if (builtin()) return &commandheader;
+{	if (command_run()) return &commandheader;
 	return scan();
 }
 
@@ -2346,7 +2365,7 @@ void main_loop (int argc, char *argv[])
 	newram=startlocal=endlocal=ramstart;
 	udfend=ramstart;
 	epsilon=10000*DBL_EPSILON;
-	sort_builtin(); sort_command(); make_xors(); clear_fktext();
+	sort_builtin(); command_sort(); make_xors(); clear_fktext();
 	next=line;		/* clear input line */
 	strcpy(line,"load \"retro.cfg\";");
 	for (i=1; i<argc; i++)
