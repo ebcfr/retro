@@ -3603,13 +3603,13 @@ int builtin_count;
 extern builtintyp builtin_list[];
 
 void print_builtin (void)
-{	int i, c, cend, lw=linelength/16;
+{	int i, c, cend, lw=linelength/MAXNAME;
 	
 	for (i=0; i<builtin_count; i+=lw) {
 		cend = i+lw;
 		if (cend>=builtin_count) cend=builtin_count;
 		for (c=i; c<cend ; c++) {
-			output1("%-16s",builtin_list[c].name);
+			output1(OUTFMT,builtin_list[c].name);
 			if (test_key()==escape) return;
 		}
 		output("\n");

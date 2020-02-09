@@ -13,7 +13,7 @@ extern char *ramstart,
             *newram,
             *udfend;
 	
-#define MAXNAME		15			/* Maximum length of an identifier */
+#define MAXNAME		19			/* Maximum length of an identifier */
 
 extern int error,surpressed,udf,udfon,linelength,stringon;
 extern long loopindex;

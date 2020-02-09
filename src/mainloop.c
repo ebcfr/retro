@@ -1063,7 +1063,7 @@ static void do_list (void)
 	hd=(header *)ramstart;
 	while ((char*)hd<udfend)
 	{	if (hd->type!=s_udf) break;
-		output1("%-16s",hd->name);
+		output1(OUTFMT,hd->name);
 		if (test_key()==escape) return;
 		hd=nextof(hd);
 		i++;
@@ -1271,7 +1271,7 @@ static void do_remove (void)
 
 static void do_do (void)
 {	int udfold;
-	char name[16];
+	char name[MAXNAME];
 	char *oldnext=next,*udflineold;
 	header *var;
 	scan_space(); scan_name(name); if (error) return;
@@ -1453,7 +1453,7 @@ static void command_print (void)
 		cend = i+lw;
 		if (cend>=command_count) cend=command_count;
 		for (c=i; c<cend ; c++) {
-			output1("%-16s",command_list[c].name);
+			output1(OUTFMT,command_list[c].name);
 			if (test_key()==escape) return;
 		}
 		output("\n");
@@ -2359,7 +2359,6 @@ int command (void)
 }
 
 /******************* main functions ************************/
-
 void main_loop (int argc, char *argv[])
 {	int i;
 	newram=startlocal=endlocal=ramstart;
@@ -2375,6 +2374,7 @@ void main_loop (int argc, char *argv[])
 	}
 	
 //	fprintf(stderr,"sizeof(header) = %lu\nsizeof(stacktyp) = %lu\n", sizeof(header), sizeof(stacktyp));
+//	fprintf(stderr,"%s\n", OUTFMT);
 	
 	while (!quit)
 	{	/* reset global context for commands evaluated in the 

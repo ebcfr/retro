@@ -10,6 +10,11 @@
 #define	MAXHIST		32			/* Maximum entries in editing history */
 
 
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
+#define OUTFMT "%-" STR(MAXNAME) "s"
+
+
 extern int linew,fieldw,hchar,wchar;
 extern double maxexpo,minexpo;
 extern char expoformat[],fixedformat[];
