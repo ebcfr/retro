@@ -13,6 +13,7 @@ typedef struct {
 extern builtintyp builtin_list[];
 
 /* udf */
+#define	MAXARGS			10
 
 typedef struct {
 	char	name[MAXNAME];

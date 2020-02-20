@@ -21,6 +21,8 @@ void mcomplex (header *hd);
 void miscomplex (header *hd);
 void misreal (header *hd);
 void misstring (header *hd);
+void misfunction (header *hd);
+void misvar (header *hd);
 void mround (header *hd);
 void marg (header *hd);
 void mabs (header *hd);
@@ -168,9 +170,15 @@ builtintyp builtin_list[] = {
 	{"re",1,mre},
 	{"im",1,mim},
 	{"complex",1,mcomplex},
-	{"iscomplex",1,miscomplex},
+	{"name",1,mname},
 	{"isreal",1,misreal},
+	{"iscomplex",1,miscomplex},
 	{"isstring",1,misstring},
+	{"isfunction",1,misfunction},
+	{"isvar",1,misvar},
+	{"lineinput",1,mlineinput},
+	{"interpret",1,minterpret},
+	{"eval",-1,mdo},
 	{"round",2,mround},
 	{"arg",1,marg},
 	{"abs",1,mabs},
@@ -207,7 +215,7 @@ builtintyp builtin_list[] = {
 	{"contour",2,mcontour},
 	{"dup",2,mdup},
 	{"mod",2,mmod},
-	{"format",1,mformat},
+	{"format",2,mformat},
 	{"color",1,mcolor},
 	{"framecolor",1,mfcolor},
 	{"wirecolor",1,mwcolor},
@@ -240,7 +248,6 @@ builtintyp builtin_list[] = {
 	{"input",1,minput},
 	{"max",1,mmax1},
 	{"min",1,mmin1},
-	{"eval",-1,mdo},
 	{"polyval",2,polyval},
 	{"polyadd",2,polyadd},
 	{"polymult",2,polymult},
@@ -279,9 +286,6 @@ builtintyp builtin_list[] = {
 	{"scaling",1,mscaling},
 	{"holding",1,mholding},
 	{"holding",0,mholding0},
-	{"lineinput",1,mlineinput},
-	{"interpret",1,minterpret},
-	{"name",1,mname},
 	{"twosides",1,mtwosides},
 	{"triangles",1,mtriangles},
 	{"meshfactor",1,mmeshfactor},

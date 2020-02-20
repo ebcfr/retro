@@ -63,28 +63,6 @@ void mkey (header *hd)
 	new_real(scan,"");
 }
 
-void mformat (header *hd)
-{	header *st=hd,*result;
-	static int l=10,d=5;
-	int oldl=l,oldd=d;
-	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_matrix || dimsof(hd)->r!=1 || dimsof(hd)->c!=2)
-		wrong_arg("1x2 real vector expected");
-	l=(int)*matrixof(hd); d=(int)*(matrixof(hd)+1);
-	if (l<2 || l>2*DBL_DIG || d<0 || d>DBL_DIG) wrong_arg("bad value");
-	if (d>l-3) d=l-3;
-	sprintf(fixedformat," %c%d.%df",'%',l,d);
-	sprintf(expoformat," %c%d.%de",'%',l,(l>9)?l-9:0);
-	minexpo=pow(10,-d);
-	maxexpo=pow(10,(l-d-3>DBL_DIG-d-1)?DBL_DIG-d-1:l-d-3)-1;
-	fieldw=l+2;
-	linew=linelength/fieldw;
-	result=new_matrix(1,2,""); if (error) return;
-	*matrixof(result)=oldl;
-	*(matrixof(result)+1)=oldd;
-	moveresult(st,result);
-}
-
 void minput (header *hd)
 {	header *st=hd,*result;
 	char input[1024],*oldnext;
@@ -135,8 +113,8 @@ void mprintf (header *hd)
 	hd=getvalue(hd);
 	hd1=getvalue(hd1); if (error) return;
 	if (hd->type!=s_string || hd1->type!=s_real)
-		wrong_arg("printf(\"string\",value)");
-	sprintf(string,stringof(hd),*realof(hd1));
+		wrong_arg("printf(\"format string\",value)");
+	snprintf(string,1024,stringof(hd),*realof(hd1));
 	result=new_string(string,strlen(string),""); if (error) return;
 	moveresult(st,result);
 }
@@ -159,15 +137,119 @@ void msetkey (header *hd)
 	moveresult(st,result);
 }
 
+/***************** number display mode handling *****************/
+/* Display modes :
+   - standard formats
+     mode FRAC: display result as aproximated fraction (?), fallback to STD
+                mode if the aproximation is too long to converge.
+       params: eps, nb of digits to display a number
+     mode STD: display smartly the result as standard or exponentiated number
+       params: nb of significant digits, nb of digits to display a number
+     mode SCI: display in loating point scientific notation m*1Eexp
+     	params: nb of significant digits, nb of digits to display a number
+     mode FIXED: display the result with a fixed point format (may be bad
+                 with floating point data)
+       params: number of dits after the decimal point, nb of digits to display a number
+   - ingineering formats
+     mode ENG1: use exponentiation format (incr/decr of the power of 10 by 3)
+     mode ENG2: use suffixes
+       params: nb of digits to display a number
+ */
+
+/***** mformat
+   format(
+     "STD"|"FIXED"|"ENG1"|"ENG2"|"SCI"|"FIXED"|"FRAC",
+     [extend, digits]
+   )
+ *****/
+void mformat (header *hd)
+{	header *st=hd,*result, *hd1=next_param(hd);
+	int l,d;
+	int oldl=disp_fieldw,oldd=disp_digits;
+	int dmode;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_string) {
+		if (strcmp(stringof(hd),"STD")==0) {
+			dmode=0;
+		} else if (strcmp(stringof(hd),"ENG1")==0) {
+			dmode=1;
+		} else if (strcmp(stringof(hd),"ENG2")==0) {
+			dmode=2;
+		} else if (strcmp(stringof(hd),"SCI")==0) {
+			dmode=3;
+		} else if (strcmp(stringof(hd),"FIXED")==0) {
+			dmode=4;
+		} else if (strcmp(stringof(hd),"FRAC")==0) {
+			dmode=5;
+		} else {
+			wrong_arg("Display mode expected");
+		}
+	}
+	if (hd1) {
+		hd1=getvalue(hd1); if (error) return;
+		if (hd1->type!=s_matrix || dimsof(hd1)->r!=1 || dimsof(hd1)->c!=2)
+			wrong_arg("1x2 real vector expected");
+		l=(int)*matrixof(hd1); d=(int)*(matrixof(hd1)+1);
+		if (l<0 || l>2*DBL_DIG+18 || d<0 || d>DBL_DIG+1) wrong_arg("bad value");
+		
+		disp_eng_sym=0;		/*  no multiple/submultiple symbols */
+		
+		switch (dmode) {
+		case 0: /* smart STD */
+			if (l<d+8) l=d+8;
+			sprintf(fixedformat,"%%0.%dG",d);
+			sprintf(expoformat,"%%0.%dE",d-1);
+			minexpo=pow(10,(-d+1>-4) ? -d+1 : -4);
+			maxexpo=pow(10,d-1)-0.1;
+			break;
+		case 1:		/* ENG1 */
+			if (d<3) {
+				d=3;
+				output("warning: \"ENG1\" display mode can't be set to less than 3 digits (3 digits enforced)\n");
+			}
+			if (l<d+8) l=d+8; 
+			disp_eng_sym=0;
+			break;
+		case 2:		/* ENG2 */
+			if (d<3) {
+				d=3;
+				output("warning: \"ENG2\" display mode can't be set to less than 3 digits (3 digits enforced)\n");
+			}
+			if (l<d+4) l=d+4;
+			disp_eng_sym=1;
+			break;
+		case 3:		/* SCI */
+			if (l<d+8) l=d+8;
+			sprintf(expoformat,"%%0.%dE",d-1);
+			break;
+		case 4:		/* FIXED */
+			if (l<DBL_DIG+3) l=DBL_DIG+3;
+			sprintf(fixedformat,"%%0.%dF",d);
+			break;
+		case 5:		/* FRAC */
+		default:	/* never used */
+			wrong_arg("mode not supported");
+			break;
+		}
+		disp_mode=dmode;
+		disp_digits=d;
+		disp_fieldw=l;
+	}
+	result=new_matrix(1,2,""); if (error) return;
+	*matrixof(result)=oldl;
+	*(matrixof(result)+1)=oldd;
+	moveresult(st,result);
+}
+
 /**************** user defined function handling ****************/
 char *argname[] =
 	{ "arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9",
 		"arg10" } ;
-char xors[10];
+char xors[MAXARGS];
 
 void make_xors (void)
 {	int i;
-	for (i=0; i<10; i++) xors[i]=xor(argname[i]);
+	for (i=0; i<MAXARGS; i++) xors[i]=xor(argname[i]);
 }
 
 header *running;
@@ -344,7 +426,7 @@ void mdo (header *hd)
 	if (error) return;
 	hd=searchudf(stringof(hd));
 	if (!hd || hd->type!=s_udf) wrong_arg("1st arg not a user defined function");
-	while (hd1) 
+	while (hd1 && count<=MAXARGS) 
 	{	strcpy(hd1->name,argname[count]);
 		hd1->xor=xors[count];
 		hd1=next_param(hd1); count++; 
@@ -406,7 +488,7 @@ void mindex (header *hd)
 {	new_real((double)loopindex,"");
 }
 
-/******************** type handling ***********************/
+/******************** type introspection ***********************/
 void mname (header *hd)
 {	header *st=hd,*result;
 	hd=getvalue(hd); if (error) return;

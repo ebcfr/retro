@@ -9,13 +9,16 @@
 #define MAXLINE		256			/* Maximum input line length */
 #define	MAXHIST		32			/* Maximum entries in editing history */
 
-
+/* Format string for */
 #define XSTR(x) #x
 #define STR(x) XSTR(x)
 #define OUTFMT "%-" STR(MAXNAME) "s"
 
-
-extern int linew,fieldw,hchar,wchar;
+extern int disp_mode;
+extern int disp_digits;
+extern int disp_fieldw;
+extern int disp_eng_sym;
+extern int hchar,wchar;
 extern double maxexpo,minexpo;
 extern char expoformat[],fixedformat[];
 
@@ -70,8 +73,6 @@ header *scan_value(void);
 void copy_complex (double *, double *);
 
 /* several */
-
-void sort_commands (void);
 
 void make_xors (void);
 void clear_fktext (void);

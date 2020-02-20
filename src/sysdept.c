@@ -709,8 +709,6 @@ static void sigHandler(int sig)
 		ioctl(1, TIOCGWINSZ, &ws);
 		if (ws.ws_col) {
 			linelength = ws.ws_col;
-			linew=linelength/fieldw;
-			if (!linew) linew=1;
 //			fprintf(stderr,"linelength : %d\n", linelength);
 		}
 		break;
@@ -844,8 +842,6 @@ Initialize memory and call main_loop
 	ioctl(1, TIOCGWINSZ, &ws);
 	if (ws.ws_col) {
 		linelength = ws.ws_col;
-		linew=linelength/fieldw;
-		if (!linew) linew=1;
 	}
 
 	/*  */

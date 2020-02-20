@@ -32,11 +32,6 @@ char line[MAXLINE];
 
 long loopindex=0;
 
-int fieldw=15,linew=5;
-double maxexpo=1.0e5,minexpo=1.0e-7;
-char expoformat[16]=" %14.5E";
-char fixedformat[16]=" %14.7F";
-
 int nosubmref=0;
 
 FILE *infile=NULL,*outfile=NULL;
@@ -49,10 +44,9 @@ int commandtype;
 void output (char *s)
 {	text_mode();
 	if (outputing || error) gprint(s);
-	if (outfile)
-	{	fprintf(outfile,"%s",s);
-		if (ferror(outfile))
-		{	
+	if (outfile) {
+		fprintf(outfile,"%s",s);
+		if (ferror(outfile)) {	
 			error=200;
 			fclose(outfile); outfile=NULL;
 			output("Error on dump file (disk full?).\n");
@@ -68,17 +62,42 @@ void output1 (char *fmt, ...)
 	vsnprintf(text,1024,fmt,v);
 	va_end(v);
 	if (outputing || error) gprint(text);
-	if (outfile)
-	{	va_start(v,fmt);
-		vfprintf(outfile,fmt,v);
-		va_end(v);
-		if (ferror(outfile))
-		{	
+	if (outfile) {
+		fprintf(outfile,text);
+		if (ferror(outfile)) {	
 			error=200;
 			fclose(outfile); outfile=NULL;
 			output("Error on dump file (disk full?).\n");
 		}
 	}
+}
+
+int output1hold (int f, char *fmt, ...)
+{	static char text [1024];
+	ULONG len;
+	va_list v;
+	if (f==0) text[0]=0;
+	len=strlen(text);
+	text_mode();
+	va_start(v,fmt);
+	vsnprintf(text+len,1024-len,fmt,v);
+	va_end(v);
+	if (f<=0) return strlen(text);
+	len=strlen(text);
+	if (len<(ULONG)f) {
+		memmove(text+(f-len),text,len+1);
+		memset(text,' ',f-len);
+	}
+	if (outputing || error) gprint(text);
+	if (outfile) {
+	   fprintf(outfile,text);
+		if (ferror(outfile)) {
+			error=200;
+			fclose(outfile); outfile=NULL;
+			output("Error on dump file (disk full?).\n");
+		}
+	}
+	return strlen(text);
 }
 
 /* help */
@@ -327,16 +346,135 @@ static void next_line (void)
 
 
 
-/********************* interpreter **************************/
+/********************* output functions **************************/
+/* Display modes :
+   - standard formats
+     mode FRAC: display result as aproximated fraction (?), fallback to STD
+                mode if the aproximation is too long to converge.
+       params: eps, nb of digits to display a number
+     mode STD: display smartly the result as standard or exponentiated number
+       params: nb of significant digits, nb of digits to display a number
+     mode SCI: display in loating point scientific notation m*1Eexp
+     	params: nb of significant digits, nb of digits to display a number
+     mode FIXED: display the result with a fixed point format (may be bad
+                 with floating point data)
+       params: number of dits after the decimal point, nb of digits to display a number
+  - ingineering formats
+     mode ENG1: use exponentiation format (incr/decr of the power of 10 by 3)
+     mode ENG2: use suffixes
+       params: nb of digits to display a number
+       
+   See functions: mformat
+   
+   Engineering
+   y = yocto = 1e-24
+   z = zepto = 1e-21
+   a = atto  = 1e-18
+   f = femto = 1e-15
+   p = pico  = 1e-12
+   n = nano  = 1e-9
+   u = micro = 1e-6
+   m = milli = 1e-3
+   
+   k = kilo  = 1e+3 or (K)
+   M = mega  = 1e+6
+   G = giga  = 1e+9
+   T = tera  = 1e+12
+   P = peta  = 1e+15
+   E = exa   = 1e+18
+   Z = zetta = 1e+21
+   Y = yotta = 1e+24
+ */
+ 
+#define PREFIX_START (-24)
+static char *eng_prefix[] = {
+  "y", "z", "a", "f", "p", "n", "u", "m", "",
+  "k", "M", "G", "T", "P", "E", "Z", "Y"
+}; 
+#define PREFIX_END (PREFIX_START+\
+(int)((sizeof(eng_prefix)/sizeof(char *)-1)*3))
+
+static void eng_out(double value, int digits, int numeric, int hold)
+{
+	int expof10;
+	int is_signed = signbit(value);
+	char* sign = is_signed ? "-" : "";
+
+	if (is_signed) value = -value;
+	
+	switch(fpclassify(value)) {
+	case FP_NORMAL:
+		expof10 = (int) log10(value);
+		if(expof10 > 0)
+			expof10 = (expof10/3)*3;
+		else
+			expof10 = (-expof10+3)/3*(-3); 
+	 
+		value *= pow(10,-expof10);
+	
+		if (value >= 1000.) { value /= 1000.0; expof10 += 3; }
+	
+		if(numeric || (expof10 < PREFIX_START) || (expof10 > PREFIX_END))
+			output1hold(hold, "%s%.*GE%+.2d", sign, digits, value, expof10); 
+		else
+			output1hold(hold, "%s%.*G%s", sign, digits, value, 
+	          eng_prefix[(expof10-PREFIX_START)/3]);
+		break;
+	case FP_INFINITE:
+		output1hold(hold, "%sINF", sign);
+		break;
+	case FP_NAN:
+		output1hold(hold, "%sNAN", sign);
+		break;
+	case FP_SUBNORMAL:
+	case FP_ZERO:
+	default:
+		if(numeric) {
+			output1hold(hold, "%s%.*GE+00", sign, digits, 0.0);
+		} else {
+			output1hold(hold, "%s%.*G", sign, digits, 0.0);
+		}
+		break;
+	}
+}
+
+int disp_mode=0;
+int disp_digits=6;
+int disp_fieldw=14;
+int disp_eng_sym=0;
+
+double maxexpo=1.0e6,minexpo=1.0e-4;
+char expoformat[16]="%0.4E";
+char fixedformat[16]="%0.5G";
+
 
 void double_out (double x)
 /***** double_out
 	print a double number.
 *****/
-{	if ((fabs(x)>maxexpo || fabs(x)<minexpo) && x!=0.0) 
-		output1(expoformat,x);
-	else if (x==0.0) output1(fixedformat,0.0); /* take care of -0 */
-	else output1(fixedformat,x);
+{
+	switch (disp_mode) {
+	case 0:		/* smart STD */
+		if ((fabs(x)>maxexpo || fabs(x)<minexpo) && x!=0.0) 
+			output1hold(0,expoformat,x);
+		else output1hold(0,fixedformat,x);
+		break;
+	case 1:		/* ENG1 */
+	case 2:		/* ENG2 */
+		eng_out(x,disp_digits,!disp_eng_sym,0);
+		break;
+	case 3:		/* SCI */
+		output1hold(0,expoformat,x);
+		break;
+	case 4:		/* FIXED */
+		output1hold(0,fixedformat,x);
+		break;
+	case 5:		/* FRAC */
+		break;
+	default:	/* never used */
+		break;
+	}
+	output1hold(disp_fieldw,"");
 }
 
 void out_matrix (header *hd)
@@ -345,6 +483,9 @@ void out_matrix (header *hd)
 *****/
 {	int c,r,i,j,c0,cend;
 	double *m,*x;
+	
+	int linew=linelength/disp_fieldw;
+	
 	getmatrix(hd,&r,&c,&m);
 	for (c0=0; c0<c; c0+=linew)
 	{	cend=c0+linew-1; 
@@ -363,14 +504,47 @@ void complex_out (double x, double y)
 /***** double_out
 	print a complex number.
 *****/
-{	if ((fabs(x)>maxexpo || fabs(x)<minexpo) && x!=0.0) 
-		output1(expoformat,x);
-	else output1(fixedformat,x);
-	output("+");
-	if ((fabs(y)>maxexpo || fabs(y)<minexpo) && y!=0.0) 
-		output1(expoformat,y);
-	else output1(fixedformat,y);
-	output("i ");
+{
+	switch (disp_mode) {
+	case 0:		/* smart STD */
+		if ((fabs(x)>maxexpo || fabs(x)<minexpo) && x!=0.0) 
+			output1hold(0,expoformat,x);
+		else output1hold(0,fixedformat,x);
+		if (y>=0) output1hold(-1,"+");
+		else output1hold(-1,"-");
+		y=fabs(y);
+		if ((y>maxexpo || y<minexpo) && y!=0.0)
+			output1hold(-1,expoformat,y);
+		else output1hold(-1,fixedformat,y);
+		break;
+	case 1:		/* ENG1 */
+	case 2:		/* ENG2 */
+		eng_out(x,disp_digits,!disp_eng_sym,0);
+		if (y>=0) output1hold(-1,"+");
+		else output1hold(-1,"-");
+		y=fabs(y);
+		eng_out(y,disp_digits,!disp_eng_sym,-1);
+		break;
+	case 3:		/* SCI */
+		output1hold(0,expoformat,x);
+		if (y>=0) output1hold(-1,"+");
+		else output1hold(-1,"-");
+		y=fabs(y);
+		output1hold(-1,expoformat,x);
+		break;
+	case 4:		/* FIXED */
+		output1hold(0,fixedformat,x);
+		if (y>=0) output1hold(-1,"+");
+		else output1hold(-1,"-");
+		y=fabs(y);
+		output1hold(-1,fixedformat,x);
+		break;
+	case 5:		/* FRAC */
+		break;
+	default:	/* never used */
+		break;
+	}
+	output1hold(2*disp_fieldw,"i");
 }
 
 void out_cmatrix (header *hd)
@@ -379,11 +553,14 @@ void out_cmatrix (header *hd)
 *****/
 {	int c,r,i,j,c0,cend;
 	double *m,*x;
+
+	int linew=linelength/(2*disp_fieldw);
+
 	getmatrix(hd,&r,&c,&m);
-	for (c0=0; c0<c; c0+=linew/2)
-	{	cend=c0+linew/2-1; 
+	for (c0=0; c0<c; c0+=linew)
+	{	cend=c0+linew-1; 
 		if (cend>=c) cend=c-1;
-		if (c>linew/2) output1("Column %d to %d:\n",c0+1,cend+1);
+		if (c>linew) output1("Column %d to %d:\n",c0+1,cend+1);
 		for (i=0; i<r; i++)
 		{	x=cmat(m,c,i,c0);
 			for (j=c0; j<=cend; j++) { complex_out(*x,*(x+1)); 
@@ -488,6 +665,7 @@ static void load_file (void)
 }
 
 static short command_find (int *l);
+static double scan_number(void);
 
 
 static void parse_udf (void)
@@ -519,7 +697,6 @@ static void parse_udf (void)
    
 *****/
 {	char name[MAXNAME],*p,*firstchar,*startp;
-	int n;
 	int *pcount, count=0;				/* argument counter */
 	unsigned int *pdefmap,defmap=0;		/* pointer to the default value bitmap */ 
 	int l;
@@ -637,8 +814,7 @@ static void parse_udf (void)
 				else
 				{	/* write byte=0x02 to signal a precompiled float */
 					*p++=2;
-		   			sscanf(next,"%lg%n",&x,&n);
-		   			next+=n;
+		   			x=scan_number();
 					// push the number to the function body
 		   			memmove(p,(char *)(&x),sizeof(double));
 		   			p+=sizeof(double);
@@ -736,7 +912,7 @@ static void do_for (void)
 	for i=value to value step value; .... ; end
 *****/
 {	int h,signum;
-	char name[16],*jump;
+	char name[MAXNAME],*jump;
 	header *hd,*init,*end,*step;
 	double vend,vstep;
 	struct { header hd; double value; } rv;
@@ -1304,13 +1480,14 @@ static void do_mdump (void)
 	hd=(header *)ramstart;
 	while ((char *)hd<newram)
 	{
-		output1("%6ld : %16s, ",(char *)hd-ramstart,hd->name);
+		output1("%6ld : %" STR(MAXNAME) "s, ",(char *)hd-ramstart,hd->name);
 		output1("size %6ld ",(long)hd->size);
 		output1("type %d\n",hd->type);
 		hd=nextof(hd);
 	}
 }
 
+/*
 static void hex_out1 (int n)
 {	if (n<10) output1("%c",n+'0');
 	else output1("%c",n-10+'A');
@@ -1321,7 +1498,7 @@ static void hex_out (unsigned int n)
 	hex_out1(n%16);
 	output(" ");
 }
-
+*/
 static void string_out (unsigned char *p)
 {	int i;
 	unsigned char a;
@@ -1332,19 +1509,24 @@ static void string_out (unsigned char *p)
 }
 
 static void do_hexdump (void)
-{	char name[16];
+{	char name[MAXNAME];
 	unsigned char *p,*end;
 	int i=0,j;
 	ULONG count=0;
 	header *hd;
-	scan_space(); scan_name(name); if (error) return;
+	scan_space(); scan_name(name); if (error) {
+		output("name of variable or user function expected!\n"); return;
+	}
 	hd=searchvar(name);
 	if (!hd) hd=searchudf(name);
-	if (error || hd==0) return;
+	if (error || hd==0) {
+		output1("%s not a variable or user function!\n", name); return;
+	}
 	p=(unsigned char *)hd; end=p+hd->size;
 	output1("\n%5lx: ",count);
 	while (p<end)
-	{	hex_out(*p++); i++; count++;
+	{//	hex_out(*p++); i++; count++;
+		output1("%02X ",*p++); i++; count++;
 		if (i>=16) 
 		{	i=0; string_out(p-16);
 			output1("\n%5lx: ",count);
@@ -1682,7 +1864,7 @@ void copy_complex (double *x, double *y)
 	*x=*y;
 }
 
-static int scan_arguments (void)
+static int parse_arguments (void)
 /* look ahead for arguments */
 {	int count=0,olds=nosubmref,nocount=0;
 	header *hd,*hdold;
@@ -1723,7 +1905,7 @@ static int scan_arguments (void)
 		{	if (!nocount) count++;
 			hd=nextof(hd);
 		}
-		if (count>=10)
+		if (count>MAXARGS)
 		{	output("Too many arguments!\n"); error=56; return 0; }
 		if (*next!=',') break;
 		next++;
@@ -1851,19 +2033,134 @@ static void scan_matrix (void)
 	newram=(char *)hd+hd->size;
 }
 
+/***** scan_number
+	scan a binary / hexadecimal / real number
+*****/
+static double scan_number(void)
+{
+	double val=0.0;
+	int d, cnt=0, sd=0; /* sd=significant digit, so incr cnt*/
+	int dexp;
+	/* set warn=1 to get a warning when the number has more than 15 digits,
+	   10^n = 2^54 ==> n= 54 ln 2 / ln 10 = 16.25, so 17 digits max
+	 */
+	int warn=1;
+	
+	if (*next=='.') {
+		goto do_dot;
+	} else if (*next=='0') {
+		next++;
+		if (*next=='.') {
+			goto do_dot;
+		} else if (*next=='x' || *next=='X') {	/* scan hexa number, 32bits max*/
+			unsigned int v=0, cnt=0, d;
+			next++;
+			while (cnt<9) {
+				if (*next>='0' && *next<='9') d=*next-'0';
+				else if (*next>='A' && *next<='F') d=*next-'A'+10;
+				else if (*next>='a' && *next<='f') d=*next-'a'+10;
+				else return (double)v;
+				v=(v<<4)|d;
+				cnt++;
+				next++;
+			}
+			error=1200; output("litteral hexa number too high (8 digits allowed)\n");
+		} else if (*next=='b' || *next=='B') {	
+			unsigned int v=0, cnt=0, d;
+			next++;
+			while (cnt<33) {
+				if (*next=='0' || *next=='1') d=*next-'0';
+				else return (double)v;
+				v=(v<<1)|d;
+				cnt++;
+				next++;
+			}
+			error=1200; output("litteral binary number too high (32 bits allowed)\n");
+		}
+	} else if (*next>='1' && *next<='9') {
+		sd=1;
+		while ((d=*next)>='0' && d<='9') {
+			val=val*10.0 + (double)(d-'0');
+			cnt++;
+			if (warn && cnt>DBL_DIG+1) {
+				output1("Warning: 'double' type offers you 16 digits of precision\n");
+				warn=0;
+			}
+			next++;
+		}
+		if (d!='.') goto do_exp;
+do_dot:
+		next++;
+		dexp=0;
+		while ((d=*next)>='0' && d<='9') {
+			val=val*10.0 + (double)(d-'0');
+			dexp++;
+			if (!sd && (d=='0')) ;
+			else {sd=1; cnt++;}
+			if (warn && cnt>DBL_DIG+1) {
+				output("Warning: 'double' type offers you 16 digits of precision\n");
+				warn=0;
+			}
+			next++;
+		}
+		while (dexp--) val /= 10.0;
+do_exp:
+		if (d=='e' || d=='E') {
+			int neg=0;
+			dexp=0;
+			next++;
+			if ((d=*next)=='-') {neg=1; next++;}
+			else if (d=='+') next++;
+			if ((d=*next)<'0' || d>'9') {
+				error=1200; output("Exponent missing!\n"); return 0.0;
+			}
+			while ((d=*next)>='0' && d<='9') {
+				dexp=dexp*10 + (d-'0');
+				next++;
+				if (dexp>308 || dexp<-308) {
+					error=1200; output("Exponent out of range!\n"); return 0.0;
+				}
+			}
+			if (neg) {
+				while (dexp--) val /= 10.0;
+			} else {
+				while (dexp--) val *= 10.0;
+			}
+		} else {
+			next++;
+			switch (d) {
+			case 'f': val*=1e-15; break;
+			case 'p': val*=1e-12; break;
+			case 'n': val*=1e-9; break;
+			case 'u': val*=1e-6; break;
+			case 'm': val*=1e-3; break;
+			case 'k':
+			case 'K': val*=1e3; break;
+			case 'M': val*=1e6; break;
+			case 'G': val*=1e9; break;
+			case 'T': val*=1e12; break;
+			default: next--;break;
+			}
+		}
+		return val;
+	}
+	return 0.0;
+}
+
+
 static void scan_elementary (void)
 /***** scan_elemtary
 	scan an elementary expression, like a value or variable.
 	scans also (...).
 *****/
 {	double x;
-	int n,nargs=0,hadargs=0;
+	int nargs=0,hadargs=0;
 	header *hd=(header *)newram,*var;
 	char name[MAXNAME],*s;
 	scan_space();
 	if ((*next=='.' && isdigit(*(next+1))) || isdigit(*next))
-	{	sscanf(next,"%lf%n",&x,&n);
-		next+=n;
+	{
+		x=scan_number();
 		if (*next=='i') /* complex number! */
 		{	next++;
 			new_complex(0,x,"");
@@ -1891,7 +2188,7 @@ static void scan_elementary (void)
 	else if (isalpha(*next))
 	{	scan_name(name); if (error) return;
 		scan_space(); nargs=0;
-		if (*next=='{')
+		if (*next=='{')					/* indexing a variable linearly */
 		{	next++; scan(); if (error) return; scan_space();
 			if (*next!='}')
 			{	output("} missing!\n"); error=1010; return;
@@ -1900,12 +2197,12 @@ static void scan_elementary (void)
 			get_element1(name,hd);
 			goto after;
 		}
-		if (*next=='(' || *next=='[') /* arguments or indices */
+		if (*next=='(' || *next=='[')	/* arguments or indices */
 		{	hadargs=(*next=='[')?2:1;
-			next++; nargs=scan_arguments();
+			next++; nargs=parse_arguments();
 			if (error) return;
 		}
-		if (hadargs==1 && exec_builtin(name,nargs,hd));
+		if (hadargs==1 && exec_builtin(name,nargs,hd));	/* call builtin function */
 		else
 		{	if (hadargs==2) var=searchvar(name);
 			else if (hadargs==1)
@@ -1913,7 +2210,8 @@ static void scan_elementary (void)
 				if (!var) var=searchvar(name);
 			}
 			else var=searchvar(name);
-			if (var && var->type==s_udf && hadargs==1)
+			
+			if (var && var->type==s_udf && hadargs==1)	/* call udf */
 			{	interpret_udf(var,hd,nargs); if (error) return;
 			}
 			else if (!var && hadargs)
@@ -1927,9 +2225,18 @@ static void scan_elementary (void)
 				return;
 			}
 			else if (var && hadargs)
-			{	get_element(nargs,var,hd);
+			{	/* call a function whose name is defined by a string 
+				   or get an element of a matrix whose indices are defined
+				   between [] or () */
+				get_element(nargs,var,hd);
 			}
-			else hd=new_reference(var,name);
+			else
+			{	/* the name is not followedhas no [] or (): it can be
+				   - a reference to a new variable e.g. X=...
+				   - a reference to a variable in an expression e.g. ...=X+3
+				*/
+				hd=new_reference(var,name);
+			}
 		}
 	}
 	else if (*next=='#' && *(next+1)!='#')
@@ -2175,7 +2482,7 @@ header *scan_value (void)
 	int oldnosubmref;
 	ULONG size;
 	scan_space();
-	if (*next=='{')		/* parse {val1, val2, ... }*/
+	if (*next=='{')	/* parse {val1, val2, ... } after return statement in udf */
 	{	next++; 
 		oldnosubmref=nosubmref; nosubmref=1; 
 		scan_logical(); nosubmref=oldnosubmref;
@@ -2195,7 +2502,7 @@ header *scan_value (void)
 		}
 	}
 	else
-	{	scan_logical();
+	{	scan_logical();	/* parse an expression */
 		marker=result;
 		endresults=(header *)newram;
 		while (marker<endresults)

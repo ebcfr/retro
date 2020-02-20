@@ -1,9 +1,6 @@
 #ifndef _CORE_H_
 #define _CORE_H_
 
-#define ULONG	unsigned
-#define LONG	int
-
 extern char *ramstart,
             *ramend,
             *startglobal,
@@ -13,13 +10,14 @@ extern char *ramstart,
             *newram,
             *udfend;
 	
-#define MAXNAME		19			/* Maximum length of an identifier */
 
 extern int error,surpressed,udf,udfon,linelength,stringon;
 extern long loopindex;
 extern char *next,*udfline;
 extern int searchglobal;
 
+#ifdef HEADER32
+/* Header 32 bytes */
 typedef enum {
 	s_real,
 	s_complex,
@@ -33,6 +31,11 @@ typedef enum {
 	s_udf
 } stacktyp;
 
+#define ULONG			unsigned
+#define LONG			int
+
+#define MAXNAME			19	/* Maximum length of an identifier */
+
 typedef struct {
 	char			name[MAXNAME];
 	char			xor;
@@ -40,6 +43,34 @@ typedef struct {
 	stacktyp		type;
 	unsigned int	flags;
 } header;
+#else
+/* Header 24 bytes */
+typedef unsigned short	stacktyp;
+
+#define s_real			0
+#define s_complex		1
+#define s_matrix		2
+#define s_cmatrix		3
+#define s_reference		4
+#define s_command		5
+#define s_submatrix		6
+#define s_csubmatrix	7
+#define s_string		8
+#define s_udf			9
+
+#define ULONG			unsigned
+#define LONG			int
+
+#define MAXNAME			15	/* Maximum length of an identifier */
+
+typedef struct {
+	char			name[MAXNAME];
+	char			xor;
+	ULONG			size;
+	stacktyp		type;
+	unsigned short	flags;
+} header;
+#endif
 
 typedef struct {
 	int c,r;

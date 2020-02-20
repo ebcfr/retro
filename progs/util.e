@@ -28,14 +28,22 @@ function wait
 	return wait(300);
 endfunction
 
+function format
+## format([n,m]) sets the number output format to m digits and a total
+## width of n. Also format(n,m);
+	if argn()==1 && isstring(arg1) return format(arg1,[0,6]); endif
+	elseif argn()==2 && istring(arg1) return format(arg1,[0,arg2]); endif
+	error("Illegal argument number!"),
+endfunction
+
 function longformat
 ## longformat() sets a long format for numbers
-	return format([20 12]);
+	return format("STD",[0,16]);
 endfunction
 
 function shortformat
 ## shortformat() sets a short format for numbers
-	return format([14 5]);
+	return format("STD",[0,6]);
 endfunction;
 
 function linspace (a,b,n)
@@ -797,27 +805,27 @@ function romberg(ffunction,a,b,m=10)
 endfunction
 
 gaussz = [ ..
--9.7390652851717172e-0001,
--8.6506336668898451e-0001,
--6.7940956829902441e-0001,
--4.3339539412924719e-0001,
--1.4887433898163121e-0001,
- 1.4887433898163121e-0001,
- 4.3339539412924719e-0001,
- 6.7940956829902440e-0001,
- 8.6506336668898451e-0001,
- 9.7390652851717172e-0001];
+-9.739065285171717e-0001,
+-8.650633666889845e-0001,
+-6.794095682990244e-0001,
+-4.333953941292472e-0001,
+-1.488743389816312e-0001,
+ 1.488743389816312e-0001,
+ 4.333953941292472e-0001,
+ 6.794095682990244e-0001,
+ 8.650633666889845e-0001,
+ 9.739065285171717e-0001];
 gaussa = [ ..
- 6.6671344308688139e-0002,
- 1.4945134915058059e-0001,
- 2.1908636251598205e-0001,
- 2.6926671930999635e-0001,
- 2.9552422471475288e-0001,
- 2.9552422471475287e-0001,
- 2.6926671930999635e-0001,
- 2.1908636251598205e-0001,
- 1.4945134915058059e-0001,
- 6.6671344308688137e-0002];
+ 6.667134430868814e-0002,
+ 1.494513491505806e-0001,
+ 2.190863625159821e-0001,
+ 2.692667193099964e-0001,
+ 2.955242247147529e-0001,
+ 2.955242247147529e-0001,
+ 2.692667193099964e-0001,
+ 2.190863625159821e-0001,
+ 1.494513491505806e-0001,
+ 6.667134430868814e-0002];
 
 function gauss10 (ffunction,a,b)
 ## gauss10("f",a,b,...)
@@ -1023,13 +1031,6 @@ function diag
 ## diagonal. v may be a vector or a real number. Also diag(n,m,k,v);
 ## diag(A,k) returns the k-th diagonal of A.
 	if argn()==4; return diag([arg1,arg2],arg3,arg4); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function format
-## format([n,m]) sets the number output format to m digits and a total
-## width of n. Also format(n,m);
-	if argn()==2; return format([arg1,arg2]); endif;
 	error("Illegal argument number!"),
 endfunction
 

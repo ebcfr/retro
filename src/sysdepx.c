@@ -304,7 +304,6 @@ void computetext (void)
 {
 	maxlines=(hscreen-2*textoffset)/textheight;
 	linelength=(wscreen-2*textoffset)/textwidth;
-	linew=linelength/fieldw;
 }
 
 void grafik (void)

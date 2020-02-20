@@ -493,15 +493,7 @@ header *searchvar (char *name)
 	search a local variable, named "name".
 	return 0, if not found.
 *****/
-{/*	int r;
-	header *hd=(header *)startlocal;
-	r=xor(name);
-	while ((char *)hd<endlocal)
-	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
-		hd=nextof(hd);
-	}
-	return 0;*/
-	char r=xor(name);
+{	char r=xor(name);
 	header *hd=(header *)startlocal;
 	while ((char *)hd<endlocal)
 	{	if (r==hd->xor && !strcmp(hd->name,name)) return hd;
@@ -594,10 +586,11 @@ header *assign (header *var, header *value)
 	if (error) return 0;
 	size=value->size;
 	if (var->type==s_reference && !referenceof(var))
-		/* seems to be a new variable */
-	{	strcpy(name,var->name);
+	{	/* seems to be a new variable or udf */
+		strcpy(name,var->name);
 		if (value->type==s_udf)
-		{	strcpy(value->name,name);
+		{	/* assign a new udf with the value (body of the udf) */
+			strcpy(value->name,name);
 			value->xor=xor(name);
 			if (newram+size>ramend)
 			{	output("Memory overflow.\n"); error=500; return value;
@@ -609,6 +602,7 @@ header *assign (header *var, header *value)
 			memmove(ramstart,(char *)value,size);
 			return (header *)ramstart;
 		}
+		/* else, assign a new variable with the value */
 		memmove(endlocal+size,endlocal,newram-endlocal);
 		value=(header *)((char *)value+size);
 		newram+=size;
@@ -867,7 +861,8 @@ void get_element (int nargs, header *var, header *hd)
 {	header *st=hd,*result,*hd1;
 	var=getvalue(var); if (error) return;
 	if (var->type==s_string) /* interpret the string as a function */
-	{	if (exec_builtin(stringof(var),nargs,hd));
+	{	/* used when using s(arg1, ...) where s is of string type */
+		if (exec_builtin(stringof(var),nargs,hd));
 		else
 		{	hd1=searchudf(stringof(var));
 			if (hd1) interpret_udf(hd1,hd,nargs);
@@ -878,6 +873,8 @@ void get_element (int nargs, header *var, header *hd)
 		}
 		return;
 	}
+	
+	/* else, get an element of a variable */
 	hd=getvalue(hd); if (error) return;
 	if (nargs<1 || nargs>2) 
 	{ 	error=30; output("Illegal matrix reference!\n"); return; }

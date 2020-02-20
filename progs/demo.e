@@ -222,7 +222,7 @@ function normaldemo
 	"Submatrices:" ""
 	">x=[11 12 13;21 22 23; 31 32 33]"
 	x=[11 12 13;21 22 23; 31 32 33],
-	">x(1)" x(1),
+	">x[1]" x[1],
 	"One can write x[...] or x(...).",
 	weiter();
 	
@@ -272,8 +272,8 @@ function normaldemo
 	xplot(x,y); ygrid(0); title("(return)"); warten();
 	"" "The maximal value is: " ">m=max(y)",
 	m=max(y),
-	"" "it is obtained in" ">x(nonzeros(y>=m))",
-	x(nonzeros(y>=m)),
+	"" "it is obtained in" ">x[nonzeros(y>=m)]",
+	x[nonzeros(y>=m)],
 	"" "The first derivative (numerically)"
 	">n=length(x); a=(y[2:n]-y[1:n-1])/(x[2:n]-x[1:n-1]);"
 	n=length(x); a=(y[2:n]-y[1:n-1])/(x[2:n]-x[1:n-1]);
@@ -353,7 +353,7 @@ function apprdemo
 	"Now the Fourier analysis:" 
 	">c=fft(y); p=abs(c)^2;"
 	c=fft(y); p=abs(c);
-	plot(0:64,p(1:65)); xgrid([10,15]);
+	plot(0:64,p[1:65]); xgrid([10,15]);
 	title("Spectral analysis (return)"); warten();
 	weiter();
 	
@@ -420,7 +420,7 @@ function statdemo
 	""
 	"Given the matrix:"
 	">a"
-	format(5,0);
+	format("STD",[0,3]);
 	a=[23,37,43,52,67,74;45,25,53,40,60,83];
 	a, shortformat();
 	""
@@ -574,20 +574,6 @@ function udfdemo
 	weiter();
 
 	"Functions should be written with an external editor."
-	"You can start an editor from within EULER, like any other program."
-	"(Not for XWindow version)"
-	"" ">exec string",
-	weiter();
-	"The string must be in double quotes or must be a variable, which"
-	"has been assigned a string. It consists of the program name and"
-	"paramters to be passed to the program; e.g.,"
-	"" ">exec "|char(34)|"editor.prg testfile"|char(34),
-	"" "or"
-	"" "a="|char(34)|"editor.prg test"|char(34)|"; a",
-	a="editor.prg test"; a,
-	"" ">exec a"
-	"(Calls Editor.prg)"
-	weiter();
 
 	"You can echo output to a file"
 	""
@@ -634,7 +620,7 @@ function specialdemo
 	"t-(exp(1)-2.5)," t-(exp(1)-2.5),
 	weiter();
 
-## Bisektion
+## Bisection
 	"Solutions of an equation : "
 	""
 	">type f", type f;
@@ -646,7 +632,7 @@ function specialdemo
 	">t-log(1.5)", t-log(1.5),
 	weiter();
 	
-## Differentialgleichung
+## Differential equations
 	"Differential equations : "
 	""
 	">type dgl", type dgl;
@@ -659,7 +645,7 @@ function specialdemo
 	">max(abs(s-exp(-t^2)))", max(abs(s-exp(-t^2))),
 	weiter();	
 
-## Eigenwerte :
+## Eigenvalues and eigenvectors
 	"Eigenvalues and eigenvectors : " ""
 	"Given the matrix"
 	">A=[0,1;1,1]", A=[0,1;1,1],
