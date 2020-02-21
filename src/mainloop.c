@@ -2156,7 +2156,7 @@ static void scan_elementary (void)
 {	double x;
 	int nargs=0,hadargs=0;
 	header *hd=(header *)newram,*var;
-	char name[MAXNAME],*s;
+	char name[MAXNAME];
 	scan_space();
 	if ((*next=='.' && isdigit(*(next+1))) || isdigit(*next))
 	{
@@ -2264,12 +2264,28 @@ static void scan_elementary (void)
 	{	next++;
 		scan_matrix();
 	}
-	else if (*next=='\"')
-	{	next++; s=next; 
-		while (*next!='\"' && *next!=0) next++;
-		hd=new_string(s,next-s,"");
+	else if (*next=='\"')		/* parse a string, de-escape escaped '\"' */
+	{	int len, cpy=0;
+		char *s, *p, *x;
+		next++; s=next; 
+		while (1) {
+			if (*next=='\"' && *(next-1)=='\\') ;	/* count escaped character \" */
+			else if (*next=='\"' || *next==0) break;
+			next++;
+		}
+		len=next-s;
 		if (*next!='\"') { output("\" missing\n"); error=1; return; }
 		next++;
+		/* de-escape characters */
+		for (p=x=s; x!=next; p++,x++) {
+			if (*x=='\\') {
+				cpy=1;
+				x++;
+				len--;
+			}
+			if (cpy) *p=*x;
+		}
+		hd=new_string(s,len,"");
 	}
 	else error=1;
 	after: if (error) return;
