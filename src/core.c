@@ -717,7 +717,7 @@ header *getvalue (header *hd)
     references to functions with no arguments (e.g. pi) should be
     executed
     submatrices should be resolved to matrices
-*****/
+ *****/
 {	header *old=hd,*mhd,*result;
 	dims *d;
 	double *m,*mr,*m1,*m2,*m3;

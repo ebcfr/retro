@@ -2496,7 +2496,7 @@ header *scan_value (void)
 {	header *result=(header *)newram,*hd,*hd1,*marker,*nextresult,
 		*endresults;
 	int oldnosubmref;
-	ULONG size;
+	LONG size;
 	scan_space();
 	if (*next=='{')	/* parse {val1, val2, ... } after return statement in udf */
 	{	next++; 

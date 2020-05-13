@@ -538,12 +538,13 @@ void misfunction (header *hd)
 }
 
 void misvar (header *hd)
-{	header *st=hd,*result;
-	hd=getvalue(hd); if (error) return;
-	if (hd->type==s_string
-		&& searchvar(stringof(hd))!=0)
-			result=new_real(1.0,"");
-	else result=new_real(0.0,"");
+{
+	header *st=hd,*result;
+	if (hd->type==s_reference && searchvar(hd->name)!=0) {
+		result=new_real(1.0,"");
+	} else {
+		result=new_real(0.0,"");
+	}
 	if (error) return;
 	moveresult(st,result);
 }
@@ -3358,7 +3359,7 @@ void polydiv (header *hd)
 	complex *mc1,*mc2,*mcr,*mch,xc,lc,hc;
 	hd1=next_param(st);
 	flag=testparams(&hd,&hd1); if (error) return;
-	getmatrix(hd,&r,&c1,&m1); if (r!=1) wrong_arg("row vector expected");
+	getmatrix(hd,&r,&c1,&m1);  if (r!=1) wrong_arg("row vector expected");
 	getmatrix(hd1,&r,&c2,&m2); if (r!=1) wrong_arg("row vector expected");
 	if (c1<c2)
 	{	result=new_real(0.0,"");

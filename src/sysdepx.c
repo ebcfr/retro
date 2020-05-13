@@ -25,9 +25,6 @@ char outputs[256];
 #include "header.h"
 #include "sysdep.h"
 
-#define RESERVE 16*1024l
-long reserve=RESERVE;
-
 char *graph_screen=0,*text_screen=0;
 int graphscr=1,colors,wscreen,hscreen;
 int linelength,wchar,hchar,wchart,hchart,in_text=1;
@@ -55,13 +52,15 @@ double nextcheck;
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
+#ifdef HAVE_XFT
+#include <X11/Xft/Xft.h>
+#endif
 
 #define maxcolors 16
 
 Display *display;
 char sdisp[64]="";
 int screen, depth;
-int winit=0;
 Window window;
 Atom sel_prop;
 GC gc,cleargc,stipplegc,textgc,invtextgc;
@@ -76,16 +75,44 @@ char *colorname[maxcolors]=
 	"Khaki","Tan","Grey","Yellow","Green","Red","LightBlue",
 	"LightSteelBlue","LimeGreen","Navy"
 };
-XFontStruct *font,*textfont;
 Pixmap pixmap;
 
-char fontname[32]=GFONT;
-char textfontname[32]=FONT;
 int userwidth=700,userheight=700,userx=0,usery=0,usersize=0,userpos=0;
 
 #include "icon.h"
 
 void process_event (XEvent *event);
+#ifdef HAVE_XFT
+typedef struct {
+	XftFont*	xfont;
+	FcPattern*	pattern;
+} XFont;
+
+XFont font, textfont;
+char* textfontname="Mono:size=10";
+char* fontname="Sans:size=10";
+
+int font_load(char* fontname, XFont* font)
+{
+	if (fontname) {
+		if (!(font->xfont = XftFontOpenName(display,screen, fontname))
+			  || !(font->pattern = FcNameParse((FcChar8 *) fontname))) {
+			if (xfont) {
+				XftFontClose(display, font->xfont);
+				font->xfont = NULL;
+			}
+			fprintf(stderr, "error, cannot load font: '%s'\n", fontname);
+			return 0;
+		}
+	}	
+	return 1;
+}
+
+#else
+XFontStruct *font,*textfont;
+char fontname[32]=GFONT;
+char textfontname[32]=FONT;
+#endif
 
 void computechar (void)
 {
@@ -116,6 +143,8 @@ void initX (void)
 	whitepixel=WhitePixel(display,screen);
 
 	/* load a font */
+#if HAVE_XFT
+#else
 	textfont=XLoadQueryFont(display,textfontname);
 	if (!textfont)
 	{
@@ -138,6 +167,7 @@ void initX (void)
 		fprintf(stderr,"Cannot find %s font\n",fontname);
 		exit(1);
 	}
+#endif
 
 	sel_prop=XInternAtom(display,"SEL_PROP",False);
 	
@@ -148,8 +178,6 @@ void initX (void)
 void quitX (void)
 /* Disconnect from server */
 {   
-	static int quitted=0;
-	if (quitted) return;
 	XDestroyWindow(display,window);
 	XFreeFont(display,font);
 	XFreePixmap(display,pixmap);
@@ -222,7 +250,7 @@ void create_contexts (Window window)
 }	
 
 Window open_window (int x, int y, int width, int height, int flag)
-/* create and open a window plus a graphic context and a pximap */
+/* create and open a window plus a graphic context and a pixmap */
 {	
 	XSetWindowAttributes attributes;
 	XSizeHints sizehints;
@@ -309,46 +337,42 @@ void computetext (void)
 void grafik (void)
 /* switch to a graphic screen */
 {
-	if (!winit)
+	initX();
+	atexit(quitX);
+	if (usersize)
 	{	
-		initX();
-		atexit(quitX);
-		if (usersize)
-		{	
-			userwidth=abs(userwidth);
-			if (userwidth<256) userwidth=256;
-			if (userwidth>DisplayWidth(display,screen))
-				userwidth=DisplayWidth(display,screen);
-			userheight=abs(userheight);
-			if (userheight<256) userheight=256;
-			if (userheight>DisplayHeight(display,screen))
-				userheight=DisplayHeight(display,screen);
-		}
-		else
-		{
-			userwidth=DisplayWidth(display,screen)/3*2;
-			userheight=DisplayHeight(display,screen)/3*2;
-		}
-		if (userpos)
-		{
-			if (userx<0) userx=DisplayWidth(display,screen)
-				+userx-userwidth;
-			if (usery<0) usery=DisplayHeight(display,screen)
-				+usery-userheight;
-			if (userx<0) userx=0;
-			if (usery<0) usery=0;
-		}
-		else
-		{
-			userx=usery=0;
-		}
-		window=open_window(userx,usery,userwidth,userheight,0);
-		wscreen=userwidth;
-		hscreen=userheight;
-		computetext();
-		computechar();
-		winit=1;
+		userwidth=abs(userwidth);
+		if (userwidth<256) userwidth=256;
+		if (userwidth>DisplayWidth(display,screen))
+			userwidth=DisplayWidth(display,screen);
+		userheight=abs(userheight);
+		if (userheight<256) userheight=256;
+		if (userheight>DisplayHeight(display,screen))
+			userheight=DisplayHeight(display,screen);
 	}
+	else
+	{
+		userwidth=DisplayWidth(display,screen)/3*2;
+		userheight=DisplayHeight(display,screen)/3*2;
+	}
+	if (userpos)
+	{
+		if (userx<0) userx=DisplayWidth(display,screen)
+			+userx-userwidth;
+		if (usery<0) usery=DisplayHeight(display,screen)
+			+usery-userheight;
+		if (userx<0) userx=0;
+		if (usery<0) usery=0;
+	}
+	else
+	{
+		userx=usery=0;
+	}
+	window=open_window(userx,usery,userwidth,userheight,0);
+	wscreen=userwidth;
+	hscreen=userheight;
+	computetext();
+	computechar();
 }
 
 void setcolor (int c)
@@ -373,20 +397,19 @@ void setcolor (int c)
 #define plot(x1,x2) XDrawPoint(display,pixmap,gc,x1,x2)
 #endif
 
-/*************** graphics and GEM initialization *************/
+/**************** graphics and GEM initialization ***************/
 
 int memory_init (void)
 /***** memory_init
 	get colors, wscreen, hscreen.
 	get the graphics screen.
-	get all memory (minus reservefor editor) for stack.
+	get all memory for stack.
 *****/
 {	
 	long size;
 	size=memsize;
 	if (size<64*1024l) size=64*1024l;
-	if (size<reserve) return 0;
-	ramstart=(char *)malloc(size-reserve);
+	ramstart=(char *)malloc(size);
 	if (!ramstart) return 0;
 	ramend=ramstart+size;
 	linelength=70;
@@ -1541,6 +1564,7 @@ int main (int argc, char *argv[])
 		}
 		else break;
 	}
+	
 	if (!memory_init()) exit(1);
 	
 	/* set up default pathes and directory */

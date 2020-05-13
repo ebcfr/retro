@@ -13,10 +13,10 @@ SIZE    = $(TARGET)size
 OBJDUMP = $(TARGET)objdump
 
 # List all default C defines here
-DDEFS = -g -O0 -DFONT=\"8x13\" -DGFONT=\"8x13\" -DINSTALL=\"$(INSTALL_DIR)\" -D_GNU_SOURCE -DDEBUG
+DDEFS = -g -O0 -DFONT=\"8x13\" -DGFONT=\"8x13\" -DINSTALL=\"$(INSTALL_DIR)\" -D_GNU_SOURCE
 
 # List all default directories to look for include files here
-DINCDIR = . src
+DINCDIR = . src /usr/include/freetype2
 
 # List the default directory to look for the libraries here
 DLIBDIR =
@@ -24,6 +24,7 @@ DLIBDIR =
 # List all default libraries here
 DLIBS = -lm 
 
+#XLIBS = -lX11 -lXft -lfontconfig
 XLIBS = -lX11
 
 # C source files here

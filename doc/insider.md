@@ -14,12 +14,12 @@ Retro uses a recursive descent parser. It is left associative.
 ```
 letter      := {'A'-'Z'} | {'a'-'z'}.
 digit       := {'0'-'9'}.
-hexadigit   := {'0'-'9'} | {'A'-'F'}.
+hexadigit   := {'0'-'9'} | {'A'-'F'} | {'a'-'f'}.
 identifier  := {letter | '_'} {letter | digit}*.
 integer     := ['+'|'-'] {'1'-'9'} {'0'-'9'}*.
 hexinteger  := '0x' hexadigit+.
 bininteger  := '0b' {'0'-'1'}+.
-real        := ['+'|'-'] {'0' | {'1'-'9'} {'0'-'9'}*} '.' {0-9}+ [ {'E' | 'e'} ['+' | '-'] {'1'-'9'} {'0'-'9'}* ].
+real        := ['+'|'-'] {'0' | {{'1'-'9'} {'0'-'9'}*}} '.' {0-9}+ [ {'E' | 'e'} ['+' | '-'] {'1'-'9'} {'0'-'9'}* ].
 complex     := real 'i'.
 number      := integer | hexinteger | bininteger | real.
 
