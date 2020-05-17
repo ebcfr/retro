@@ -33,7 +33,7 @@ Tk/gtk/Qt GUIs back?
 1.00
 allow escaped characters in strings
 review of the parsing of numbers and formatted outputs
-option for 16 or 24 byte header at compile time
+option for 32 or 24 byte header at compile time
 fix of condition eval in boolean test
 review of the encoding of buitin commands in user defined functions
 review of the encoding of formal parameters and add a switch for
