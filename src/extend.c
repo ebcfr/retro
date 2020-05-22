@@ -55,6 +55,7 @@ void msolid1 (header *hd);
 void mplot (header *hd);
 void mplotarea (header *hd);
 void mplot1 (header *hd);
+void msubplot (header *hd);
 void mpixel (header *hd);
 void mmark (header *hd);
 void mcontour (header *hd);
@@ -210,6 +211,7 @@ builtintyp builtin_list[] = {
 	{"plot",2,mplot},
 	{"plotarea",2,mplotarea},
 	{"plot",0,mplot1},
+	{"subplot",1,msubplot},
 	{"pixel",0,mpixel},
 	{"mark",2,mmark},
 	{"contour",2,mcontour},

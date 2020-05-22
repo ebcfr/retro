@@ -3,6 +3,31 @@
 textcolor(1);
 framecolor(1);
 
+subwindows=zeros([9,4]);
+logredraw=1;
+
+function xsubplot(rci)
+## sets plot layout to r x c plots, sets plot index to the ith one
+##   with r, c, i coded on a single digit each, i <= r x c
+##   so i<=9 : 2x4, 4*2 or 3x3 max layouts
+## returns a 1x3 vector with [r, c, i]
+	global subwindows,logredraw;
+	l=subplot(rci);
+	if l[3]==1 hold off; clg; endif
+	w=window(); wt=textwidth(); ht=textheight();
+	hr=floor(1024/l[1]);wc=floor(1024/l[2]);
+	for r=1 to l[1]
+		for c=1 to l[2]
+			w=[8*wt+(c-1)*wc,1.5*ht+(r-1)*hr,c*wc-2*wt,r*hr-3*ht];
+			subwindows[(r-1)*l[2]+c]=w;
+		end
+	end
+	hold on
+	logredraw=1;
+	window(subwindows[l[3]]);	
+	return l;
+endfunction
+
 function select
 ## Returns coordinates {x,y} of mouse clicks, until the user clicked
 ## above the plot window.
@@ -21,6 +46,15 @@ function title (text)
 ## title(text) plots a title to the grafik window.
 	ctext(text,[512 0]);
 	return text;
+endfunction
+
+function xlabel(text,l=1)
+## Puts the label text at the x-axis at point l in [0,1].
+	w=window();
+	ht=textheight();
+..	ctext(text,[w[1]+l*(w[3]-w[1]),w[4]+0.2*ht]);
+	ctext(text,[(w[1]+w[3])/2,w[4]+2*ht]);
+	return 0;
 endfunction
 
 function textheight
@@ -118,6 +152,12 @@ endfunction
 function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 ## xplot(x,y) or xplot(y) works like plot, but shows axis ticks.
 ## xplot() shows only axis ticks and the grid.
+## options:
+## - grid, tick: show the grid and ticks
+## - xlog, ylog: use a base 10 log scale in x or y directions
+## - xticks and yticks: use these as ticks instead of calculate them
+## - lw, ls, color: line attribute
+## Returns the extent of the plot
 	if argn()>0
 		if argn()==1
 			if iscomplex(x) y=im(x); xh=re(x);
@@ -134,13 +174,23 @@ function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 	endif
 	olw=linewidth(1);
 	if !xlog
-		{t,f}=ticks(p[1],p[2]);
+		if isvar(xticks)
+			t=xticks; f=1;
+			p=setplot([xticks[1],xticks[length(xticks)]]|p[3:4]);
+		else
+			{t,f}=ticks(p[1],p[2]);
+		endif
 	else
 		{t,f}=logticks2(p[1],p[2]);
 	endif
 	xgrid(t,f,grid,ticks,xlog);
 	if !ylog
-		{t,f}=ticks(p[3],p[4]);
+		if isvar(yticks)
+			t=yticks; f=1;
+			p=setplot(p[1:2]|[yticks[1],yticks[length(yticks)]]);
+		else
+			{t,f}=ticks(p[3],p[4]);
+		endif
 	else
 		{t,f}=logticks2(p[3],p[4]);
 	endif
@@ -157,7 +207,8 @@ function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 		color(ocolor);
 	endif;
 	linewidth(olw);
-	if !holding() frame(); endif
+..	if !holding() frame(); endif
+	frame();
 	return p;
 endfunction
 

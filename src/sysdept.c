@@ -116,6 +116,11 @@ void clear_graphics (void)
 {	if (metafile) intwrite(6);
 }
 
+void gsubplot(int r, int c, int index)
+{
+
+}
+
 void gline (double c, double r, double c1, double r1, int col,
 	int st, int width)
 /***** gline

@@ -43,6 +43,7 @@ typedef enum { key_none, cursor_up, cursor_down, cursor_left, cursor_right,
 
 void text_mode (void);
 void graphic_mode (void);
+void gsubplot(int r, int c, int index);
 void gline (double c, double r, double c1, double r1, int color,
 	int st, int width);
 void gtext (double c, double r, char *text, int color, int centered);

@@ -490,6 +490,11 @@ void text_mode (void)
 	}
 }
 
+void gsubplot(int r, int c, int index)
+{
+
+}
+
 int oldst=-1,oldcol=-1,oldwidth=-1;
 
 void setline (int w, int st)

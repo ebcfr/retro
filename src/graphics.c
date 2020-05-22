@@ -10,6 +10,12 @@
 #include "funcs.h"
 #include "graphics.h"
 
+int subplot=111;
+
+typedef struct _plot_t {
+	double	x_min, x_max, y_min, y_max;
+} plot_t;
+
 double x_min=-1,x_max=1,y_min=-1,y_max=1,meshfactor=1,dgrid=0;
 
 int upperc=10,upperr=30,lowerc=1010,lowerr=1010;
@@ -1121,3 +1127,38 @@ void mframe (header *hd)
 	frame();
 	new_real(0,"");
 }
+
+void msubplot (header *hd)
+{	header *st=hd,*result;
+	int tmp;
+	int r, c, index;
+	double* m;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type==s_real) {
+		tmp=(unsigned int)(*realof(hd));
+		if (tmp>999) {error=2201; return;}
+		index = tmp % 10;
+		r = tmp/100;
+		c = tmp/10-r*10;
+		if (r==0 || c==0) {
+			output("subplot: needs at least one row and one column!\n");
+			error=2201; return;
+		}
+		if (index==0 || index>r*c) {
+			output("subplot: bad subplot index!\n");
+			error=2201; return;
+		}
+	} else{
+		output("suplot: needs 1 real parameter!\n");
+		error=2201; return;
+	}
+	subplot=tmp;
+	gsubplot(r,c,index);
+	result=new_matrix(1,3,"");
+	m=matrixof(result);
+	*m++=(double)r;
+	*m++=(double)c;
+	*m=(double)index;
+	moveresult(st,result);
+}
+

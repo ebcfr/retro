@@ -3,6 +3,7 @@
 void mplot (header *hd);
 void mplot1 (header *hd);
 void mmark (header *hd);
+void msubplot (header *hd);
 void mcontour (header *hd);
 void mwire (header *hd);
 void msolid (header *hd);

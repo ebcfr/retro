@@ -590,20 +590,6 @@ endfunction
 
 .. ### use zeros,... the usual way ###
 
-function ctext
-## ctext(s,[c,r]) plots the centered string s at the coordinates (c,r).
-## Also ctext(s,c,r).
-	if argn()==3; return ctext(arg1,[arg2,arg3]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function text
-## text(s,[c,r]) plots the centered string s at the coordinates (c,r).
-## Also ctext(s,c,r).
-	if argn()==3; return text(arg1,[arg2,arg3]); endif;
-	error("Illegal argument number!"),
-endfunction
-
 function diag
 ## diag([n,m],k,v) returns a nxm matrix A, containing v on its k-th
 ## diagonal. v may be a vector or a real number. Also diag(n,m,k,v);
@@ -644,25 +630,6 @@ function matrix
 ## matrix([n,m],x) returns a nxm matrix with all elements set to x.
 ## Also matrix(n,m,x).
 	if argn()==3; return matrix([arg1,arg2],arg3); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function view
-## view([distance, tele, angle1, angle2]) sets the perspective for
-## solid and view. distance is the eye distance, tele a zooming factor.
-## angle1 is the angle from the negativ y-axis to the positive x-axis.
-## angle2 is the angle to the positive z-axis (the height of the eye).
-## Also view(d,t,a1,a2).
-## view() returns the values of view.
-	if argn()==4; return view([arg1,arg2,arg3,arg4]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function window
-## window([c1,r1,c2,r2]) sets a plotting window. The cooridnates must
-## be screen coordimates. Also window(c1,r1,c2,r2).
-## window() returns the active window coordinates.
-	if argn()==4; return window([arg1,arg2,arg3,arg4]); endif;
 	error("Illegal argument number!"),
 endfunction
 
