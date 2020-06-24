@@ -28,6 +28,15 @@ function wait
 	return wait(300);
 endfunction
 
+function dir(pattern="*.*")
+## dir(pattern) displays a directory.
+## dir() is the same as dir("*.*").
+	s=searchfile(pattern), if s=="" return 0; endif;
+	repeat
+		s=searchfile(), if s==""; return 0; endif;
+	end;
+endfunction
+
 function format
 ## format([n,m]) sets the number output format to m digits and a total
 ## width of n. Also format(n,m);
@@ -66,13 +75,6 @@ function length (v)
 	return max(size(v));
 endfunction
 
-function polydif (p)
-## polydif(p) returns the polynomial p'
-	n=cols(p);
-	if (n==1); return 0; endif;
-	return p[2:n]*(1:n-1);
-endfunction
-
 function writeform (x)
 	if isreal(x); return printf("%25.16e",x); endif;
 	if iscomplex(x);
@@ -96,6 +98,51 @@ function write (x,s)
 		endif;
 	end;
 	return 0;
+endfunction
+
+.. ### use zeros,... the usual way ###
+
+function diag
+## diag([n,m],k,v) returns a nxm matrix A, containing v on its k-th
+## diagonal. v may be a vector or a real number. Also diag(n,m,k,v);
+## diag(A,k) returns the k-th diagonal of A.
+	if argn()==4; return diag([arg1,arg2],arg3,arg4); endif;
+	error("Illegal argument number!"),
+endfunction
+
+function normal
+## normal([n,m]) returns a nxm matrix of unit normal distributed random
+## values. Also normal(n,m).
+	if argn()==2; return normal([arg1,arg2]); endif;
+	error("Illegal argument number!"),
+endfunction
+
+function random
+## random([n,m]) returns a nxm matrix of uniformly distributed random 
+## values in [0,1]. Also random(n,m).
+	if argn()==2; return random([arg1,arg2]); endif;
+	error("Illegal argument number!"),
+endfunction
+
+function ones
+## ones([n,m]) returns a nxm matrix with all elements set to 1.
+## Also ones(n,m).
+	if argn()==2; return ones([arg1,arg2]); endif;
+	error("Illegal argument number!"),
+endfunction
+
+function zeros
+## zeros([n,m]) returns a nxm matrix with all elements set to 0.
+## Also zeros(n,m).
+	if argn()==2; return zeros([arg1,arg2]); endif;
+	error("Illegal argument number!"),
+endfunction
+
+function matrix
+## matrix([n,m],x) returns a nxm matrix with all elements set to x.
+## Also matrix(n,m,x).
+	if argn()==3; return matrix([arg1,arg2],arg3); endif;
+	error("Illegal argument number!"),
 endfunction
 
 
@@ -253,6 +300,13 @@ endfunction
 
 .. ### polynomial fit ##
 
+function polydif (p)
+## polydif(p) returns the polynomial p'
+	n=cols(p);
+	if (n==1); return 0; endif;
+	return p[2:n]*(1:n-1);
+endfunction
+
 function polyfit (xx,yy,n)
 ## fit(x,y,degree) fits a polynomial in L_2-norm to (x,y).
 	A=ones(size(xx))_dup(xx,n); A=cumprod(A');
@@ -279,6 +333,11 @@ endfunction
 function totalmax (A)
 ## Returns the total maximum of the elements of a
 	return max(max(A)')'
+endfunction
+
+function log10(x)
+# base 10 logaithm
+  return log(x)/log(10);
 endfunction
 
 function sinh
@@ -586,61 +645,5 @@ function splineval (x,y,h,t)
 	a=y2-y1-b-c;
 	d=(t-x1)/(x2-x1);
 	return y1+d*(a+d*(b+c*d));
-endfunction
-
-.. ### use zeros,... the usual way ###
-
-function diag
-## diag([n,m],k,v) returns a nxm matrix A, containing v on its k-th
-## diagonal. v may be a vector or a real number. Also diag(n,m,k,v);
-## diag(A,k) returns the k-th diagonal of A.
-	if argn()==4; return diag([arg1,arg2],arg3,arg4); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function normal
-## normal([n,m]) returns a nxm matrix of unit normal distributed random
-## values. Also normal(n,m).
-	if argn()==2; return normal([arg1,arg2]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function random
-## random([n,m]) returns a nxm matrix of uniformly distributed random 
-## values in [0,1]. Also random(n,m).
-	if argn()==2; return random([arg1,arg2]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function ones
-## ones([n,m]) returns a nxm matrix with all elements set to 1.
-## Also ones(n,m).
-	if argn()==2; return ones([arg1,arg2]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function zeros
-## zeros([n,m]) returns a nxm matrix with all elements set to 0.
-## Also zeros(n,m).
-	if argn()==2; return zeros([arg1,arg2]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function matrix
-## matrix([n,m],x) returns a nxm matrix with all elements set to x.
-## Also matrix(n,m,x).
-	if argn()==3; return matrix([arg1,arg2],arg3); endif;
-	error("Illegal argument number!"),
-endfunction
-
-.. *** directory ***
-
-function dir(pattern="*.*")
-## dir(pattern) displays a directory.
-## dir() is the same as dir("*.*").
-	s=searchfile(pattern), if s=="" return 0; endif;
-	repeat
-		s=searchfile(), if s==""; return 0; endif;
-	end;
 endfunction
 

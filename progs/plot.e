@@ -4,14 +4,13 @@ textcolor(1);
 framecolor(1);
 
 subwindows=zeros([9,4]);
-logredraw=1;
 
 function xsubplot(rci)
 ## sets plot layout to r x c plots, sets plot index to the ith one
 ##   with r, c, i coded on a single digit each, i <= r x c
 ##   so i<=9 : 2x4, 4*2 or 3x3 max layouts
 ## returns a 1x3 vector with [r, c, i]
-	global subwindows,logredraw;
+	global subwindows;
 	l=subplot(rci);
 	if l[3]==1 hold off; clg; endif
 	w=window(); wt=textwidth(); ht=textheight();
@@ -23,7 +22,6 @@ function xsubplot(rci)
 		end
 	end
 	hold on
-	logredraw=1;
 	window(subwindows[l[3]]);	
 	return l;
 endfunction
@@ -341,7 +339,7 @@ function ygrid(yy,f=1,grid=1,ticks=1,ylog=0,color=3)
 		end
 	endif
 	if ticks && !(f~=1)
-		text(printf("*%g",f),[w[1]-6*wt,0]);
+		text(printf("*%g",f),[w[1]-6*wt,w[2]-1.5*ht]);
 	endif
 	linestyle(st); color(1); holding(h); scaling(s);
 	return 0;

@@ -9,12 +9,19 @@ T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
 Ta=abs(T);
 xplot(f,Ta);
 
+.. xlog plot
 load plot
 TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.01:5);w=2*pi*f;
 T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
-Ta=abs(T);
-xplot(f,20*log10(Ta),xlog=1);
+xplot(f,20*log10(abs(T)),xlog=1);
 
+.. xlog-ylog plot
+load plot
+TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.01:5);w=2*pi*f;
+T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
+xplot(f,abs(T),xlog=1,ylog=1);
+
+.. multiple subplots 2x1 layout
 load plot
 j=1i;
 TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.005:5);w=2*pi*f;
@@ -24,6 +31,7 @@ xplot(f,abs(T),xlog=1,ylog=1,lw=2);
 xsubplot(212);
 xplot(f,arg(T)/pi*180,xlog=1,lw=2,yticks=45*(-2:2));
 
+.. multiple subplots 2x2 layout
 load plot
 j=1i;
 TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(2:0.005:5);w=2*pi*f;

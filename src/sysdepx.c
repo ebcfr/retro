@@ -25,23 +25,38 @@ char outputs[256];
 #include "header.h"
 #include "sysdep.h"
 
-char *graph_screen=0,*text_screen=0;
-int graphscr=1,colors,wscreen,hscreen;
-int linelength,wchar,hchar,wchart,hchart,in_text=1;
-int userbreak=0;
-int planes=0x01;
-unsigned long mask;
+/************************ Screen *****************************/
+static int wscreen,hscreen;	/*screen width & height [pixel] */
 
+/********************* Text buffer ***************************/
 #define TEXTSIZE (128*1024l)
 
-char textstart[TEXTSIZE]={0};
+static char textstart[TEXTSIZE]={0};	/* output buffer */
+static char *textend=textstart,			/* end of used buffer */
+            *textwindow=textstart,		/* start of buffer in the
+            							   view */
+            *oldtextwindow;
 
-int maxlines,cx,cy;
-int textheight,textwidth,textoffset;
-int cursoron=1,thchar,twchar,editor=0,scrolled=0;
-char *textend=textstart,*textwindow=textstart,*oldtextwindow;
+static int textheight,		/* char width [pixel] */
+           textwidth,		/* line height [pixel]*/
+           textoffset;		/* offset all around the window [pixel] */
 
+int wchar,hchar;			/* char width & height in screen coords [1024x1024] */
+
+int linelength;				/* screen width [char] */
+static int maxlines;		/* screen height [line] */
+
+static int cx,cy;			/* current char pos relative to the screen 
+							   in char count/linecount */
+
+static int cursoron=1,		/* cursor is visible */
+           scrolled=0,		/* view scrolled ? */
+           in_text=1;		/* text window is the active view */
+
+/*************************************************************/
 long memsize=1024*1024l;
+
+int userbreak=0;
 
 double nextcheck;
 
@@ -56,20 +71,21 @@ double nextcheck;
 #include <X11/Xft/Xft.h>
 #endif
 
-#define maxcolors 16
+#define MAXCOLORS 16
 
 Display *display;
 char sdisp[64]="";
 int screen, depth;
 Window window;
+unsigned long mask;
 Atom sel_prop;
 GC gc,cleargc,stipplegc,textgc,invtextgc;
 Pixmap stipple[64];
 unsigned long blackpixel, whitepixel;
 Colormap colormap;
-int usedcolors=maxcolors;
-unsigned long color[maxcolors];
-char *colorname[maxcolors]=
+int usedcolors=MAXCOLORS;
+unsigned long color[MAXCOLORS];
+char *colorname[MAXCOLORS]=
 {
 	"White","Black","Green","Lightblue","Blue","SteelBlue",
 	"Khaki","Tan","Grey","Yellow","Green","Red","LightBlue",
@@ -77,7 +93,7 @@ char *colorname[maxcolors]=
 };
 Pixmap pixmap;
 
-int userwidth=700,userheight=700,userx=0,usery=0,usersize=0,userpos=0;
+int userwidth=800,userheight=600,userx=0,usery=0,usersize=0,userpos=0;
 
 #include "icon.h"
 
@@ -137,7 +153,7 @@ void initX (void)
 		case 1 : usedcolors=2; break;
 		case 2 : usedcolors=4; break;
 		case 3 : usedcolors=8; break;
-		default : usedcolors=maxcolors; break;
+		default : usedcolors=MAXCOLORS; break;
 	}
 	blackpixel=BlackPixel(display,screen);
 	whitepixel=WhitePixel(display,screen);
@@ -844,12 +860,28 @@ void getpixel (double *x, double *y)
 	*y=1024.0/hscreen;
 }
 
-/********************* text cursor ******************/
 
-/* defined as macros */
-
-/************** text screen **************************/
-
+/********************* text screen **************************/
+/*
+             +---------------------------------+
+  textstart->|
+             |
+             |
+             |
+             |
+             |
+             |
+             +---------------------------------+
+textwindow-> |     |
+             |-----+ cy
+             |     cx       SCREEN
+             |
+             |     textend->X
+             +---------------------------------+
+ 
+ 
+ */
+ 
 void edit_on (void)
 {
 }
@@ -858,7 +890,7 @@ void edit_off (void)
 {
 }
 
-void show_cursor (void)
+static void show_cursor (void)
 {
 	char cstring[]=" ";
 	if (!cursoron || cx>linelength) return;
@@ -870,7 +902,7 @@ void show_cursor (void)
 		cstring,1);
 }
 
-void hide_cursor (void)
+static void hide_cursor (void)
 {
 	char cstring[]=" ";
 	if (!cursoron || cx>linelength) return;
@@ -909,7 +941,11 @@ void cursor_off (void)
 	hide_cursor();
 }
 
-void textline (char *p, int x, int y)
+/* textline
+ *   draw a line of text starting at char pos in the string p+x
+ *   at pos (x,y) [char,line]
+ */
+static void textline (char *p, int x, int y)
 {
 	XDrawImageString(display,window,textgc,textoffset+x*textwidth,
 		y*textheight+textfont->ascent+textoffset,p+x,
@@ -917,7 +953,11 @@ void textline (char *p, int x, int y)
 	if (y==cy && !scrolled) show_cursor();
 }
 
-void clearline (char *p, int cx, int cy)
+/* clearline
+ *   clear a line of text starting at char pos in the string p+x
+ *   at pos (x,y) [char,line]
+ */
+static void clearline (char *p, int cx, int cy)
 {
 	XFillRectangle(display,window,invtextgc,
 		textoffset+cx*textwidth,textoffset+cy*textheight,
@@ -926,10 +966,14 @@ void clearline (char *p, int cx, int cy)
 	if (!scrolled) show_cursor();
 }
 
+/* clear_eol [CALLBACK] */
 void clear_eol (void)
 {	clearline(textend,cx,cy);
 }
 
+/* clear_screen [CALLBACK]
+ *   clear the whole text screen, reset the buffer
+ */
 void clear_screen (void)
 {	XFillRectangle(display,window,invtextgc,0,0,wscreen,hscreen);
 	cx=0; cy=0; scrolled=0;
@@ -937,33 +981,42 @@ void clear_screen (void)
 	memset(textstart,0,TEXTSIZE);
 }
 
-void textupdate (void)
+/* textupdate
+ *   update the text screen (starting from textwindow pos in the buffer)
+ */
+static void textupdate (void)
 {	char *tp;
 	int i;
 	XFillRectangle(display,window,invtextgc,0,0,wscreen,hscreen);
 	tp=textwindow; i=0;
-	while (tp<=textend && i<maxlines)
-	{	textline(tp,0,i);
+	while (tp<=textend && i<maxlines) {
+		textline(tp,0,i);
 		i++; tp+=strlen(tp)+1;
 	}
 	XFlush(display);
 }
 
-void new_line (void)
+/* newline
+ *   update textend, scroll the buffer when it is near to be full,
+ *   scroll the screen display when we are at the bottom line
+ */
+static void new_line (void)
 {	int length;
 	char *tp;
 	hide_cursor();
 	cy++; cx=0;
 	textend+=strlen(textend)+1;
-	if (textend>textstart+TEXTSIZE-256)
-	{	tp=textstart+(TEXTSIZE-256)/8;
+	/* if buffer near to be full, cut 1/8th of the buffer */
+	if (textend>textstart+TEXTSIZE-256) {
+		tp=textstart+(TEXTSIZE-256)/8;
 		tp+=strlen(tp)+1;
 		memmove(textstart,tp,textend-tp);
 		length=tp-textstart;
 		textend-=length; textwindow-=length;
 	}
-	if (cy>=maxlines)
-	{	cy--; textwindow+=strlen(textwindow)+1;
+	/* if at the bottom of the screen, scroll it of 1 line up */
+	if (cy>=maxlines) {
+		cy--; textwindow+=strlen(textwindow)+1;
 		XCopyArea(display,window,window,gc,
 			0,textoffset+textheight,
 			wscreen,
@@ -973,37 +1026,49 @@ void new_line (void)
 	}
 }
 
+/* gprint [CALLBACK]
+ *   print a line onto the screen from pos (cx,cy) starting at
+ *   buffer pos textend+cx, parse tabs and \n
+ */
 void gprint (char *s)
-/* print a line onto the screen, parse tabs and \nl */
 {
 	int cx0=cx,cx1,i;
-	if (scrolled)
-	{	textwindow=oldtextwindow;
+	if (scrolled) {
+		textwindow=oldtextwindow;
 		show_cursor();
 		scrolled=0;
 		refresh_window();
 	}
-	while (*s)
-	{
-		switch(*s)
-		{
-			case 10 : s++; textline(textend,cx0,cy); cx0=0;
-				new_line(); break;
-			case 9 :
-				cx1=(cx/4+1)*4;
-				for (i=cx; i<cx1; i++) textend[i]=' ';
-				cx=cx1; s++;
-				break;
-			default :
-				textend[cx]=*s; cx++;
-				s++;
-				break;
+	while (*s) {
+		switch(*s) {
+		case 10 : s++; textline(textend,cx0,cy); cx0=0;
+			new_line(); break;
+		case 9 :
+			cx1=(cx/4+1)*4;
+			for (i=cx; i<cx1; i++) textend[i]=' ';
+			cx=cx1; s++;
+			break;
+		default :
+			textend[cx]=*s; cx++;
+			s++;
+			break;
 		}
-		if (textend+cx>textstart+TEXTSIZE)
-		{	cx0=0; new_line(); }
+		if (textend+cx>textstart+TEXTSIZE) {
+			cx0=0; new_line();
+		}
 	}
 	textline(textend,cx0,cy);
 	XFlush(display);
+}
+
+void ev_scroll_up()
+{
+	fprintf(stderr,"ev scroll up\n");
+}
+
+void ev_scroll_down()
+{
+	fprintf(stderr,"ev scroll down\n");
 }
 
 /**************** refresh routine **********************/
@@ -1130,6 +1195,13 @@ void process_event (XEvent *event)
 	XEvent dummyevent;
 	switch (event->type)
 	{
+		case ButtonPress:
+			if (event->xbutton.button==4) {
+				if (in_text) ev_scroll_up();
+			} else if (event->xbutton.button==5) {
+				if (in_text) ev_scroll_down();
+			}
+			break;
 		case GraphicsExpose:
 			if (event->xgraphicsexpose.count>0) break;
 			refresh_window(); break;
@@ -1145,8 +1217,7 @@ void process_event (XEvent *event)
 			computechar();
 			computetext();
 			XFreePixmap(display,pixmap);
-			pixmap=XCreatePixmap(display,window,
-				wscreen,hscreen,depth);
+			pixmap=XCreatePixmap(display,window,wscreen,hscreen,depth);
 			clear_graphics();
 			textwindow=textend-1;
 			while (textwindow>=textstart && *textwindow) textwindow--;
@@ -1559,7 +1630,7 @@ int main (int argc, char *argv[])
 				case 'd' :
 					strcpy(sdisp,argv[2]); argc--; argv++; break;
 				default :
-					if (sscanf(argv[1]+1,"%d",&nn)==1 && nn>=0 && nn<maxcolors)
+					if (sscanf(argv[1]+1,"%d",&nn)==1 && nn>=0 && nn<MAXCOLORS)
 					{	colorname[nn]=argv[2]; argc--; argv++;
 						break;
 					}
