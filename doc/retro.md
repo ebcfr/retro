@@ -510,43 +510,41 @@ code of Retro.
 
 Command, builtin and user defined function list can be displayed with the `list` command.
 
-```
->list
-  *** Builtin functions:
-abs            acos           any            arg            argn           args           asin           atan           band           bandmult       
-bin            ceil           char           charpoly       chidis         color          cols           complex        conj           contour        
-cos            count          ctext          cumprod        cumsum         density        diag           diag           dup            epsilon        
-error          errorlevel     eval           exp            extrema        fak            fdis           fft            find           flipx          
-flipy          floor          format         frame          framecolor     free           hb             holding        holding        huecolor       
-huegrid        ifft           im             index          input          interp         interpret      interpval      invnormaldis   invtdis        
-iscomplex      isfunction     isreal         isstring       isvar          jacobi         key            lineinput      linestyle      linewidth      
-log            lu             lusolve        mark           markerstyle    matrix         max            max            mesh           meshfactor     
-min            min            mod            mouse          name           nonzeros       normal         normaldis      ones           pi             
-pixel          plot           plot           plotarea       polyadd        polycons       polydiv        polymult       polyroot       polysolve      
-polytrans      polytrunc      polyval        printf         prod           project        random         re             restore        round          
-rows           rtext          scale          scaling        setdiag        setepsilon     setkey         setplot        sign           sin            
-size           solid          solid          solidhue       sort           sqrt           store          style          subplot        sum            
-symmult        tan            tdis           text           textcolor      textsize       time           triangles      twosides       view           
-view           wait           window         window         wire           wirecolor      zeros          
-
-  *** Commands:
-break          cd             clear          clg            cls            comment        dir            do             dump           else           
-elseif         end            endif          exec           for            forget         function       global         help           hexdump        
-hold           if             list           listvar        load           loop           memorydump     meta           output         quit           
-remove         repeat         return         shg            trace          type           
-
-  *** Your functions:
-solidhue       density        framedwire     framedsolidhue framedsolid    scaleframe     frame2         frame1         framexmym      framexmyp      
-framexpym      framexpyp      framez1        framez0        getframe       view           text           ctext          window         plotwindow     
-cplot          mark           plot           ygrid          xgrid          niceform       histogram      fplot          setplotm       xmark          
-xplot          logticks2      logticks       ticks          setplot        shrinkwindow   fullwindow     textwidth      textheight     xlabel         
-title          select         xsubplot       splineval      spline         remez          remezhelp      iterate        map            broyden        
-gauss          gauss10        romberg        simpson        secant         bisect         heun           arcosh         arsinh         cosh           
-sinh           log10          totalmax       totalmin       totalsum       field          polyfit        polydif        hilb           eigennewton    
-eigen1         eigenremove    eigenspace1    eigen          eigenspace     eigenvalues    det            image          kernel         fit            
-inv            id             matrix         zeros          ones           random         normal         diag           write          writeform      
-length         equispace      linspace       shortformat    longformat     format         wait           reset          
-```
+	>list
+	  *** Builtin functions:
+	abs            acos           any            arg            argn           args           asin           atan           band           bandmult       
+	bin            ceil           char           charpoly       chidis         color          cols           complex        conj           contour        
+	cos            count          ctext          cumprod        cumsum         density        diag           diag           dup            epsilon        
+	error          errorlevel     eval           exp            extrema        fak            fdis           fft            find           flipx          
+	flipy          floor          format         frame          framecolor     free           hb             holding        holding        huecolor       
+	huegrid        ifft           im             index          input          interp         interpret      interpval      invnormaldis   invtdis        
+	iscomplex      isfunction     isreal         isstring       isvar          jacobi         key            lineinput      linestyle      linewidth      
+	log            lu             lusolve        mark           markerstyle    matrix         max            max            mesh           meshfactor     
+	min            min            mod            mouse          name           nonzeros       normal         normaldis      ones           pi             
+	pixel          plot           plot           plotarea       polyadd        polycons       polydiv        polymult       polyroot       polysolve      
+	polytrans      polytrunc      polyval        printf         prod           project        random         re             restore        round          
+	rows           rtext          scale          scaling        setdiag        setepsilon     setkey         setplot        sign           sin            
+	size           solid          solid          solidhue       sort           sqrt           store          style          subplot        sum            
+	symmult        tan            tdis           text           textcolor      textsize       time           triangles      twosides       view           
+	view           wait           window         window         wire           wirecolor      zeros          
+	
+	  *** Commands:
+	break          cd             clear          clg            cls            comment        dir            do             dump           else           
+	elseif         end            endif          exec           for            forget         function       global         help           hexdump        
+	hold           if             list           listvar        load           loop           memorydump     meta           output         quit           
+	remove         repeat         return         shg            trace          type           
+	
+	  *** Your functions:
+	solidhue       density        framedwire     framedsolidhue framedsolid    scaleframe     frame2         frame1         framexmym      framexmyp      
+	framexpym      framexpyp      framez1        framez0        getframe       view           text           ctext          window         plotwindow     
+	cplot          mark           plot           ygrid          xgrid          niceform       histogram      fplot          setplotm       xmark          
+	xplot          logticks2      logticks       ticks          setplot        shrinkwindow   fullwindow     textwidth      textheight     xlabel         
+	title          select         xsubplot       splineval      spline         remez          remezhelp      iterate        map            broyden        
+	gauss          gauss10        romberg        simpson        secant         bisect         heun           arcosh         arsinh         cosh           
+	sinh           log10          totalmax       totalmin       totalsum       field          polyfit        polydif        hilb           eigennewton    
+	eigen1         eigenremove    eigenspace1    eigen          eigenspace     eigenvalues    det            image          kernel         fit            
+	inv            id             matrix         zeros          ones           random         normal         diag           write          writeform      
+	length         equispace      linspace       shortformat    longformat     format         wait           reset          
 
 Commands constitute the core interface of Retro. They can be dispatched in the following categories.
 

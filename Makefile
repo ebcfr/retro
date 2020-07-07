@@ -71,6 +71,8 @@ $(TPROJ): $(OBJS) $(TOBJS)
 install:
 	cp $(XPROJ) $(INSTALL_DIR)/bin/
 	cp $(TPROJ) $(INSTALL_DIR)/bin/
+	mkdir -p $(INSTALL_DIR)/share/retro/progs
+	cp -f progs/*.e $(INSTALL_DIR)/share/retro/progs/
 
 clean:
 	-rm -f $(OBJS) $(XOBJS) $(TOBJS)
