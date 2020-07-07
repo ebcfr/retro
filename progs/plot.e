@@ -1,5 +1,5 @@
 
-.. text and frame color to black 
+... text and frame color to black 
 textcolor(1);
 framecolor(1);
 
@@ -50,7 +50,7 @@ function xlabel(text,l=1)
 ## Puts the label text at the x-axis at point l in [0,1].
 	w=window();
 	ht=textheight();
-..	ctext(text,[w[1]+l*(w[3]-w[1]),w[4]+0.2*ht]);
+...	ctext(text,[w[1]+l*(w[3]-w[1]),w[4]+0.2*ht]);
 	ctext(text,[(w[1]+w[3])/2,w[4]+2*ht]);
 	return 0;
 endfunction
@@ -114,8 +114,8 @@ function ticks (a,b,extend=0)
 	elseif (b-a)*10^-fexp<3*tick
 		tick1=tick/5;
 	else tick1=tick; endif
-..	m=a/10^fexp;M=b/10^fexp;
-..	return {(floor(m/tick1)+1)*tick1:tick1:(ceil(M/tick1)-1)*tick1,10^fexp}
+...	m=a/10^fexp;M=b/10^fexp;
+...	return {(floor(m/tick1)+1)*tick1:tick1:(ceil(M/tick1)-1)*tick1,10^fexp}
 	tick1=tick1*10^fexp;
 	if extend
 		return {(floor(a/tick1+0.05))*tick1:tick1:(ceil(b/tick1-0.05))*tick1,10^fexp};
@@ -124,8 +124,8 @@ function ticks (a,b,extend=0)
 endfunction
 
 function logticks(a,b)
-..	expi=floor(log(a)/log(10))+1;
-..	expf=ceil(log(b)/log(10))-1;
+...	expi=floor(log(a)/log(10))+1;
+...	expf=ceil(log(b)/log(10))-1;
 	expi=floor(a)+1;expf=ceil(b)-1;
 	tick=expi-1+log(floor(a/10^(expi-1)+1):9)/log(10);
 	for k=expi to expf-1
@@ -136,8 +136,8 @@ function logticks(a,b)
 endfunction
 
 function logticks2(a,b)
-..	expi=floor(log(a)/log(10));
-..	expf=ceil(log(b)/log(10));
+...	expi=floor(log(a)/log(10));
+...	expf=ceil(log(b)/log(10));
 	expi=floor(a);expf=ceil(b);
 	tick=[];
 	for k=expi to expf-1
@@ -205,7 +205,7 @@ function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 		color(ocolor);
 	endif;
 	linewidth(olw);
-..	if !holding() frame(); endif
+...	if !holding() frame(); endif
 	frame();
 	return p;
 endfunction
@@ -300,7 +300,7 @@ function xgrid(xx,f=1,grid=1,ticks=1,xlog=0,color=3)
 	if xlog
 		loop floor(c[1]) to ceil(c[2])
 			col=w[1]+(#-c[1])/(c[2]-c[1])*(w[3]-w[1]);
-..			ctext(printf("10^%g",#),[col,w[4]+0.2*ht]);
+...			ctext(printf("10^%g",#),[col,w[4]+0.2*ht]);
 			rtext("10",[col+wt,w[4]+0.75*ht]);
 			text(printf("%g",#),[col+wt,w[4]+ht*0.25]);
 		end
@@ -333,7 +333,7 @@ function ygrid(yy,f=1,grid=1,ticks=1,ylog=0,color=3)
 	if ylog
 		loop ceil(c[3]) to floor(c[4])
 			row=w[4]-(#-c[3])/(c[4]-c[3])*(w[4]-w[2]);
-..			rtext(printf("10^%g",#),[w[1]-wt/2,row-h/2]);
+...			rtext(printf("10^%g",#),[w[1]-wt/2,row-h/2]);
 			rtext("10",[w[1]-3*wt,row-ht/2]);
 			text(printf("%g",#),[w[1]-3*wt,row-ht]);
 		end
@@ -408,7 +408,7 @@ function text
 	error("Illegal argument number!"),
 endfunction
 
-.. ###################### 3d plots #########################
+... ###################### 3d plots #########################
 
 function view
 ## view([distance, tele, angle1, angle2]) sets the perspective for
@@ -429,13 +429,13 @@ function getframe (x,y,z)
 endfunction
 
 function framez0 (f)
-	wire([f[1],f[2],f[2],f[1],f[1]], ..
+	wire([f[1],f[2],f[2],f[1],f[1]], ...
 		[f[3],f[3],f[4],f[4],f[3]],dup(f[5],5)');
 	return 0	
 endfunction
 
 function framez1 (f)
-	wire([f[1],f[2],f[2],f[1],f[1]], ..
+	wire([f[1],f[2],f[2],f[1],f[1]], ...
 		[f[3],f[3],f[4],f[4],f[3]],dup(f[6],5)');
 	return 0
 endfunction

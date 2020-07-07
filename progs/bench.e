@@ -118,7 +118,7 @@ endfunction
 
 function test
 	global looptime;
-	format(14,6);
+	stdformat();
 	{text,looptime}=musec("f1");
 	text|" for one loop.",
 	musec("f2")|" for: endif;",

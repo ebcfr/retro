@@ -1,9 +1,9 @@
-.. Help texts.
+... Help texts.
 
 comment
 
   *** Builtin functions:
-abs acos any arg argn args asin atan band bandmult bin cd ceil char
+abs acos any arg argn args asin atan band bandmult bin ceil char
 charpoly chidis color complex conj contour cos count ctext cumprod
 cumsum diag diag dup epsilon error errorlevel eval exp extrema fak
 fdis fft find flipx flipy floor format framecolor free hb holding
@@ -12,12 +12,12 @@ invtdis iscomplex isreal jacobi key lineinput linestyle log lu lusolve
 mark markerstyle matrix max max mesh meshfactor min min mod mouse name
 nonzeros normal normaldis ones pi plot plot polyadd polycons polydiv
 polymult polyroot polysolve polytrans polytrunc polyval printf prod
-project random re round scale scaling searchfile searchfile setdiag
+project random re round scale scaling setdiag
 setepsilon setkey setplot shrink sign sin size solid sort sqrt
-stringcompare style sum symmult tan tdis text textcolor textsize time
+style sum symmult tan tdis text textcolor textsize time
 triangles twosides view view wait window window wire wirecolor zeros 
   *** Commands:
-break clear clg cls comment do dump else end endif exec for forget
+break cd clear clg cls comment dir do dump else end endif exec for forget
 function global help hexdump hold if list load loop memorydump meta
 output quit remove repeat return shg type 
   *** Your functions:
@@ -103,8 +103,8 @@ function bin
 endfunction
 
 function cd
-## cd("") shows the active directory.
-## cd("Path") sets the active directory to Path.
+## cd shows the active directory.
+## cd path sets the active directory to "path".
 	error("Illegal argument number!"),
 endfunction
 
@@ -490,10 +490,9 @@ function round
 	error("Illegal argument number!"),
 endfunction
 
-function searchfile
-## searchfile("Pattern") searches for a file, matching the pattern.
-## searchfile() searches another file matching this pattern.
-## Returns "", if there is no (more) such file.
+function dir
+## dir pattern lists all the files of the current directory, matching the pattern.
+## dir lists all th files in the current directory.
 	error("Illegal argument number!"),
 endfunction
 
@@ -570,13 +569,6 @@ function linewidth
 	error("Illegal argument number!"),
 endfunction
 
-function stringcompare
-## stringcompare("string1","string2") compares the two strings.
-## Returns 0 if both are equal, 1 if string1 is bigger than string2,
-## -1 else.
-	error("Illegal argument number!"),
-endfunction
-
 function text
 ## text("string",[c,r]) displays the string at column c and row r
 	error("Illegal argument number!"),
@@ -623,7 +615,7 @@ function wirecolor
 	error("Illegal argument number!"),
 endfunction
 
-.. commands
+... commands
 
 function break
 ## break -> breaks a current loop, for, or repeat.

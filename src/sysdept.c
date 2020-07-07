@@ -453,19 +453,76 @@ int test_code (void)
 /**************** directory *******************/
 
 #include <unistd.h>
+#include <dirent.h>
 
-char curdir[256];
-
-char *cd (char *dir)
-/***** sets the path if dir!=0 and returns the path
-*****/
-{	
-	chdir(dir);
-	if (getcwd(curdir,256)) return curdir;
-	return dir;
+/* path_expand
+ *   expands ~ and resolve relative path
+ *   returns the expanded path. 
+ *     result has to be freed if not NULL
+ */
+static char* path_expand(char* path)
+{
+	char rpath[PATH_MAX];
+	
+	if (path[0]=='~') {
+		char* home=getenv("HOME");
+		if (home) {
+			strncat(rpath, home, PATH_MAX);
+			strncat(rpath, path+1, PATH_MAX);
+			return realpath(rpath, NULL);
+		}
+		return NULL;
+	}
+	return realpath(path, NULL);
 }
 
-#include "dirent.h"
+/* path_is_dir
+ *   does the path exist and identifies a directory ?
+ */
+static int path_is_dir(char* path)
+{
+	struct stat si;
+	if (stat(path, &si)==0 && S_ISDIR(si.st_mode)) {
+		return 1;
+	}
+	return 0;
+}
+
+#if 0
+/* path_is_dir
+ *   does the path exist and identifies a directory ?
+ */
+static int path_is_file(char* path)
+{
+	struct stat si;
+	if (stat(path, &si)==0 && S_ISREG(si.st_mode)) {
+		return 1;
+	}
+	return 0;
+}
+#endif
+
+/* search path list:
+ *   path[0]       --> current directory
+ *   path[npath-1] --> INSTALL_DIR/share/retro/progs/ 
+ */
+char * path[MAX_PATH];
+int npath=0;
+
+char *cd (char *dir)
+/* sets the path if dir!=0 and returns the path*/
+{
+	if (dir && dir[0]) {
+		char* p = path_expand(dir);
+		if (p) {
+			free(path[0]);
+			path[0] = p;
+			chdir(p);
+		}
+	}
+	return path[0];
+}
+
 
 int match (char *pat, char *s)
 {	if (*pat==0) return *s==0;
@@ -484,6 +541,61 @@ int match (char *pat, char *s)
 	return match(pat+1,s+1);
 }
 
+/*
+ *	scan a directory and get :
+ *		files : an array of entries matching the pattern
+ *		files_count : number of files entries
+ *	the function returns the max length of a file entry
+ */
+static int entry_cmp(const char**e1, char**e2)
+{
+	return strcmp(*e1,*e2);
+}
+
+int scan_dir(char *dir_name, char *pat, char ** files[], int *files_count)
+{
+	DIR *dir;
+	struct dirent *entry;
+	int entry_count=0, len=0;
+	char **buf = NULL;
+
+	dir = opendir(dir_name);
+
+	if (dir) {
+		while((entry = readdir(dir)) != NULL) {
+			if (match(pat,entry->d_name)) {
+				if (strcmp(entry->d_name,".")==0 || strcmp(entry->d_name,"..")==0) 
+					continue;
+				int isdir=path_is_dir(entry->d_name);
+				int l=strlen(entry->d_name);
+				len = len>l ? len : l;
+				buf = (char**)realloc(buf,(entry_count+1)*sizeof(char *));
+				if (buf) {
+					buf[entry_count]=(char*)malloc(isdir ? l+2 : l+1);
+					if (buf[entry_count]) {
+						strcpy(buf[entry_count],entry->d_name);
+						if (isdir) {
+							strcat(buf[entry_count],"/");
+						}
+						entry_count++;
+					} else break;
+				} else break;
+			}
+		}
+
+		closedir(dir);
+		
+		if (buf)
+			qsort(buf,entry_count,sizeof(char*),(int (*)(const void*, const void*))entry_cmp);
+	}
+
+	*files = buf;
+	*files_count = entry_count;
+
+	return len;
+}
+
+#if 0
 char *dir (char *pattern)
 /* if pattern==0, find next file, else find pattern.
    return 0, if there is no file.
@@ -495,7 +607,7 @@ char *dir (char *pattern)
 	{	strcpy(pat,pattern);
 		if (!pat[0]) strcpy(pat,"*");
 		if (dir) { closedir(dir); dir=0; }
-		dir=opendir(".");
+		dir=opendir(path[0]);
 	}
 	if (dir)
 	{	again: entry=readdir(dir);
@@ -510,7 +622,7 @@ char *dir (char *pattern)
 	}
 	return 0;
 }
-
+#endif
 /***************** clock and wait ********************/
 
 #ifndef SY_CLK_TCK
@@ -732,51 +844,6 @@ static char titel[]="This is Retro, Version 3.04 compiled %s.\n\n"
 	"Type help(Return) for help.\n"
 	"Enter command: (%ld Bytes free.)\n\n";
 
-/* path_expand
- *   expands ~ and resolve relative path
- *   returns the expanded path. 
- *     result has to be freed if not NULL
- */
-static char* path_expand(char* path)
-{
-	char rpath[PATH_MAX];
-	
-	if (path[0]=='~') {
-		char* home=getenv("HOME");
-		if (home) {
-			strncat(rpath, home, PATH_MAX);
-			strncat(rpath, path+1, PATH_MAX);
-			return realpath(rpath, NULL);
-		}
-		return NULL;
-	}
-	return realpath(path, NULL);
-}
-
-/* path_is_dir
- *   does the path exist and identifies a directory ?
- */
-static int path_is_dir(char* path)
-{
-	struct stat si;
-	if (stat(path, &si)==0 && S_ISDIR(si.st_mode)) {
-		return 1;
-	}
-	return 0;
-}
-#if 0
-/* path_is_dir
- *   does the path exist and identifies a directory ?
- */
-static int path_is_file(char* path)
-{
-	struct stat si;
-	if (stat(path, &si)==0 && S_ISREG(si.st_mode)) {
-		return 1;
-	}
-	return 0;
-}
-#endif
 
 int main (int argc, char *argv[])
 /******
@@ -814,7 +881,7 @@ Initialize memory and call main_loop
 	char str[strlen(s)+1];
 	s=strcpy(str,s);
 	
-	path[0]=".";
+	path[0]=path_expand(".");
 	npath=1;
 	for (s=strtok(s,":"); s!=NULL; s=strtok(NULL,":")) {
 		char* p=path_expand(s);

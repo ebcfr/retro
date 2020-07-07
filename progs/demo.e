@@ -1,4 +1,4 @@
-.. The Demo. Starts automatically.
+... The Demo. Starts automatically.
 
 ""
 "Demo loading."
@@ -285,7 +285,7 @@ function normaldemo
 	return 0
 endfunction
 
-.. *** Approximations - Demo ***
+... *** Approximations - Demo ***
 
 function apprdemo
 	global Pi; pi=Pi;
@@ -298,7 +298,7 @@ function apprdemo
 	"" ">n=length(x); p=polyfit(x,y,5),",
 	n=length(x); p=polyfit(x,y,5),
 	"" 
-	">plot(x,y); hold on; color(3); "| ..
+	">plot(x,y); hold on; color(3); "| ...
 	"plot(x,polyval(p,x)); color(1); hold off;"
 	weiter();
 	plot(x,y); hold on; color(3);
@@ -361,7 +361,7 @@ function apprdemo
 
 endfunction
 
-.. *** Statistik - Demo ***
+... *** Statistik - Demo ***
 
 function statdemo
 ## Statistikdemo.
@@ -420,7 +420,7 @@ function statdemo
 	""
 	"Given the matrix:"
 	">a"
-	format("STD",[0,3]);
+	stdformat(3);
 	a=[23,37,43,52,67,74;45,25,53,40,60,83];
 	a, shortformat();
 	""
@@ -685,7 +685,7 @@ function grafiktutor
 	taste();
 	plot(x,y); wait(delay);
 	"The plot can be given a title."
-	">title("|char(34)|"sin(4*Pi*x)*exp(-x*x),(return)"| ..
+	">title("|char(34)|"sin(4*Pi*x)*exp(-x*x),(return)"| ...
 		char(34)|");"
 	taste();
 	title("sin(4*Pi*x)*exp(-x*x),(return)"); wait(delay());
@@ -712,7 +712,7 @@ function grafiktutor
 	setplot(-1.5,1.5,-1.5,1.5);
 	plot(x,T); xgrid(-2:2,1); ygrid(-2:2,1); wait(delay); hold off;
 	"One can also mark a point on the screen with the mouse."
-	">title("|char(34)|"Click the left mouse button."|char(34)| ..
+	">title("|char(34)|"Click the left mouse button."|char(34)| ...
 	"); c=mouse(); c,"
 	taste();
 	if delay>30;
@@ -813,7 +813,7 @@ function tube
 	x=linspace(0,2*Pi,40);
 
 ## a atomic modell or so.
-	y=0.1+(sin(linspace(0,Pi,15))| ..
+	y=0.1+(sin(linspace(0,Pi,15))| ...
 		1.5*sin(linspace(0,Pi,10))|sin(linspace(0,Pi,15)));
 	cosphi=dup(cos(x),length(y));
 	sinphi=dup(sin(x),length(y));

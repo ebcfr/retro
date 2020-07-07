@@ -1,38 +1,63 @@
 
 
-Documentation
-=============
+# Documentation
 
-Retro, The numerical Laboratory
-===============================
+# Retro, a numerical laboratory
 
-Version 3.04
+Version 1.00
+
+<a id="top"></a>
+
+* [INTRODUCTION](#intro)
+  * [Overview](#intro.overview)
+  * [Installing and running Retro](#intro.install)
+  * [The command line interface](#intro.cli)
+  * [Loading a file](#intro.load)
+  * [A quick demo](#intro.demo)
+  * [Getting help](#intro.help)
+  
+* [BASICS](#basics)
+  * [Entering input](#basics.input)
+  * [Data types](#basics.types)
+  * [Commands, builtin and user defined functions](#basics.cmd)
+
+* [THE MATRIX LANGUAGE](#matrix)
+  * [Matrices](#matrix.def)
+  * [Submatrices](#matrix.subm)
+  * [Quick vector definition](#matrix.vector)
+  * [Combining matrices (horizontal and vertical concatenation)](#matrix.concat)
+  * [Matrix operations](#matrix.op)
+  * [Functions that generate matrices](#matrix.funcs)
+  * [Builtin functions](#matrix.builtin)
+
+* [GRAPHICS](#graph)
+  * [2D Graphics](#graph.2d)
+  * [3D Graphics](#graph.3d)
+  * [The meta file](#graph.meta)
+
+* [PROGRAMMING RETRO](#prog)
+  * [Functions](#prog.func)
+  * [Control structure syntax](#prog.syntax)
+  * [Programming style](#prog.style)
+  * [Passing functions as arguments](#prog.fargs)
+  * [Debugging](#prog.debug)
+  * [User interface](#prog.ui)
+  * [Hints](#prog.hints)
+
+* [UTILITIES](#util)
+
+* [LINEAR ALGEBRA](#linear)
+
+* [POLYNOMS](#poly)
+
+* [RANDOM NUMBERS and STATISTCAL FUNCTIONS](#stat)
 
 
-INTRODUCTION
-------------
+<a id="intro"></a>
+## INTRODUCTION
 
-Retro consists of the following files:
-
->	retro (the program, which may also have another name)
-
->	retro.cfg (is loaded after start of the program)
-
->	util.e (is loaded from retro.cfg)
-
-There are some additional files, which help using the program:
-
->	HELP.E (help texts)
-
->	demo.e (a demo file, see the demo section)
-
->	retro.md (this file)
-
->	examples.md (some example sessions)
-
-To load Retro, copy the above files in a directory, and start Retro. A
-startup screen indicating the version date will appear. The program
-will prompt for input, using a DOS-like text screen.
+<a id="intro.overview"></a>
+### Overview
 
 The idea of Retro is a system with the following features:
 
@@ -43,9 +68,9 @@ The idea of Retro is a system with the following features:
 - Matrix functions.
 - Statistical functions and random numbers.
 - 2D- and 3D-plots.
-- A built in programming language with parameters and local variables.
+- A built in programming language which allows to define user functions with parameters and local variables.
+- A tracing feature for debug purpose.
 - An online help.
-- A tracing feature for the Retro programming language.
 
 These features make Retro an ideal tool for the tasks such as:
 
@@ -56,61 +81,78 @@ These features make Retro an ideal tool for the tasks such as:
 - Solving differential equations numerically.
 - Computing polynomials.
 
-
-THE COMMAND LINE
-----------------
-
-If Retro is started from a shell, command line parameters for Retro can
-be entered. These parameter must be file names and those files are
-loaded after the start of Retro (See "loading a file"). Note, that the
-file `retro.cfg` is always loaded as first file.
-
-The file `retro.cfg` contains some commands to set up the Retro system,
-like defining the default file. It does in turn load the file UTIL.E.
-UTIL contains functions which are written in the Retro programming
-language and can be considered a part of Retro. But the user should
-feel free to change the content of UTIL to his own needs.
+[[Top](#top)]
 
 
-THE DEMO AND THE ONLINE HELP
-----------------------------
+<a id="intro.install"></a>
+### Installing and running Retro
 
-The best way to get a good idea of Retro is to run the demo. To do that
-issue the command
+From the root directory of the project, in a shell console
 
-```
-	>load "demo"
-```
+	make
+	make install
+	
+will compile the source code into two programs: 
 
-Do not enter the prompt ">" and press the Return key. Of course, the
-file DEMO must be in the active directory. To get a print of the
-output of the demo, enter
+- `retro` a console program which provides a command line interface,
+- `xretro` which provides command line editing and graphing features in a basic X11 interface.
 
-	>dump "demo.txt"; load "demo"; dump;
+and will install them to the `/usr/local/bin` directory and will copy the files `progs/*.e` to the `/usr/share/retro/progs` directory. These are function module files that you will be able to load at demand.
+ 
+It is a good idea to create a `.retro/progs` directory in your local directory as well (though it is not done by the install process).
 
-Then the file "demo.txt" will contain the demo texts. If
-the demo is interrupted (by the Escape key), the command
+	retro -h
+	Use: retro [-s KB] [-q] files
+	
+	xretro -h
+	Use: xretro  [-d DISPLAY] [-geom GEOMETRY] [-f FONT] [-g FONT]
+	[-0..15 COLOR] [-s KBYTES] files
 
-	>dump;
+gives the available command line parameters
 
-must be entered to close the file "demo.txt".
+- `-s KBYTES`: size of the calculation stack.
+- `-q`: quiet. Used to disable echoing of commands, and get only the output results.
+- `-d`: the display to be used.
+- `-geom WxH`: size of the X11 window (defaults to 800x600).
+- `files`: a list of files containing commands, user functions, expression to evaluate. They are searched for in different directories in the following order:
+    - the current directory
+    - `~/.retro/progs`
+    - `INSTALL_DIR/share/retro/progs`
+    
+    The first and last directories in the list are mandatory. `~/.retro/progs` can be replaced by a list of directories provided by the RETRO environment variable if it is defined. The directories must be separated by colons (:). The first directory will be searched first.
+    
+    A special file `retro.e` **must exist**. It allows to initialize the environment, loading standard modules, for example. It is executed before any other file. It is searched in the same search path list as other files.
 
-You can also learn to program Retro by studying the demo file.
+**Example running the script hello.e**
 
-It is a good idea to make a print of the HELP file, since all
-functions are explained in that file. To load the online help, enter
+- create a file hello.e with a text editor
+    
+    put inside
+    
+    	"Hello World!"
+    	quit
+  
+  
+- execute it
+    
+    	retro -q hello.e
 
-	>load "help";
+will print on the console the classical `Hello World!`.
 
-Then
+Note that without the `-q` option, the program prints a welcome message 
+before executing our script. Without the `quit` command in the script, 
+the program enters the interactive mode after executing the script 
+content.
 
-	>help command
+Running `xretro` with or without files in the command line parameters 
+will send you to the interactive console after executing the files. The 
+program will then prompt for input.
 
-will show the help text of the command (see "programming Retro").
+[[Top](#top)]
 
 
-THE LINE EDITOR
----------------
+<a id="intro.cli"></a>
+### The command line interface
 
 Text can be entered after the prompt (>) using the keyboard. If a
 letter is mistyped, it can be cancelled with the Backspace key. The
@@ -144,79 +186,321 @@ and from there any key switches back. The Esc key stops any running
 Retro program and some internal functions, like the 3-dimensional
 plots, the linear equation solver and the polynomial root finder.
 
-Input can spread over several lines by the use of "..". The two dots
+Input can spread over several lines by the use of "...". The three dots
 are allowed at any place, where a space is acceptable. E.g.
 
-	>3+ .. some comment
+	>3+ ... some comment
 	>4
 
 is equivalent to
 
 	>3+4
 
-Comments can follow the ".." and are skipped.
+Comments can follow the "..." and are skipped.
 
 The function keys may be programmed by the command
 
 	>setkey(number,"text");
 
-The number must be between 1 and 10 and the "text" may be any Retro
+The number must be between 1 and 12 and the "text" may be any Retro
 string. Then the corresponding function key will produce the text,
-when it is pressed. If the function key text is to contain a ", one
-can use char(34) and the Retro string concatenation, as in the example
+when it is pressed. A " can be escaped or one can use char(34) and the 
+string concatenation. For example,
 
-	>setkey(1,"load "|char(34)|"test"|char(34)|";");
+	>setkey(1,"load \"test\";");
 
-which puts
+will put `load "test";` on the function key F1 push.
 
-	>load "test";
+By default, Retro doesn't save neither the command entered nor the output 
+results. This behavior can be changed using the `dump` command
 
-on the function key F1.
+	>dump savefile.txt
+	> ... extra commands
+	>dump
+
+All the commands and expressions entered between the two **dump** and the 
+corresponding output results will be saved in the *savefile.txt* file.
+
+**[TODO: It would be nice to have a -o option allowing to save everything in a file entered at startup]**
+
+[[Top](#top)]
 
 
-THE DATA TYPES
---------------
+<a id="intro.load"></a>
+### Loading a file
 
-Retro uses the following data types
+To abbreviate tedious input one may generate a file containing Retro
+commands. This file can be generated with any editor. To load that file enter
+
+	>load filename
+
+All lines of that file are then interpreted just as any other input
+from the keyboard. Also a loaded file may itself contain a load command.
+If an error occurs, the loading is stopped and an error message is
+displayed. There is a default extension ".e", which you should use for
+your files. You need not specify this extension in the load command.
+
+The best use of a load file is to define functions in that file. See
+[programming Retro](#prog).
+
+[[Top](#top)]
+
+
+<a id="intro.demo"></a>
+### A quick demo
+
+The best way to get a good idea of Retro is to run the demo. To do that
+issue the command
+
+	>load demo
+
+Do not enter the prompt ">" and press the Return key. 
+
+You can learn a lot by studying the demo file.
+
+[[Top](#top)]
+
+
+<a id="intro.help"></a>
+### Getting help
+
+One can get online help, using the command `help`
+
+	>help cmd
+
+It will show the help text of the *cmd* (see "programming Retro").
+
+**[TODO: review the help system]**
+
+[[Top](#top)]
+
+
+<a id="basics"></a>
+## BASICS
+
+<a id="basics.input"></a>
+### Entering input
+
+Retro is all about evaluating inputs which can be either a "command", an "expression" including numerical litterals and operators, variables and builin or user defined functions, or an "assignment" allowing to define new variables dynamically.
+
+An example for a **command** is
+
+	>quit
+
+which quits the program.
+
+An **expression** is a valid Retro expression, which can be evaluated.
+
+Hence, the expression
+
+	>3+4*sin(pi/3)
+	        6.4641
+
+is evaluated and the result 6.4641 is displayed.
+
+Expression use normal mathematical notations, and so may be shaped with 
+number litterals, variables, builtin or user defined functions and 
+operators.
+
+Of course, one can use the round brackets ( and ) to group expressions
+like in
+
+	>(1+5)*(6+7^(1+3))
+
+Expression evaluation is done according to **operator precedence** defined 
+below and uses a stack to store intermediate results.
+
+|builtin and user defined functions, accessing variables () []|[highest priority]|
+|"^" "'"| exponent, transpose |
+|"*" "/" "."| element wise multiply and divide, matrix multiply|
+|"+" "-"| add, substract |
+| ":" ": :" | vectorize|
+|"!" "<" "<=" "==" "~=" "!=" ">=" ">" "\|" "_" | complement, compare, horizontal and vertical concatenate|
+| "\|\|" "&&" |logical or / and [lowest priority]
+
+Operation yielding a **boolean result** ("!" "<" "<=" "==" "~=" "!=" ">=" ">" "\|\|" "&&") will give the numerical values 1 for true and 0 for false.
+
+An **assignment** looks like
+
+	>variablename=expression;
+
+It assigns the expression evaluation result to the variable defined by 
+*variablename*. If the expression is followed by a ";", then the printing 
+is skipped. The expression may be followed by "," (or nothing), which 
+prints the result of the expression evaluation.
+
+This makes sense, since it may be the result of be an 
+intermediate calculus and hence we don't need to display it, or the user 
+does not want to see the long output corresponding to the result of the
+expression evaluation.
+
+There are also multiple assignments (see below).
+
+[[Top](#top)]
+
+
+<a id="basics.types"></a>
+### Data types
+
+**Variables are defined dynamically** and data types are assigned according to
+the data type of the result. Possible **data types** are:
 
 - real numbers
 - complex numbers
 - real matrices
 - complex matrices
 - strings
-- references
-- programs
 
-The meaning of the first five data types should be clear. Retro tries
-to keep an evaluation real. But as soon, as complex data is involved
-the computation gets complex. That is why
+The basic constant expressions are numbers. Those are entered in the
+usual form 100, 100.0, 1e2, 1.0e+2, or 1k (1e3), 1u (1e-3). The letter
+e or E indicates powers of 10. Letters ... T, G, M, k or K, m, u, n, p ,f ...
+are recognized as multiple or submultiple of engineering units.
+
+>	|m = milli = 1e-3 |k = kilo  = 1e+3 or (K)|
+>	|u = micro = 1e-6 |M = mega  = 1e+6|
+>	|n = nano  = 1e-9 |G = giga  = 1e+9|
+>	|p = pico  = 1e-12| T = tera  = 1e+12|
+>	|f = femto = 1e-15|P = peta  = 1e+15|
+>	|a = atto  = 1e-18| E = exa   = 1e+18|
+>	|z = zepto = 1e-21| Z = zetta = 1e+21|
+>	|y = yocto = 1e-24| Y = yotta = 1e+24|
+
+A suffix "i" indicates multiples of the complex imaginary unit "i". 
+"1+1i" is in fact a sum of 1 and 1i.
+
+**Retro tries to keep an evaluation real. But as soon, as complex data is 
+involved the computation gets complex**. That is why
 
 	>sqrt(-1)
+	          -NAN
 
 results in NaN (not a number), but
 
 	>sqrt(complex(-1))
+	              6.12323E-17+1i
+	>sqrt(-1+0i)
+	              6.12323E-17+1i
 
-gives 0+1*i. complex(x) is a way to turn a number complex. See the
-section on expressions for more information on how to enter these
-data types.
+gives 0+1*i. `complex(x)` is a way to turn a number complex.
 
-Strings are only used for explaining output, file names and function
-key texts. There are only two string operators, the concetanation |
-and the function stringcompare.
+**Real and complex matrices** can be defined and used in expressions. For a 
+detailed overview, go the [Matrix language](#matrix) section.
 
-References are used internally for parameters of functions (see the
-programming section).
+**Number formatting**
 
-Programs are the user defined programs including the functions in
-UTIL. 
+Retro use the IEEE 64 bit double precision floating point encoding to 
+represent numbers. It allows a 16 decimal digit representation of numbers.
+
+The printing format is determined by the function
+
+	>format(flavour,[n,m])
+
+where *flavour* is one of the five ways of formatting numbers and *n* is 
+the total width of print and *m* is either the number of significant 
+digits displayed or the number of digits after the decimal dot. It returns
+the vector value [n,m].
+
+| flavor |n             |m                                 |comment|
+| "STD"  |width in chars|nb of significant digits          |smart display: use fixed or scientiic display depending on the value|
+| "FIXED"|width in chars|nb of digits after the decimal dot|fixed display|
+| "SCI"  |width in chars|nb of significant digits          |scientific display: mantissa*1E[+-]exponent, with 1<mantissa<10|
+| "ENG1" |width in chars|nb of significant digits          |engineering display: use exponent multiple of 3|
+| "ENG2" |width in chars|nb of significant digits          |plain text engineering displat: use letters to represent powers of 10|
+
+Setting *n* to 0 will trigger automatic calculation of the width relative 
+to the flavour used and the value of *m*.
+
+Simplified functions are available
+
+	>longformat()             ... format("STD",[0,16])
+	>shortformat()            ... format("STD",[0,6])
+	>stdformat(m=6)           ... format("STD",[0,m]) where m defaults to 6
+	>sciformat(m=6)           ... format("SCI",[0,m]) where m defaults to 6
+	>fixedformat(m=6)         ... format("FIXED",[0,m]) where m defaults to 6
+	>eng1format(m=6)          ... format("ENG1",[0,m]) where m defaults to 6
+	>eng2format(m=6)          ... format("ENG2",[0,m]) where m defaults to 6
+
+The effect of the different flavours is illustrated below
+
+	>stdformat();
+	>12.56*0.0000456
+	   0.000572736
+	>3+12.56*0.0000456
+	       3.00057
+	>0.03+12.56*0.0000456
+	     0.0305727
+	
+	>fixedformat();
+	>12.56*0.0000456
+	          0.000573
+	>3+12.56*0.0000456
+	          3.000573
+	>0.03+12.56*0.0000456
+	          0.030573
+	
+	>sciformat();
+	>12.56*0.0000456
+	   5.72736E-04
+	>3+12.56*0.0000456
+	   3.00057E+00
+	>0.03+12.56*0.0000456
+	   3.05727E-02
+	
+	>eng1format();
+	>12.56*0.0000456
+	   572.736E-06
+	>3+12.56*0.0000456
+	   3.00057E+00
+	>0.03+12.56*0.0000456
+	   30.5727E-03
+	
+	>eng2format();
+	>12.56*0.0000456
+	  572.736u
+	>3+12.56*0.0000456
+	   3.00057
+	>0.03+12.56*0.0000456
+	  30.5727m
+
+	>shortformat()
+
+
+**Strings** are only used for explaining output, file names and function
+key texts. There are only a few string operators: the concatenation \| and
+comparison <, <=, ==, !=, =>, >.
+
+String constants are enclosed in double quotes, like in
+
+	>s="This is a text"
+
+A " can be escaped in a string constant like
+
+	>s="say \"Hello!\""
+
+There are a few builtin function which can produce strings: 
+
+|**char(n)**|A single character string with ASCII code n|
+|**printf("fmt", var)**|C like formatting of a real data|
+|||
 
 All these data are kept on the stack. Usually, the user does not have
 to worry about the stack, since Retro uses normal mathematical notation
 for expressions. Internally, the evaluation of an expression uses the
-stack rather heavily. Programs are kept in the lower area of the stack.
-The stack is also used to pass parameters to builtin or user defined
-functions and to keep the local variables of these functions.
+stack rather heavily.
+
+A list of all defined variables with their type information can be get 
+by the command
+
+	>listvar
+
+If a variable, used in an expression, is undefined, interpreting the 
+expression will stop with an error message.
+
+[[Top](#top)]
+
+
+<a id="basics.cmd"></a>
+### Commands, builtin and user defined functions
 
 Finally, we remark that the data explained in this section are
 different from builtin functions which can be used in the same places
@@ -224,99 +508,100 @@ as user defined functions. There are also "commands", which cannot be
 used in expressions. Builtin functions and commands are part of the
 code of Retro.
 
-A complete list of builtin functions, commands and user defined
-functions is printed by
+Command, builtin and user defined function list can be displayed with the `list` command.
 
-	>list
+```
+>list
+  *** Builtin functions:
+abs            acos           any            arg            argn           args           asin           atan           band           bandmult       
+bin            ceil           char           charpoly       chidis         color          cols           complex        conj           contour        
+cos            count          ctext          cumprod        cumsum         density        diag           diag           dup            epsilon        
+error          errorlevel     eval           exp            extrema        fak            fdis           fft            find           flipx          
+flipy          floor          format         frame          framecolor     free           hb             holding        holding        huecolor       
+huegrid        ifft           im             index          input          interp         interpret      interpval      invnormaldis   invtdis        
+iscomplex      isfunction     isreal         isstring       isvar          jacobi         key            lineinput      linestyle      linewidth      
+log            lu             lusolve        mark           markerstyle    matrix         max            max            mesh           meshfactor     
+min            min            mod            mouse          name           nonzeros       normal         normaldis      ones           pi             
+pixel          plot           plot           plotarea       polyadd        polycons       polydiv        polymult       polyroot       polysolve      
+polytrans      polytrunc      polyval        printf         prod           project        random         re             restore        round          
+rows           rtext          scale          scaling        setdiag        setepsilon     setkey         setplot        sign           sin            
+size           solid          solid          solidhue       sort           sqrt           store          style          subplot        sum            
+symmult        tan            tdis           text           textcolor      textsize       time           triangles      twosides       view           
+view           wait           window         window         wire           wirecolor      zeros          
 
-If more information is needed, the command
+  *** Commands:
+break          cd             clear          clg            cls            comment        dir            do             dump           else           
+elseif         end            endif          exec           for            forget         function       global         help           hexdump        
+hold           if             list           listvar        load           loop           memorydump     meta           output         quit           
+remove         repeat         return         shg            trace          type           
 
-	>memorydump
+  *** Your functions:
+solidhue       density        framedwire     framedsolidhue framedsolid    scaleframe     frame2         frame1         framexmym      framexmyp      
+framexpym      framexpyp      framez1        framez0        getframe       view           text           ctext          window         plotwindow     
+cplot          mark           plot           ygrid          xgrid          niceform       histogram      fplot          setplotm       xmark          
+xplot          logticks2      logticks       ticks          setplot        shrinkwindow   fullwindow     textwidth      textheight     xlabel         
+title          select         xsubplot       splineval      spline         remez          remezhelp      iterate        map            broyden        
+gauss          gauss10        romberg        simpson        secant         bisect         heun           arcosh         arsinh         cosh           
+sinh           log10          totalmax       totalmin       totalsum       field          polyfit        polydif        hilb           eigennewton    
+eigen1         eigenremove    eigenspace1    eigen          eigenspace     eigenvalues    det            image          kernel         fit            
+inv            id             matrix         zeros          ones           random         normal         diag           write          writeform      
+length         equispace      linspace       shortformat    longformat     format         wait           reset          
+```
 
-is available. A hexdump of any data can be optained with
+Commands constitute the core interface of Retro. They can be dispatched in the following categories.
 
-	>hexdump name
+- *file system interaction*
+  
+    |**exec** *appname*|execute an external application [**disabled**]|
+    |**cd** [*path*]|change directory. Without an argument, the current path is displayed. With an argument, the current directory is changed. The path can be absolute or relative to the current directory.|
+    |**dir** [*pattern*]|display the directory content according to the pattern. Simple wildcard patterns can be used (*.e, zzz?.txt, ...). Without a pattern, the whole content of the directory is displayed.|
+    |**rm** *file*|remove the file or dir from disk [**disabled**]|
+    |**dump** [*textfile*]|with an argument, starts appending the text console to the specified text file. Without an argument, it stops to echo to the text file.|
+    |**load** *filename.e*|load a module containing user defined function and expression to evaluate. the path file can be locates with an absolute path or a relative one to the current directory or to the same search directory list applicable when loading files given on the command line.|
+    |**meta** *filename*|store the graphics window in a device-independent manner.|
+    |**store** *filename*|save the current calculation stack to the specified file.|
+    |**restore** *filename*|reload the calculation stack content from the specified file. *store/restore* define a way to save and reload a session with all its functions and global variables.|
 
-but it will only be useful for insiders.
+- *console/graphical display interaction*
+  
+    |**quit**|quit the program (beware: no chance to save the content!)|
+    |**cls**|clear the text console.|
+    |**output** *on/off*|enable/disable the outputing of results in the text console (default: on).|
+    |**clg**|clear the graphics screen.|
+    |**shg**|toggle between text and graphics screens.|
+    |**hold** *on/off*|enable/disable the persistence for the graphics screen (default: off). See [Plotting].|
 
-	>store("filename")
+- *variable and user function management*
+  
+    |**list**|list commands, builtin and user defined functions.|
+    |**listvar**|list variables in the current context.|
+    |**memorydump**|display the content of the stack.|
+    |**hexdump**|low-level inspect the way a variable or user defined function is stored on the stack.|
+    |**clear** [*var*]|With an argument, remove the specified variable from the current context. Without an argument, remove all the variables!|
+    |**forget** *userfunc*|remove the specified user defined function from the stack.|
+    |**show** *userfunc*|display the code of the specified user defined function.|
+    |**help** *cmd*|ask for help about the specified *cmd* (see [User defined function help]).|
+    |**trace** *on/off*|enable/disable the trace feature to debug user defined function (default: off). See [Programming].|
 
-stores the content of the Retro stack into a file.
+- *programming language keywords*
+  
+    **break**, **do**, **else**, **elseif**, **end**, **endfunction**, **endif**, **for**, **function**, **global**, **if**, **loop**, **repeat**, **return**.
+    
+    See [Programming] for details.
+    
+- *comments*
+  
+    |...|line comment|
+    |**comment** **endcomment**|multiline comment between the two keywords.|
 
-	>restore("filename")
-
-loads that file. This is a short way of storing a session including
-the global variables and functions.
-
-
-ENTERING INPUT
---------------
-
-Retro input is either a "command", an "expression" or an "assignment".
-An example for a command is
-
-	>quit
-
-which quits the Retro system. By and by, we will mention a few others.
-Another example is "load".
-
-An expression is a valid Retro expression, which has a resulting
-value. If it is entered on its own or followed by a comma, this value
-is printed.
-
-	>3+4*5
-
-prints the value 23.00000. The print is surpressed, if the expression
-is followed by a ";", like in the setkey example above. This makes
-sense, since some functions have side effects and their result is not
-needed, of since the user does not want to see the long output of
-an assignment (see below).
-
-The printing is done with a format determined by the function
-
-	>format([n,m])
-
-where n is the total width of print and m is the number of digits after
-the decimal dot.
-
-	>format(n,m)
-
-does the same thing, but is a little bit slower since it is a function
-in UTIL. The output automatically switches to exponential format, if
-there is not enough space to display the number in fixed format.
-
-	>longformat()
-
-is a function in UTIL, which sets a longer output format, while
-
-	>shortformat()
-
-sets a shorter one.
-
-An assignment looks like
-
-	>variablename=value
-
-It assigns the value to the variable, which is declared by the
-assignment, and prints the value. If the assignment is followed by a
-";", then the printing is surpressed. An assignment may be followed by
-",", which prints the right hand side of the assignment.
-
-There are also multiple assignments (see below).
+[[Top](#top)]
 
 
-Expressions
------------
+<a id="matrix"></a>
+## THE MATRIX LANGUAGE
 
-The most simple expressions are variables. Their value is the value
-of the variable, and their type is the type of the variable. If the
-variable is undefined, interpreting the expressions will stop with
-an error message.
-
-The basic constant expressions are numbers. Those are entered in the
-usual form 100, 100.0, 1e2, or 1.0e+2. The letter "small e" indicates
-powers of 10. An appendix "i" indicates multiples of the complex unit
-"i". "1+1i" is in fact a sum of 1 and 1i.
+<a id="matrix.def"></a>
+### Matrices
 
 A matrix is entered in the brackets "[" and "]" row by row. The columns
 are seperated by "," and the rows by ";". Example:
@@ -330,6 +615,12 @@ This is equivalent with
 The matrix is real, if all entries are real, otherwise it is complex.
 If a row is shorter than the others, it is filled with zeros. A matrix
 constant can spread over several lines. 
+
+[[Top](#top)]
+
+
+<a id="matrix.subm"></a>
+### Submatrices
 
 A submatrix is a matrix, which is made up by the entries of another
 matrix. The simplest example is a matrix element
@@ -354,19 +645,31 @@ are taken. Example:
 
 	>A[[1,2],[1,2]]
 
-is the upper left 2x2 submatrix of A. If a row or column does not
-exist, it is simply neglected. Thus, if A is a 4x4 matrix, then
-A[[4,7],[4,7]] results in the value A[4,4]. A special thing is A[1],
-which gives the first row of A. To be precise, if only one index is
+is the upper left 2x2 submatrix of A.
+
+Note that
+
+	>A[[1,2],[1,2]]=[6,7;8,9]
+
+is also a legal assignment
+
+If a row or column does not exist, it is simply neglected. Thus, if A is 
+a 4x4 matrix, then A[[4,7],[4,7]] results in the value A[4,4].
+
+A special thing is A[1], which gives the first row of A. To be precise, if only one index is
 present, then the second index is assumed to be ":". A ":" indicates
 all rows or columns; i.e., A[:,1] is the first column of A, and A[:,:]
-is A itself. Another example:
+is A itself.
+
+Another example:
 
 	>v=[-1,-2,-3,-4,-5]; v[[5,4,3,2,1,1]]
 
-gives the vector [-5,-4,-3,-2,-1,-1]. If A is a 4x4 matrix, then
-A[[2,1]] gives a 2x4 matrix, which consists of the second row of A on
-top of the first row. Note, that there may be a 0xN or Nx0 matrix.
+gives the vector [-5,-4,-3,-2,-1,-1].
+
+If A is a 4x4 matrix, then A[[2,1]] gives a 2x4 matrix, which consists of 
+the second row of A on top of the first row. Note, that there may be a 
+0xN or Nx0 matrix.
 
 For compatibility reasons, the square brackets can be replaced by
 round brackets. Thus, A(1,1) is the same thing as A[1,1]. But
@@ -379,17 +682,10 @@ work for matrices, and is really the quickest way to access a matrix
 element. It works also, if the matrix A is to small or a real or
 complex variable. Then the result is the last element of A.
 
-String constants are enclosed in double quotes, like in
+[[Top](#top)]
 
-	>string="This is a text"
-
-The section on the line editor shows how to insert a double quote into
-a string. A single character with ASCII code n can be produced by
-
-	>char(n)
-
-If A is a matrix expression (an expression of type matrix), then A'
-is the transposed matrix. 
+<a id="matrix.vector"></a>
+### Quick vector definition
 
 The ":" serves to generate a vector quickly. Thus
 
@@ -410,26 +706,43 @@ even
 
 works correctly. 
 
-The binary operator "|" puts a matrix aside another; i.e., if A is a
-NxM matrix and B is a NxK matrix, then A|B is a Nx(M+K) matrix, which
-consists of A left of B. Analogously, A_B puts A atop of B. These
-operators work also for numbers, which are treated as 1x1 matrices.
+[[Top](#top)]
+
+
+<a id="matrix.concat"></a>
+### Combining matrices (horizontal and vertical concatenation)
+
+The binary operator "\|" puts a matrix aside another; i.e., if A is a
+NxM matrix and B is a NxK matrix, then A\|B is a Nx(M+K) matrix, which
+consists of A left of B.
+
+Analogously, A_B puts A atop of B.
+
+These operators work also for numbers, which are treated as 1x1 matrices.
 They do even work, if A is a Nx0 or 0xN matrix.
 
-The mathematical operators +,-,*,/ work as usual for numbers. For
-matrices they work elementwise. The matrix product of A and B is
-computed by "A.B". If a is a number and B a matrix, then a+B or
-B+a computes the sum of all elements of B with a. This also holds
-for the other operators. Of course, -A negates all elements of A.
-Retro knows the rule, to compute "*" and "/" before "+" and "-".
+[[Top](#top)]
+
+
+<a id="matrix.op"></a>
+### Matrix operations
+
+The matrix product of A and B is computed by "A.B".
+
+The transposed matrix of 1 is computed by "A'".
+is the transposed matrix. 
+
+The mathematical operators +,-,\*,/ work as usual for numbers. For
+matrices they work elementwise.
+
+If a is a number and B a matrix, then a+B or B+a computes the sum of all 
+elements of B with a. This also holds for the other operators. 
+
+Precedence between operators is observed as usual.
+
 One can also write ".*","./" for compatibility with MATLAB. If
 A has a different size as B, and neither A or B is a 1x1 matrix or
 a number, then A+B results in error.
-
-Of course, one can use the round brackets ( and ) to group expressions
-like in
-
-	>(1+5)*(6+7^(1+3))
 
 The power operator can be written "^" or "**" (or ".^"). It computes
 the power elementwise, like all the other operatos. So
@@ -471,21 +784,20 @@ corresponding element of B is nonzero.
 
 yields 1 if any element of A is nonzero.
 
-If S and T are strings, then S|T consists of the string T appended to
-S.
+[[Top](#top)]
 
 
-GENERATING A MATRIX
--------------------
+<a id="matrix.funcs"></a>
+### Functions that generate matrices
 
 There are several builtin functions which generate matrices. The most
-elementary ones are zeros([N,M]) and ones([N,M]), which can also be
-written zeros(N,M) and ones(N,M). They produce a NxM matrix, which is
+elementary ones are **zeros([N,M])** and **ones([N,M])**, which can also be
+written **zeros(N,M)** and **ones(N,M)**. They produce a NxM matrix, which is
 filled with ones or zeros respectively. The first form, which gives
 the size in a 1x2 vector, is faster, since the second form is not a
 builtin function, but a user defined function from UTIL. The input for
 zeros and ones is the output of the "size" function, which gives [N,M]
-for size(A), if A is an NxM matrix. Note, that one can also generate
+for **size(A)**, if A is an NxM matrix. Note, that one can also generate
 0xN and Nx0 matrices. So
 
 	>zeros[0,5]_v_v
@@ -569,28 +881,10 @@ column the last.
 
 does the same to the rows.
 
+[[Top](#top)]
 
-LOADING A FILE
---------------
-
-To abbreviate tedious input one may generate a file containing Retro
-commands. This file can be generated with any editor (like 1STWORD,
-TEMPUS or so). To load that file enter
-
-	>load "filename"
-
-All lines of that file are then interpreted just as any other input
-from the keyboard. Also a loaded file may itself contain a load command.
-If an error occurs, the loading is stopped and an error message is
-displayed. There is a default extension ".e", which you should use for
-your files. You need not specify this extension in the load command.
-
-The best use of a load file is to define functions in that file (see
-"programming Retro").
-
-
-BUILTIN FUNCTIONS
------------------
+<a id="matrix.builtin"></a>
+### Builtin functions
 
 In this section some basic builtin functions are explained. There are
 the usual functions:
@@ -690,13 +984,6 @@ works the same way. E.g.,
 
 returns a vector with faculty function at 1 to 20.
 
-The only string function in Retro is
-
-	>stringcompare("string1","string2")
-
-which returns 0, if the strings are equal, -1 if string1 is
-alphabetically prior to string2, and 1 else.
-
 	>time()
 
 returns a timer in seconds. It is useful for benchmarks etc.
@@ -709,226 +996,10 @@ waits for n seconds or until a key was pressed.
 
 waits for a keypress and returns the internal scan code.
 
+[[Top](#top)]
 
-LINEAR ALGEBRA
---------------
-
-There are lots of builtin functions to perform linear algebra. The
-matrix product has already been discussed. The operation
-
-	>A\b
-
-takes a NxN matrix A and a Nx1 vector b and returns the vector x such
-that Ax=b. If in
-
-	>A\B
-
-B is a NxM matrix, then the systems A\B[:,i] are solved simultanuously.
-An error is issued if the determinant of A turns out to be to small
-relative to the internal epsilon.
-
-	>inv(A)
-
-computes the invers of A. This is a function in UTIL defined as
-
-	>A\id(cols(A))
- 
-There are also more primitive functions, like
-
-	>lu(A)
-
-for NxM matrices A. It returns multiple values, which needs explaining.
-You can assign its return values to variables with
-
-	>{Res,ri,ci,det}=lu(A)
-
-If you use only
-
-	>Res=lu(A)
-
-all other output values are dropped. To explain the output of lu, lets
-start with Res. Res is a NxM matrix containing the LU-decomposition of
-A; i.e., L.U=A with a lower triangle matrix L and an upper triangle
-matrix U. L has ones in the diagonal, which are omitted so that L and
-U can be stored in Res. det is of course the determinant of A. ri
-contains the indices of the rows of lu, since during the algorithm the
-rows may have been swept. ci is not important if A is nonsingular. If
-A is singular, however, Res contains the result of the Gauss algorithm.
-ri contains 1 and 0 such that the columns with 1 form a basis for the
-columns of A.
-
-lu is used by several functions in UTIL.
-
-	>kernel(A)
-
-gives a basis of the kernel of A; i.e., the vectors x with Ax=0.
-
-	>image(A)
-
-gives a basis of the vectors Ax.
-
-The primitive function for computing eigenvalues currently implemented
-is
-
-	>charpoly(A)
-
-which computes the characteristic polynomial of A. This is used by
-
-	>eigenvalues(A)
-
-to compute the eigenvalues of A. Then
-
-	>eigenspace(A,l)
-
-computes a basis of the eigenspace of l.
-
-	>{l,X}=eigen(A)
-
-returns the eigenvalues of A in l and the eigenvectors in X.
-
-
-STATISTICAL FUNCTIONS
----------------------
-
-Retro supports statistical functions, such as distribution integrals
-and random variables.
-
-First of all,
-
-	>random(N,M)
-
-or random([N,M]) generates an NxM random matrix with uniformly
-distributed values in [0,1]. It uses the internal random number
-generator of ANSI-C. The quality of this generator may be doubtful;
-but for most purposes it should suffice. The function
-
-	>normal(N,M)
-
-or normal([N,M]) returns normally distributed random variables with
-mean value 0 and standart deviation 1. You should scale the function
-for other mean values or deviations.
-
-A function for the mean value or the standart deviation has not been
-implemented, since it is easily defined in Retro; e.g,
-
-	>m=sum(x)/cols(x)
-
-is the mean value of the vector x, and
-
-	>d=sqrt(sum((x-m)^2)/(cols(x)-1))
-
-the standart deviation.
-
-Rather, some distributions are implemented.
-
-	>normaldis(x)
-
-returns the probability of a normally dstributed random variable being
-less than x.
-
-	>invnormaldis(p)
-
-is the inverse to the above function. These functions are only accurate
-to about 4 digits. However, this is enough for practical purposes and
-an improved version is easily implemented with the Romberg or Gauss
-integration method.
-
-Another distribution is
-
-	>tdis(x,n)
-
-It the T-distrution of x with n degrees of freedom; i.e., the
-probability that n the sum of normally distributed random variables
-scaled with their mean value and standart deviation are less than x.
-
-	>invtdis(p,n)
-
-returns the inverse of this function.
-
-	>chidis(x,n)
-
-returns the chi^2 distribution; i.e., the distribution of the sum of
-the squares n normally distributed random variables.
-
-	>fdis(x,n,m)
-
-returns the f-distribution with n and m degrees of freedom.
-
-Other functions have been mentioned above, like bin, fak, count, etc.,
-which may be useful for statistical purposes.
-
-
-POLYNOMIALS
------------
-
-Retro stores a polynomial a+bx+...+cx^n in the form [a,b,...,c]. It
-can evaluate a polynomial with the Horner scheme
-
-	>polyval(p,x)
-
-where x can be a matrix, of course. It can multiply polynomials with
-
-	>polymult(p,q)
-
-or add them with
-
-	>polyadd(p,q)
-
-Of course, the polynomials need not have the same degree.
-
-	>polydiv(p,q)
-
-divides p by q and returns {result,remainder}.
-
-	>polytrunc(p)
-
-truncates a polynomial to its true degree (using epsilon). In UTIL
-
-	>polydif(p)
-
-is defined. It differentiates the polynomial once. To construct a
-polynomial with prescribed zeros z=[z1,...,zn]
-
-	>polycons(z)
-
-is used. The reverse is obtained with
-
-	>polysolve(p)
-
-This function uses the Bauhuber method, which converges very stabelly
-to the zeros. However, there is always the problem with multiple zeros
-destroying the accuracy (but not the speed of convergence). Another
-problem is the scaling of the polynomial, which can improve the
-stability and accuracy of the method considerably.
-
-Polynomial interpolation can be done by
-
-	>d=interp(t,s)
-
-where t and s are vectors. The result is a polynomial in divided
-differences (Newton) form, and can be evaluated by
-
-	>interpval(t,d,x)
-
-at x. To transform the Newton form to the usual polynomial form
-
-	>polytrans(t,d)
-
-may be used. Interpolation in the roots of unity can be done with
-the fast Fourier transform
-
-	>p=fft(s)
-
-Then p(exp(I*2*pi*i/n))=s[i+1], 0<=i<n-1. For maximal speed, n should
-be a power of 2. The reverse evaluates a polynomial at the roots of
-unity simultanuously
-
-	>s=ifft(p)
-
-
-
-GRAPHICS
---------
+<a id="graph"></a>
+## GRAPHICS
 
 The best part of Retro is its graphic capability. There are two
 screens, the text screen and the graphic screen. Text output
@@ -945,6 +1016,9 @@ the screen with the smallest x value left and the smallest y value at
 the bottom. To be precise, the rectangle is mapped to the screen
 window, which may only cover a part of the display area. See below for
 more information on windows.
+
+<a id="graph.2d"></a>
+### 2D graphics
 
 If x and y are 1xN vectors, the function
 
@@ -1122,6 +1196,11 @@ returns the previous marker style.
 resets the plot and marker styles. There is also the command
 
 	>xmark(x,y)
+
+[[Top](#top)]
+
+<a id="graph.3d"></a>
+### 3D graphics
 
 The easiest way to produce 3D-plots is
 
@@ -1307,28 +1386,11 @@ returns several x coordinates and y coordinates at the points, which
 the user selected by the mouse. The selection stops, if the user clicks
 above the plot window.
 
-
-DIRECTORIES
------------
-
-The active directory can be changed with
-
-	>cd("path")
-
-where path is the new directory and may include a drive letter, like
-
-	>cd("a:\progs")
-
-The command
-
-	>dir("*.e")
-
-displays all files in the active directory, which fit with the pattern.
-This is not available on UNIX machines.
+[[Top](#top)]
 
 
-THE META FILE
--------------
+<a id="graph.meta"></a>
+### The meta file
 
 For special purposes, you can keep a record of your graphic output
 on an external file called meta file. You turn on recording with
@@ -1383,9 +1445,11 @@ might write a program for printer output, film sequences etc. using
 the meta file. Sorry, but I was unable to use POSTSCRIPT commands. It
 should be trival to translate the above commands however.
 
+[[Top](#top)]
 
-PROGRAMMING RETRO
-----------------
+
+<a id="prog"></a>
+## PROGRAMMING RETRO
 
 Retro would not be as powerful as it is, if there wasn't the
 possibility to extend it with user defined functions. A function can
@@ -1400,8 +1464,9 @@ Loading a file is done with
 as explained above.
 
 
-FUNCTIONS
----------
+<a id="prog.func"></a>
+### Functions
+
 
 A function is declared by the following commands
 
@@ -1420,7 +1485,7 @@ finishes the function definition. An example:
 Every function must have a return statement, which ends the execution
 of the function and defines the value it returns. A function can be
 used in any expression, just as the builtin functions. If a function
-is not used in an assignment and with surpressed output (followed by
+is not used in an assignment and with suppressed output (followed by
 ";"), it is used like a procedure and its result is evidently lost.
 However, the function may have had some side effect.
 
@@ -1539,10 +1604,10 @@ By the way, a variable can be removed with
 
 	>clear name,...
 
+[[Top](#top)]
 
-
-RETRO PROGRAMMING LANGUAGE
--------------------------
+<a id="prog.syntax"></a>
+### Control structure syntax
 
 Like in any other programming language, in Retro there are commands
 for changing the flow of evaluation. These commands can only be used
@@ -1594,10 +1659,92 @@ and
 
 	>  for i=1 to 10; i, end;
 
+[[Top](#top)]
+
+<a id="prog.style"></a>
+### Programming style
+
+All internal Retro functions can handle vector or matrix input. And so
+should user defined functions. To achieve this, sometimes nothing
+special needs to be done. E.g., the function
+
+	>function kap (r,i,n)
+	>  p=1+i/100;
+	>  return p*r*(p^n-1)/(p-1)
+	>endfunction
+
+is automatically capable to handle matrix intput. Thus
+
+	>kap(1000,5:0.1:10,10)
+
+will produce a vector of values. However, if the function uses a more
+complicated algorithm, one needs to take extra care. E.g.,
+
+	>function lambda (a,b)
+	>  si=size(a,b); l=zeros(si);
+	>  loop 1 to prod(si);
+	>    l{#}=max(abs(polysolve([1,a{#},b{#},1])));
+	>  end;
+	>  return l
+	>endfunction
+
+shows the fastest way to achieve the aim. "si" will contain the size,
+of the matrix "a" or "b", and will yield an error message, if the
+sizes are different. However, if "a" is a real and "b" a matrix, "si"
+will contain the size of "b" and the program will still run properly.
+The loop will then be over all the elements of "a" or "b". the "{#}"
+indexing works correctly, if the vector is smaller than the index. It
+then yields the last element of a vector, which is OK in the case of a
+real or complex values. See also the function "map" in UTIL explained
+below.
+
+Forthermore, as a matter of good style, one should use the help lines
+extensively. One should explain all parameters of the function and its
+result. This is a good way to remember what the function really does.
+
+[[Top](#top)]
 
 
-DEBUGGING RETRO PROGRAMS
-------------------------
+<a id="prog.fargs"></a>
+### Passing functions as arguments
+
+It is possible to pass functions to a function. E.g., the function
+"bisect" in UTIL finds the zero of a function using bisection. One
+uses this function in the following way:
+
+	>function f(x)
+	>  return x*x-2
+	>endfunction
+	>bisect("f",1,2)
+
+The result will be sqrt(2). If "f" needs extra paramters, those can
+also be passed to "bisect":
+
+	>funtion f(x,a)
+	>  return x*x-a
+	>endfunction
+	>bisect("f",0,a,a)
+
+will result in sqrt(a) (for a>=0). The search interval is set to [0,a].
+
+The way to write a function like "bisect" is to use the "args" function.
+
+	>function bisect (function,a,b)
+	>...
+	>  y=function(x,args(4));
+	>...
+	>endfunction
+
+Then "function" will be called with the parameter "x" and all paramters
+from the 4-th on (if any) which have been passed to "bisect". Of course,
+"function" should be assigned a string, containing the name of the
+function which we want the zero of.
+
+[[Top](#top)]
+
+
+<a id="prog.debug"></a>
+### Debugging
 
 The command
 
@@ -1644,87 +1791,11 @@ the trace bit of this function off.
 
 switches tracing for all functions off.
 
-
-PROGRAMMING STYLE
------------------
-
-All internal Retro functions can handle vector or matrix input. And so
-should user defined functions. To achieve this, sometimes nothing
-special needs to be done. E.g., the function
-
-	>function kap (r,i,n)
-	>  p=1+i/100;
-	>  return p*r*(p^n-1)/(p-1)
-	>endfunction
-
-is automatically capable to handle matrix intput. Thus
-
-	>kap(1000,5:0.1:10,10)
-
-will produce a vector of values. However, if the function uses a more
-complicated algorithm, one needs to take extra care. E.g.,
-
-	>function lambda (a,b)
-	>  si=size(a,b); l=zeros(si);
-	>  loop 1 to prod(si);
-	>    l{#}=max(abs(polysolve([1,a{#},b{#},1])));
-	>  end;
-	>  return l
-	>endfunction
-
-shows the fastest way to achieve the aim. "si" will contain the size,
-of the matrix "a" or "b", and will yield an error message, if the
-sizes are different. However, if "a" is a real and "b" a matrix, "si"
-will contain the size of "b" and the program will still run properly.
-The loop will then be over all the elements of "a" or "b". the "{#}"
-indexing works correctly, if the vector is smaller than the index. It
-then yields the last element of a vector, which is OK in the case of a
-real or complex values. See also the function "map" in UTIL explained
-below.
-
-Forthermore, as a matter of good style, one should use the help lines
-extensively. One should explain all parameters of the function and its
-result. This is a good way to remember what the function really does.
+[[Top](#top)]
 
 
-PASSING FUNCTIONS AS PARAMETERS
--------------------------------
-
-It is possible to pass functions to a function. E.g., the function
-"bisect" in UTIL finds the zero of a function using bisection. One
-uses this function in the following way:
-
-	>function f(x)
-	>  return x*x-2
-	>endfunction
-	>bisect("f",1,2)
-
-The result will be sqrt(2). If "f" needs extra paramters, those can
-also be passed to "bisect":
-
-	>funtion f(x,a)
-	>  return x*x-a
-	>endfunction
-	>bisect("f",0,a,a)
-
-will result in sqrt(a) (for a>=0). The search interval is set to [0,a].
-
-The way to write a function like "bisect" is to use the "args" function.
-
-	>function bisect (function,a,b)
-	>...
-	>  y=function(x,args(4));
-	>...
-	>endfunction
-
-Then "function" will be called with the parameter "x" and all paramters
-from the 4-th on (if any) which have been passed to "bisect". Of course,
-"function" should be assigned a string, containing the name of the
-function which we want the zero of.
-
-
-USER INTERFACE
---------------
+<a id="prog.ui"></a>
+## User interface
 
 Clearly, Retro is designed to run interactively. The user loads a file
 containing the functions he needs. The file may inform the user of its
@@ -1773,7 +1844,7 @@ on 15 places with 10 digits after decimal dot, and "%20.10e" produces
 the exponential format. You can concatenate strings with | to longer
 output in a single line.
 
-Output is surpressed globally with
+Output is suppressed globally with
 
 	>output off;
 
@@ -1819,10 +1890,71 @@ Finally, an error can be issued with the function
 
 	>error("error text")
 
+[[Top](#top)]
 
 
-UTILITIES
----------
+<a id="prog.hints"></a>
+### Hints
+
+One can make all sorts of mistakes in Retro. This section tries to
+warn you of the more common ones, most os which the author has some
+experience with.
+
+As already mentioned, you should not assign to the parameter of a
+function. This will generally produce strange errors, which are
+difficult to debug. If you need default values for parameters, use a
+construction like
+
+	>function f(a,x)
+	>  if argn()==2; xx=x; else xx=4; endif
+	>  ...
+
+which gives xx the value of the second parameter, with default 4.
+
+The next mistake is to produce matrices with 0 rows or columns. Retro
+can not do any computation with these matrices. Make sure that every
+index you use is in range. And use special handling, if there is
+nothing to do.
+
+Another subtlety concerns the use of multiple return values. The
+following simply does not work:
+
+	>x=random(1,10); sin(sort(x))
+
+The reason is that sort returns not only the sorted array but also the
+indices of the sorted elements. This works as if sin was passed two
+parameters and Retro will not recognize that use of sin. To work
+around this either assign the sorted array to a variable or put extra
+brackets around it:
+
+	>x=random(1,10); sin((sort(x)))
+
+Also a return statement like
+
+	>return {sort(x),y}
+
+really returns 3 (or more) values! Use
+
+	>return {(sort(x)),y}
+
+One further misfortune results from the use of strings as functions,
+like in
+
+	>function test(f,x)
+	>	return f(x*x)
+	>endfunction
+	>test("sin",4)
+
+This works well as long as there is no function by the name of "f". If
+there is, this function is called rather than the sine function. The
+only way to avoid this is to use really strange names for function
+parameters. I prefer "test(ffunction,x)" and used it throughout UTIL.
+
+[[Top](#top)]
+
+
+<a id="util"></a>
+## UTILITIES
 
 In UTIL some fuctions are defined, which will to be of general use.
 First there are some functions for solving equations.
@@ -1915,96 +2047,236 @@ point and only this fixed point is returned.
 evaluates the function f(x,...) at all elements of x, if f(x,...)
 does not work because the function f does not accept vectors x.
 
-
-HINTS
------
-
-One can make all sorts of mistakes in Retro. This section tries to
-warn you of the more common ones, most os which the author has some
-experience with.
-
-As already mentioned, you should not assign to the parameter of a
-function. This will generally produce strange errors, which are
-difficult to debug. If you need default values for parameters, use a
-construction like
-
-	>function f(a,x)
-	>  if argn()==2; xx=x; else xx=4; endif
-	>  ...
-
-which gives xx the value of the second parameter, with default 4.
-
-The next mistake is to produce matrices with 0 rows or columns. Retro
-can not do any computation with these matrices. Make sure that every
-index you use is in range. And use special handling, if there is
-nothing to do.
-
-Another subtlety concerns the use of multiple return values. The
-following simply does not work:
-
-	>x=random(1,10); sin(sort(x))
-
-The reason is that sort returns not only the sorted array but also the
-indices of the sorted elements. This works as if sin was passed two
-parameters and Retro will not recognize that use of sin. To work
-around this either assign the sorted array to a variable or put extra
-brackets around it:
-
-	>x=random(1,10); sin((sort(x)))
-
-Also a return statement like
-
-	>return {sort(x),y}
-
-really returns 3 (or more) values! Use
-
-	>return {(sort(x)),y}
-
-One further misfortune results from the use of strings as functions,
-like in
-
-	>function test(f,x)
-	>	return f(x*x)
-	>endfunction
-	>test("sin",4)
-
-This works well as long as there is no function by the name of "f". If
-there is, this function is called rather than the sine function. The
-only way to avoid this is to use really strange names for function
-parameters. I prefer "test(ffunction,x)" and used it throughout UTIL.
+[[Top](#top)]
 
 
-VERSION CHANGES
----------------
+<a id="linear"></a>
+## LINEAR ALGEBRA
 
-Here is a list of recent changes to Retro. The new version should be
-downward compatible in most cases. Minor error corrections are not
-listed here.
+There are lots of builtin functions to perform linear algebra. The
+matrix product has already been discussed. The operation
 
-- Named parameters and default values for paramters have been
-introduced. Many functions in UTIL.E have been redesigned using the
-new features.
+	>A\b
 
-- Graphic primitives have been changed. Lines can have a width now.
-The density, huecolor and solidhue functions have been introduced.
-This changed the content of the meta file, which has also been
-simplified.
+takes a NxN matrix A and a Nx1 vector b and returns the vector x such
+that Ax=b. If in
 
-- New functions in UTIL.E: scalematrix, select, framedsolidhue,
-setplotm.
+	>A\B
 
-- The key function is defined. It waits for a key stroke.
+B is a NxM matrix, then the systems A\B[:,i] are solved simultanuously.
+An error is issued if the determinant of A turns out to be to small
+relative to the internal epsilon.
 
-- The help/insert key extends incomplete commands.
+	>inv(A)
+
+computes the invers of A. This is a function in UTIL defined as
+
+	>A\id(cols(A))
+ 
+There are also more primitive functions, like
+
+	>lu(A)
+
+for NxM matrices A. It returns multiple values, which needs explaining.
+You can assign its return values to variables with
+
+	>{Res,ri,ci,det}=lu(A)
+
+If you use only
+
+	>Res=lu(A)
+
+all other output values are dropped. To explain the output of lu, lets
+start with Res. Res is a NxM matrix containing the LU-decomposition of
+A; i.e., L.U=A with a lower triangle matrix L and an upper triangle
+matrix U. L has ones in the diagonal, which are omitted so that L and
+U can be stored in Res. det is of course the determinant of A. ri
+contains the indices of the rows of lu, since during the algorithm the
+rows may have been swept. ci is not important if A is nonsingular. If
+A is singular, however, Res contains the result of the Gauss algorithm.
+ri contains 1 and 0 such that the columns with 1 form a basis for the
+columns of A.
+
+lu is used by several functions in UTIL.
+
+	>kernel(A)
+
+gives a basis of the kernel of A; i.e., the vectors x with Ax=0.
+
+	>image(A)
+
+gives a basis of the vectors Ax.
+
+The primitive function for computing eigenvalues currently implemented
+is
+
+	>charpoly(A)
+
+which computes the characteristic polynomial of A. This is used by
+
+	>eigenvalues(A)
+
+to compute the eigenvalues of A. Then
+
+	>eigenspace(A,l)
+
+computes a basis of the eigenspace of l.
+
+	>{l,X}=eigen(A)
+
+returns the eigenvalues of A in l and the eigenvectors in X.
+
+[[Top](#top)]
 
 
-FINAL WORDS
------------
+<a id="poly"></a>
+## POLYNOMIALS
 
-The author is interested in applications of Retro and will collect
-them. These applications will then be included in program updates
-(maybe in packed form). Some interesting applications are in the
-folder PROGS. The file EXAMPLES.DOC contains sample sessions with
-Retro and shows how to solve problems with this programming system.
+Retro stores a polynomial a+bx+...+cx^n in the form [a,b,...,c]. It
+can evaluate a polynomial with the Horner scheme
+
+	>polyval(p,x)
+
+where x can be a matrix, of course. It can multiply polynomials with
+
+	>polymult(p,q)
+
+or add them with
+
+	>polyadd(p,q)
+
+Of course, the polynomials need not have the same degree.
+
+	>polydiv(p,q)
+
+divides p by q and returns {result,remainder}.
+
+	>polytrunc(p)
+
+truncates a polynomial to its true degree (using epsilon). In UTIL
+
+	>polydif(p)
+
+is defined. It differentiates the polynomial once. To construct a
+polynomial with prescribed zeros z=[z1,...,zn]
+
+	>polycons(z)
+
+is used. The reverse is obtained with
+
+	>polysolve(p)
+
+This function uses the Bauhuber method, which converges very stabelly
+to the zeros. However, there is always the problem with multiple zeros
+destroying the accuracy (but not the speed of convergence). Another
+problem is the scaling of the polynomial, which can improve the
+stability and accuracy of the method considerably.
+
+Polynomial interpolation can be done by
+
+	>d=interp(t,s)
+
+where t and s are vectors. The result is a polynomial in divided
+differences (Newton) form, and can be evaluated by
+
+	>interpval(t,d,x)
+
+at x. To transform the Newton form to the usual polynomial form
+
+	>polytrans(t,d)
+
+may be used. Interpolation in the roots of unity can be done with
+the fast Fourier transform
+
+	>p=fft(s)
+
+Then p(exp(I*2*pi*i/n))=s[i+1], 0<=i<n-1. For maximal speed, n should
+be a power of 2. The reverse evaluates a polynomial at the roots of
+unity simultanuously
+
+	>s=ifft(p)
+
+[[Top](#top)]
+
+
+<a id="stat"></a>
+## RANDOM NUMBERS and STATISTICAL FUNCTIONS
+
+Retro supports statistical functions, such as distribution integrals
+and random variables.
+
+First of all,
+
+	>random(N,M)
+
+or random([N,M]) generates an NxM random matrix with uniformly
+distributed values in [0,1]. It uses the internal random number
+generator of ANSI-C. The quality of this generator may be doubtful;
+but for most purposes it should suffice. The function
+
+	>normal(N,M)
+
+or normal([N,M]) returns normally distributed random variables with
+mean value 0 and standart deviation 1. You should scale the function
+for other mean values or deviations.
+
+A function for the mean value or the standart deviation has not been
+implemented, since it is easily defined in Retro; e.g,
+
+	>m=sum(x)/cols(x)
+
+is the mean value of the vector x, and
+
+	>d=sqrt(sum((x-m)^2)/(cols(x)-1))
+
+the standart deviation.
+
+Rather, some distributions are implemented.
+
+	>normaldis(x)
+
+returns the probability of a normally dstributed random variable being
+less than x.
+
+	>invnormaldis(p)
+
+is the inverse to the above function. These functions are only accurate
+to about 4 digits. However, this is enough for practical purposes and
+an improved version is easily implemented with the Romberg or Gauss
+integration method.
+
+Another distribution is
+
+	>tdis(x,n)
+
+It the T-distrution of x with n degrees of freedom; i.e., the
+probability that n the sum of normally distributed random variables
+scaled with their mean value and standart deviation are less than x.
+
+	>invtdis(p,n)
+
+returns the inverse of this function.
+
+	>chidis(x,n)
+
+returns the chi^2 distribution; i.e., the distribution of the sum of
+the squares n normally distributed random variables.
+
+	>fdis(x,n,m)
+
+returns the f-distribution with n and m degrees of freedom.
+
+Other functions have been mentioned above, like bin, fak, count, etc.,
+which may be useful for statistical purposes.
+
+[[Top](#top)]
+
+
+## FINAL WORDS
+
+The author is interested in applications of Retro. Some interesting 
+applications are in the *progs* folder. The file examples.md contains 
+sample sessions with Retro and shows how to solve problems with this 
+programming system.
 
 The author wishes anyone success in using Retro.

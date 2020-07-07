@@ -123,9 +123,11 @@ void mzeros1 (header *hd);
 void margn (header *hd);
 void msetkey (header *hd);
 void many (header *hd);
+#if 0
 void mcd (header *hd);
 void mdir (header *hd);
 void mdir0 (header *hd);
+#endif
 void wmultiply (header *hd);
 void smultiply (header *hd);
 void mproject (header *hd);
@@ -277,9 +279,11 @@ builtintyp builtin_list[] = {
 	{"argn",0,margn},
 	{"setkey",2,msetkey},
 	{"any",1,many},
+#if 0
 	{"cd",1,mcd},
 	{"searchfile",1,mdir},
 	{"searchfile",0,mdir0},
+#endif
 	{"bandmult",2,wmultiply},
 	{"symmult",2,smultiply},
 	{"project",3,mproject},

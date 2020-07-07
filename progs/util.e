@@ -1,4 +1,4 @@
-.. The Utilities.
+... The Utilities.
 
 "Loading utilities, Version 3.04, Apr 16, 1993."
 
@@ -28,23 +28,6 @@ function wait
 	return wait(300);
 endfunction
 
-function dir(pattern="*.*")
-## dir(pattern) displays a directory.
-## dir() is the same as dir("*.*").
-	s=searchfile(pattern), if s=="" return 0; endif;
-	repeat
-		s=searchfile(), if s==""; return 0; endif;
-	end;
-endfunction
-
-function format
-## format([n,m]) sets the number output format to m digits and a total
-## width of n. Also format(n,m);
-	if argn()==1 && isstring(arg1) return format(arg1,[0,6]); endif
-	elseif argn()==2 && istring(arg1) return format(arg1,[0,arg2]); endif
-	error("Illegal argument number!"),
-endfunction
-
 function longformat
 ## longformat() sets a long format for numbers
 	return format("STD",[0,16]);
@@ -54,6 +37,37 @@ function shortformat
 ## shortformat() sets a short format for numbers
 	return format("STD",[0,6]);
 endfunction;
+
+function stdformat(digits=6)
+## use a smart format to print litterals with 'digits' significant digits.
+##  ex: 123.45  3.34567E-14
+	return format("STD",[0,digits]);
+endfunction
+
+function sciformat(digits=6)
+## use a scientific format to print litterals with 'digits' significant digits.
+##  ex: 1.2345E+2  3.34567E-14
+	return format("SCI",[0,digits]);
+endfunction
+
+function fixedformat(digits=6)
+## use a fixed format to print litterals with 'digits' digits for the fractionnal part.
+##  ex: 123.450000  0.003346
+	return format("FIXED",[0,digits]);
+endfunction
+
+function eng1format(digits=6)
+## use a engineering format to print litterals with 'digits' significant digits.
+## set the printing format to "ENG1".
+##  ex: 123.45E+6, 0.056E-9
+	return format("ENG1",[0,digits]);
+endfunction
+
+function eng2format(digits=6)
+## use a plain text engineering format to print litterals with 'digits' significant digits.
+##  ex: 123.45M, 0.056n
+	return format("ENG2",[0,digits]);
+endfunction
 
 function linspace (a,b,n)
 ## linspace(a,b,n) generates n+1 linear spaced points in [a,b].
@@ -88,7 +102,7 @@ function write (x,s)
 	if argn()==1; s=name(x); endif;
 	si=size(x);
 	if max(si)==1; s|" = "|writeform(x)|";", return 0; endif;
-	s|" = [ .."
+	s|" = [ ..."
 	for i=1 to si[1];
 		for j=1 to si[2]-1;
 			writeform(x[i,j])|",",
@@ -100,7 +114,7 @@ function write (x,s)
 	return 0;
 endfunction
 
-.. ### use zeros,... the usual way ###
+... ### use zeros,... the usual way ###
 
 function diag
 ## diag([n,m],k,v) returns a nxm matrix A, containing v on its k-th
@@ -146,7 +160,7 @@ function matrix
 endfunction
 
 
-.. ### linear algebra things ###
+... ### linear algebra things ###
 
 function id (n)
 ## id(n) creates a nxn identity matrix.
@@ -182,7 +196,7 @@ endfunction
 function image (a)
 ## image(a) computes the image of the quadratic matrix a.
 	{aa,r,c,d}=lu(a);
-	return a[:,nonzeros(c));
+	return a[:,nonzeros(c)];
 endfunction
 
 function det (a)
@@ -298,7 +312,7 @@ function hilb (n)
     return 1/(i+j-1);
 endfunction
 
-.. ### polynomial fit ##
+... ### polynomial fit ##
 
 function polydif (p)
 ## polydif(p) returns the polynomial p'
@@ -441,7 +455,7 @@ function romberg(ffunction,a,b,m=10)
 	return Intalt
 endfunction
 
-gaussz = [ ..
+gaussz = [ ...
 -9.739065285171717e-0001,
 -8.650633666889845e-0001,
 -6.794095682990244e-0001,
@@ -452,7 +466,7 @@ gaussz = [ ..
  6.794095682990244e-0001,
  8.650633666889845e-0001,
  9.739065285171717e-0001];
-gaussa = [ ..
+gaussa = [ ...
  6.667134430868814e-0002,
  1.494513491505806e-0001,
  2.190863625159821e-0001,
@@ -495,7 +509,7 @@ function gauss (ffunction,a,b,n=1)
 	return R
 endfunction
 
-.. ### Broyden ###
+... ### Broyden ###
 
 broydenmax=50;
 
@@ -563,7 +577,7 @@ function iterate (ffunction,x,n=0)
 	endif;
 endfunction	
 
-.. ### Remez algorithm ###
+... ### Remez algorithm ###
 
 function remezhelp (x,y,n)
 ## {t,d,h}=remezhelp(x,y,deg) is the case, where x are exactly deg+2
@@ -618,7 +632,7 @@ function remez(x,y,deg,trace=0)
 	return {t,d,h,x[ind[deg+2]]};
 endfunction
 
-.. ### Natural spline ###
+... ### Natural spline ###
 
 function spline (x,y)
 ## spline(x,y) defines the natural Spline at points x(i) with

@@ -9,6 +9,7 @@
 #define ALIGNMENT 8
 #endif
 
+/* Filesystem interaction */
 #ifdef _WIN32
 #define PATH_DELIM_CHAR '\\'
 #define PATH_DELIM_STR "\\"
@@ -19,14 +20,17 @@
 
 #define MAX_PATH	10
 
-extern char * path[MAX_PATH];
+extern char* path[MAX_PATH];
 extern int npath;
+
+char *cd (char *dir);
+int scan_dir(char *dir_name, char *pat, char ** files[], int *files_count);
+char *dir (char *pattern);
+int execute (char *, char *);
 
 #define EXTENSION ".e"
 
 extern char fktext[12][64];
-
-/* definiert in rmat.c */
 
 typedef enum { line_none, line_solid, line_dotted, line_dashed }
 	linetyp;
@@ -60,12 +64,8 @@ void getpixel (double *x, double *y);
 int wait_key (scantyp *scan);
 int test_key (void);
 
-char *cd (char *dir);
-char *dir (char *pattern);
-
 void clear_graphics (void);
 void clear_screen (void);
-int execute (char *, char *);
 int shrink (size_t size);
 
 double myclock (void);

@@ -573,6 +573,7 @@ void merrlevel (header *hd)
 
 
 /*************************** file IO ****************************/
+#if 0
 void mcd (header *hd)
 {	header *st=hd,*result;
 	char *path;
@@ -601,7 +602,7 @@ void mdir0 (header *hd)
 	if (name) new_string(name,strlen(name),"");
 	else new_string("",0,"");
 }
-
+#endif
 /************************ Stack handling ************************/
 void mfree (header *hd)
 {	new_real(ramend-endlocal,"");

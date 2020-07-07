@@ -530,14 +530,14 @@ void complex_out (double x, double y)
 		if (y>=0) output1hold(-1,"+");
 		else output1hold(-1,"-");
 		y=fabs(y);
-		output1hold(-1,expoformat,x);
+		output1hold(-1,expoformat,y);
 		break;
 	case 4:		/* FIXED */
 		output1hold(0,fixedformat,x);
 		if (y>=0) output1hold(-1,"+");
 		else output1hold(-1,"-");
 		y=fabs(y);
-		output1hold(-1,fixedformat,x);
+		output1hold(-1,fixedformat,y);
 		break;
 	case 5:		/* FRAC */
 		break;
@@ -594,13 +594,10 @@ static void scan_endif (void);
 static int  scan_else (void);
 
 
-char * path[MAX_PATH];
-int npath=0;
-
-static void load_file (void)
 /***** load_file
-	inerpret a file.
+	interpret a file.
 *****/
+static void load_file (void)
 {	char filename[256];
 	char oldline[1024],*oldnext;
 	FILE *oldinfile;
@@ -659,7 +656,7 @@ static void load_file (void)
 		infile=oldinfile;
 		strcpy(line,oldline); next=oldnext;
 	} else {
-		output1("Could not open %s!\n",stringof(filename));
+		output1("Could not open %s!\n",filename);
 		error=53; infile=oldinfile; return;
 	}
 }
@@ -866,8 +863,8 @@ static void do_global (void)
 	while (1)
 	{	scan_space();
 		/* parse 'global *' */
-		if (*next=='*' && (*(next+1)==';' || *(next+1)==0)) {
-			next++;
+		if (*next=='*' && (*(next+1)==';' || *(next+1)==0))
+		{	next++;
 			searchglobal=1;
 			return;
 		}
@@ -1294,7 +1291,7 @@ static void do_listvar (void)
 	}
 }
 
-static void do_type (void)
+static void do_show (void)
 {
 	char name[MAXNAME];
 	header *hd;
@@ -1389,60 +1386,6 @@ static void do_help (void)
 			"\n\n To run a demo use:\n >load \"demo\"\n >demo()\n"
 			"\n >quit\n quits this program.\n\n");
 	}
-}
-
-static void do_dump (void)
-{	header *file;
-	if (outfile)
-	{	if (fclose(outfile))
-		{	output("Error while closing dumpfile.\n");
-		}
-		outfile=0;
-	}
-	scan_space();
-	if (*next==';' || *next==',' || *next==0)
-	{	if (*next) next++; return; }
-	file=scan_value();
-	if (error || file->type!=s_string)
-	{	output("Dump needs a filename!\n");
-		error=201; return;
-	}
-	outfile=fopen(stringof(file),"a");
-	if (!outfile)
-	{	output1("Could not open %s.\n",stringof(file));
-	}
-}
-
-static void do_meta (void)
-{	header *file;
-	if (metafile)
-	{	if (fclose(metafile))
-		{	output("Error while closing metafile.\n");
-		}
-		metafile=0;
-	}
-	scan_space();
-	if (*next==';' || *next==',' || *next==0)
-	{	if (*next) next++; return; }
-	file=scan_value();
-	if (error || file->type!=s_string)
-	{	output("Meta needs a filename!\n");
-		error=201; return;
-	}
-	metafile=fopen(stringof(file),"ab");
-	if (!metafile)
-	{	output1("Could not open %s.\n",stringof(file));
-	}
-}
-
-static void do_remove (void)
-{	header *file;
-	file=scan_value();
-	if (error || file->type!=s_string)
-	{	output("Remove needs a string!\n");
-		error=202; return;
-	}
-	remove(stringof(file));
 }
 
 static void do_do (void)
@@ -1572,6 +1515,65 @@ static void do_quit (void)
 {	quit=1;
 }
 
+static void do_dump (void)
+{
+	char filename[256];
+	if (outfile)
+	{	if (fclose(outfile))
+		{	output("Error while closing dumpfile.\n");
+		}
+		outfile=0;
+	}
+	scan_space();
+	if (*next==';' || *next==',' || *next==0)
+	{	if (*next) next++; return; }
+	if (*next=='(') {
+		header* hd=scan_value();
+		if (error) return;
+		if (hd->type!=s_string) {
+			output("String value expected!\n");
+			error=1; return;
+		}
+		strncpy(filename,stringof(hd),255);filename[255]=0;
+	} else {
+		scan_filename(filename,256);
+	}
+	outfile=fopen(filename,"a");
+	if (!outfile)
+	{	output1("Could not open %s.\n",filename);
+	}
+}
+
+static void do_meta (void)
+{
+	char filename[256];
+	if (metafile)
+	{	if (fclose(metafile))
+		{	output("Error while closing metafile.\n");
+		}
+		metafile=0;
+	}
+	scan_space();
+	if (*next==';' || *next==',' || *next==0)
+	{	if (*next) next++; return; }
+	if (*next=='(') {
+		header* hd=scan_value();
+		if (error) return;
+		if (hd->type!=s_string) {
+			output("String value expected!\n");
+			error=1; return;
+		}
+		strncpy(filename,stringof(hd),255);filename[255]=0;
+	} else {
+		scan_filename(filename,256);
+	}
+	if (error) return;
+	metafile=fopen(filename,"ab");
+	if (!metafile)
+	{	output1("Could not open %s.\n",filename);
+	}
+}
+
 static void do_exec (void)
 {	header *name;
 	char *s;
@@ -1588,6 +1590,109 @@ static void do_exec (void)
 		error=131;
 	}
 }
+
+static void do_cd (void)
+{	header *hd;
+	char filename[256];
+	char *s;
+	scan_space();
+	if (*next==';' || *next==',' || *next==0)
+	{	s=cd("");
+		output1("%s\n",s);
+		return;
+	}
+	if (*next=='(')
+	{   hd=scan_value();
+		if (error) return;
+		if (hd->type!=s_string)
+		{	output("String value expected!\n");
+			error=1; return;
+		}
+		strncpy(filename,stringof(hd),255);filename[255]=0;
+	}
+	else
+	{	scan_filename(filename,256);
+	}
+	if (error) return;
+	s=cd(filename);
+	if (*next!=';') output1("%s\n",s);
+	if (*next==',' || *next==';') next++;
+}
+
+static void do_dir (void)
+{
+	char pattern[16]="*";
+	int len, npl, i, j, k, imax;
+	char **entries=NULL;
+	int n_entries=0;
+	
+	scan_space();
+	if (*next==';' || *next==',' || *next==0) {
+		/**/
+	} else if (*next=='(') {
+		header* hd=scan_value();
+		if (error) return;
+		if (hd->type!=s_string) {
+			output("String value expected!\n");
+			error=1; return;
+		}
+		strncpy(pattern,stringof(hd),15);pattern[15]=0;
+	} else {
+		scan_filename(pattern,16);
+	}
+	if (error) return;
+	
+	len = scan_dir(".",pattern,&entries,&n_entries);
+	len +=2;
+	npl = linelength/len;
+	imax = n_entries/npl;
+	if (n_entries % npl) imax++;
+	for (i=0; i<imax;i++) {
+		for (j=0; j<npl; j++) {
+			if (outputing) {
+				int l;
+				if (npl*i+j>=n_entries) break;
+				output1("%s", entries[npl*i+j]);
+				l=strlen(entries[npl*i+j]);
+				for (k=0;k<len-l;k++)
+					output(" ");
+				if (test_key()==escape) outputing=0;
+			}
+			free(entries[npl*i+j]);
+		}
+		output("\n");
+	}
+	free(entries);
+	if (!outputing) {
+		outputing=1;
+		output("\n");
+	}
+	
+	if (*next==',' || *next==';') next++;
+}
+
+static void do_remove (void)
+{
+	char filename[256];
+
+	scan_space();
+	if (*next=='(')
+	{   header* hd=scan_value();
+		if (error) return;
+		if (hd->type!=s_string)
+		{	output("String value expected!\n");
+			error=1; return;
+		}
+		strncpy(filename,stringof(hd),255);filename[255]=0;
+	}
+	else
+	{	scan_filename(filename,256);
+	}
+	if (error) return;
+
+	remove(filename);
+}
+
 
 static int command_count;
 
@@ -1610,14 +1715,12 @@ static commandtyp command_list[] = {
 	{"clear",c_clear,do_clear},
 	{"clg",c_clg,do_clg},
 	{"cls",c_cls,do_cls},
-	{"exec",c_exec,do_exec},
 	{"forget",c_forget,do_forget},
 	{"global",c_global,do_global},
 	{"list",c_global,do_list},
 	{"listvar",c_global,do_listvar},
-	{"type",c_global,do_type},
+	{"show",c_global,do_show},
 	{"dump",c_global,do_dump},
-	{"remove",c_global,do_remove},
 	{"help",c_global,do_help},
 	{"do",c_global,do_do},
 	{"memorydump",c_global,do_mdump},
@@ -1626,6 +1729,10 @@ static commandtyp command_list[] = {
 	{"meta",c_global,do_meta},
 	{"comment",c_global,do_comment},
 	{"trace",c_global,do_trace},
+	{"exec",c_exec,do_exec},
+	{"cd",c_global,do_cd},
+	{"dir",c_global,do_dir},
+	{"rm",c_global,do_remove},
 };
 
 static void command_print (void)
@@ -1648,7 +1755,7 @@ static int command_compare (const commandtyp *p1, const commandtyp *p2)
 }
 
 static void command_sort (void)
-{	command_count=0;
+{
 	command_count=sizeof(command_list)/sizeof(commandtyp);
 	qsort(command_list,command_count,sizeof(commandtyp),
 		(int (*)(const void *, const void *))command_compare);
@@ -1704,7 +1811,7 @@ static int command_run (void)
 /***************** scanning ***************************/
 void scan_space (void)
 {	start: while (*next==' ' || *next=='\t') next++;
-	if (!udfon && *next=='.' && *(next+1)=='.')
+	if (!udfon && *next=='.' && *(next+1)=='.' && *(next+2)=='.')
 		{	next_line(); if (error) return; goto start; }
 }
 
@@ -1827,13 +1934,13 @@ static void scan_filename (char *name, int lmax)
 			error=11;
 		}
 	}
-	else if (!isalpha(*next) && *next!='_' && *next!=PATH_DELIM_CHAR)
+	else if (!isalpha(*next) && *next!='_' && *next!=PATH_DELIM_CHAR && *next!='.' && *next!='*')
 	{   output1("Valid file name or path expected at:\n%s\n",next);
 		error=11; *name=0; return;
 	}
 	else
 	{	if (*next=='_') { *name++=*next++; count++; }
-		while (isalpha(*next) || isdigit(*next) || *next==PATH_DELIM_CHAR || *next=='-' || *next=='.')
+		while (isalpha(*next) || isdigit(*next) || *next==PATH_DELIM_CHAR || *next=='-' || *next=='.' || *next=='*')
 		{	*name++=*next++; count++;
 			if (count>=lmax-1)
 			{	output("Name too long!\n");
@@ -2689,11 +2796,11 @@ void main_loop (int argc, char *argv[])
 	epsilon=10000*DBL_EPSILON;
 	sort_builtin(); command_sort(); make_xors(); clear_fktext();
 	next=line;		/* clear input line */
-	strcpy(line,"load \"retro.cfg\";");
+	strcpy(line,"load \"retro.e\";");
 	for (i=1; i<argc; i++)
-	{	strcat(line," load \"");
-		strcat(line,argv[i]);
-		strcat(line,"\";");
+	{	strncat(line," load \"",MAXLINE-1);
+		strncat(line,argv[i],MAXLINE-1);
+		strncat(line,"\";",MAXLINE-1);
 	}
 	
 //	fprintf(stderr,"sizeof(header) = %lu\nsizeof(stacktyp) = %lu\n", sizeof(header), sizeof(stacktyp));

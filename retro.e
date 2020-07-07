@@ -10,9 +10,9 @@ setkey(8,"format(\"STD\",[0,6]);");
 setkey(9,"reset");
 setkey(10,"quit");
 
-cd("progs");
-load util
+cd progs;
 
+load util
 load plot
 
 shortformat(); shrinkwindow();
