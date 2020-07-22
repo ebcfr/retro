@@ -40,20 +40,7 @@ function select
 	x=x'; return {x[1],x[2]}
 endfunction
 
-function title (text)
-## title(text) plots a title to the grafik window.
-	ctext(text,[512 0]);
-	return text;
-endfunction
-
-function xlabel(text,l=1)
-## Puts the label text at the x-axis at point l in [0,1].
-	w=window();
-	ht=textheight();
-...	ctext(text,[w[1]+l*(w[3]-w[1]),w[4]+0.2*ht]);
-	ctext(text,[(w[1]+w[3])/2,w[4]+2*ht]);
-	return 0;
-endfunction
+... text and labeling
 
 function textheight
 ## textheight() returns the height of a letter.
@@ -65,6 +52,50 @@ function textwidth
 ## textwidth() returns the width of a letter.
 	h=textsize();
 	return h[1];
+endfunction
+
+function title (text)
+## title(text) plots a title to the grafik window.
+	w=window(); ht=textheight();
+	ctext(text,[w[1]+(w[3]-w[1])/2,w[2]-1.5*ht]);
+	return text;
+endfunction
+
+function xlabel(text,l=1)
+## Puts the label text at the x-axis at point l in [0,1].
+	w=window();
+	ht=textheight();
+	return text(text,[(w[1]+w[3])/2,w[4]+2*ht],1);
+endfunction
+
+function ylabel(text,l=1)
+## Puts the label text at the y-axis at point l in [0,1].
+	w=window();wt=textwidth();
+	return text(text,[w[1]-8*wt,(w[4]+w[2])/2],4);
+endfunction
+
+function text
+## text(s,[c,r]) plots the centered string s at the coordinates (c,r).
+## Also text(s,c,r).
+	if argn()==2 return text(arg1,arg2,0); endif;
+	if argn()==3 return text(arg1,[arg2,arg3],0); endif;
+	error("Illegal argument number!"),
+endfunction
+
+function ctext
+## ctext(s,[c,r]) plots the centered string s at the coordinates (c,r).
+## Also ctext(s,c,r).
+	if argn()==2 return text(arg1,arg2,1); endif;
+	if argn()==3 return text(arg1,[arg2,arg3],1); endif;
+	error("Illegal argument number!"),
+endfunction
+
+function rtext
+## rtext(s,[c,r]) plots the centered string s at the coordinates (c,r).
+## Also text(s,c,r).
+	if argn()==2 return text(arg1,arg2,2); endif;
+	if argn()==3 return text(arg1,[arg2,arg3],2); endif;
+	error("Illegal argument number!"),
 endfunction
 
 function fullwindow
@@ -102,21 +133,16 @@ function ticks (a,b,extend=0)
 ## the factor of the ticks.
 	fexp0=floor(log(b-a)/log(10));
 	if fexp0<-2 || fexp0>2 fexp=3*floor(fexp0/3); else fexp=0; endif
-	if fexp==fexp0
-		tick=1;
-	else
-		tick=10^(fexp0-fexp);
+...	tick=10^(fexp0-fexp);
+	tick=10^fexp0;
+	n=ceil((b-a)*10^-fexp0);
+	if n<3 tick1=n*tick/10;
+	elseif n<5 tick1=tick/2;
+	else tick1=tick;
 	endif
-	if (b-a)*10^-fexp>10*tick
-		tick1=tick*2;
-	elseif (b-a)*10^-fexp<5*tick
-		tick1=tick/2;
-	elseif (b-a)*10^-fexp<3*tick
-		tick1=tick/5;
-	else tick1=tick; endif
 ...	m=a/10^fexp;M=b/10^fexp;
 ...	return {(floor(m/tick1)+1)*tick1:tick1:(ceil(M/tick1)-1)*tick1,10^fexp}
-	tick1=tick1*10^fexp;
+...	tick1=tick1*10^fexp;
 	if extend
 		return {(floor(a/tick1+0.05))*tick1:tick1:(ceil(b/tick1-0.05))*tick1,10^fexp};
 	endif
@@ -176,7 +202,8 @@ function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 			t=xticks; f=1;
 			p=setplot([xticks[1],xticks[length(xticks)]]|p[3:4]);
 		else
-			{t,f}=ticks(p[1],p[2]);
+			{t,f}=ticks(p[1],p[2],1);
+			p=setplot([t[1],t[length(t)]]|p[3:4]);
 		endif
 	else
 		{t,f}=logticks2(p[1],p[2]);
@@ -187,7 +214,8 @@ function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 			t=yticks; f=1;
 			p=setplot(p[1:2]|[yticks[1],yticks[length(yticks)]]);
 		else
-			{t,f}=ticks(p[3],p[4]);
+			{t,f}=ticks(p[3],p[4],1);
+			p=setplot(p[1:2]|[t[1],t[length(t)]]);
 		endif
 	else
 		{t,f}=logticks2(p[3],p[4]);
@@ -391,20 +419,6 @@ function window
 ## be screen coordimates. Also window(c1,r1,c2,r2).
 ## window() returns the active window coordinates.
 	if argn()==4; return window([arg1,arg2,arg3,arg4]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function ctext
-## ctext(s,[c,r]) plots the centered string s at the coordinates (c,r).
-## Also ctext(s,c,r).
-	if argn()==3; return ctext(arg1,[arg2,arg3]); endif;
-	error("Illegal argument number!"),
-endfunction
-
-function text
-## text(s,[c,r]) plots the centered string s at the coordinates (c,r).
-## Also ctext(s,c,r).
-	if argn()==3; return text(arg1,[arg2,arg3]); endif;
 	error("Illegal argument number!"),
 endfunction
 

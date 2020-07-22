@@ -24,14 +24,15 @@ DLIBDIR =
 # List all default libraries here
 DLIBS = -lm 
 
-#XLIBS = -lX11 -lXft -lfontconfig
-XLIBS = -lX11
+#XLIBS = -lX11
+XLIBS = -lX11 -lXft
 
 # C source files here
 SRC  = src/core.c src/edit.c src/extend.c src/funcs.c \
        src/graphics.c src/mainloop.c src/matheh.c src/spread.c
 
-XSRC = src/sysdepx.c
+#XSRC = src/sysdepx.c
+XSRC = src/sysdepxft.c
 
 TSRC = src/sysdept.c
 

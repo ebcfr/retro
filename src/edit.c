@@ -55,12 +55,12 @@ static void prompt (void)
 
 static void left (int n)
 {	int i;
-	for (i=0; i<n; i++) move_cl();
+	for (i=0; i<n; i++) move_cl_cb();
 }
 /*
 static void right (int n)
 {	int i;
-	for (i=0; i<n; i++) move_cr();
+	for (i=0; i<n; i++) move_cr_cb();
 }
 */
 static void fkinsert (int i, int *pos, char *s)
@@ -99,7 +99,7 @@ static void edithelp (char *s, int *pos, int *shorter)
 	while (isalpha(*end) || isdigit(*end)) end++;
 	if (start>s+(*pos) || start>=end || (end-start)>MAXNAME-1) return;
 	/* we have an extent */
-	while (p<end) { move_cr(); (*pos)++; p++; }
+	while (p<end) { move_cr_cb(); (*pos)++; p++; }
 	memmove(helpstart,start,end-start);
 	helpstart[end-start]=0;
 	helpn=extend(helpstart,helpextend);
@@ -111,11 +111,13 @@ scantyp edit (char *s)
 	scantyp scan;
 	char ch,chs[2]="a",*p=0;
 	s[0]=0; pos=0;
-	edit_on();
+	edit_on_cb();
 	prompt();
 	helpn=0; helphist=-1; //hist=act_history;
 	while (1){
+		cursor_on_cb();
 		ch=wait_key(&scan);
+		cursor_off_cb();
 		if (scan!=help && helpnext<helpn) helpn=0;
 		if (scan==enter || scan==eot) break;
 		shorter=0;
@@ -125,34 +127,34 @@ scantyp edit (char *s)
 					cpy(s+pos+1,s+pos);
 					s[pos]=ch; pos++;
 					chs[0]=ch;
-					cursor_off(); gprint(chs);
+					gprint(chs);
 				}
-				goto cont;
+				break;
 			case cursor_left :
-				if (pos) { pos--; move_cl(); }; continue;
+				if (pos) { pos--; move_cl_cb(); }; continue;
 		    case cursor_right : /* cursor right */
-		    	if (s[pos]) { pos++; move_cr(); }; continue;
+		    	if (s[pos]) { pos++; move_cr_cb(); }; continue;
 			case word_right : /* a word to the right */
 			{	while (s[pos] && s[pos]!=' ')
-				{	pos++; move_cr(); }
+				{	pos++; move_cr_cb(); }
 				while (s[pos]==' ')
-				{	pos++; move_cr(); }
+				{	pos++; move_cr_cb(); }
 				continue;
 			}
 			case word_left : /* a word to the right */
-			{	if (pos) { pos--; move_cl(); }
+			{	if (pos) { pos--; move_cl_cb(); }
 				while (pos && s[pos]==' ')
-				{	pos--; move_cl(); }
+				{	pos--; move_cl_cb(); }
 				while (pos && s[pos]!=' ')
-				{	pos--; move_cl(); }
-				if (pos) { pos++; move_cr(); }
+				{	pos--; move_cl_cb(); }
+				if (pos) { pos++; move_cr_cb(); }
 				continue;
 			}
 		    case backspace :
 		    	if (pos) {
 		    		pos--;
 		    		cpy(s+pos,s+pos+1); 
-		    		move_cl(); shorter=1;
+		    		move_cl_cb(); shorter=1;
 		    	}
 		    	break;
 		    case delete :
@@ -164,7 +166,8 @@ scantyp edit (char *s)
 		    	if (hist) {
 		    		hist--; strcpy(s,history[hist]); shorter=1;
 		    	}
-		    	cursor_off(); left(pos); pos=0; goto cont;
+		    	left(pos); pos=0;
+		    	break;
 		    case cursor_down :
 		    	hist++;
 		    	if (hist<act_history) {
@@ -172,37 +175,41 @@ scantyp edit (char *s)
 		    	} else {
 		    		hist=act_history; s[0]=0; shorter=1;
 		    	}
-		    	cursor_off(); left(pos); pos=0; goto cont;
+		    	left(pos); pos=0;
+		    	break;
 		    case clear_home :
 		    case escape :
-		    	cursor_off();
 		    	left(pos); pos=0; s[0]=0;
 		    	shorter=1; hist=act_history;
-		    	goto cont;
+		    	break;
 		    case line_end :
-		    	while (s[pos]) { pos++; move_cr(); }
+		    	while (s[pos]) { pos++; move_cr_cb(); }
 		    	continue;
 		    case line_start :
 		    	left(pos); pos=0;
 		    	continue;
+		    case page_up:
+		    	page_up_cb();
+		    	continue;
+		    case page_down:
+		    	page_down_cb();
+		    	continue;
 		    case switch_screen :
-		    	edit_off(); show_graphics(); edit_on(); break;
+		    	edit_off_cb(); show_graphics(); edit_on_cb(); break;
 		    case help :
 		    	if (helpnext>=helpn && helphist<0) {
 		    		edithelp(s,&pos,&shorter);
 		    		p=0;
 		    	}
 		    	if (helphist>=0) {	/* completion found in history */
-		    		cursor_off();
 		    		strcpy(s,history[helphist]);
 		    		hist=helphist;
 		    		p=s+pos;
 		    		gprint(p);
 		    		pos+=strlen(p);
 		    		shorter=1;
-		    		helphist=-1; goto cont;
+		    		helphist=-1;
 		    	} else if (helpnext<helpn) {	/* completion is a builtin/command/udf */
-		    		cursor_off();
 		    		if (p) {					/* erase preceding extension (not the first time) */
 		    			left(strlen(p));
 		    			pos-=strlen(p);
@@ -217,7 +224,6 @@ scantyp edit (char *s)
 					gprint(p);
 					pos+=strlen(p);
 					shorter=1;
-					goto cont;
 		    	}
 		    	break;
 		    case fk1 : fkinsert(0,&pos,s); break;
@@ -235,18 +241,16 @@ scantyp edit (char *s)
 		    default:
 		    	continue;
 		}
-		cursor_off();
 
-		cont: gprint(s+pos);
+		gprint(s+pos);
 		if (shorter) clear_eol();
 		left(strlen(s+pos));
-		cursor_on();
 	}
 	push_in_history(s);
 	if (outfile) {
 		fprintf(outfile,"%s",s);
 	}
 	output("\n");
-	edit_off();
+	edit_off_cb();
 	return scan;
 }

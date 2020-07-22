@@ -741,25 +741,25 @@ added, such as viewing old text. But the input line should be
 visible as soon as a key is pressed by the user.
 ****/
 
-void move_cl (void)
+void move_cl_cb (void)
 /* move the text cursor left */
 {
 	gprint("\x1b[1D");
 }
 
-void move_cr (void)
+void move_cr_cb (void)
 /* move the text cursor right */
 {
 	gprint("\x1b[1C");
 }
 
-void cursor_on (void)
+void cursor_on_cb (void)
 /* switch cursor on */
 {
 	gprint("\x1b[?25h");
 }
 
-void cursor_off (void)
+void cursor_off_cb (void)
 /* switch cursor off */
 {
 	gprint("\x1b[?25l");
@@ -787,14 +787,22 @@ when the command line is on.
 	}
 }
 
-void edit_off (void)
+void edit_off_cb (void)
 /* the command line is no longer in use (graphics or computing) */
 {	editing=0;
 }
 
-void edit_on (void)
+void edit_on_cb (void)
 /* the command line is active */
 {	editing=1;
+}
+
+void page_up_cb(void)
+{
+}
+
+void page_down_cb()
+{
 }
 
 /********** execute programs *************************/
@@ -837,6 +845,8 @@ static void term_restore(void)
 {
 	/* restore the former settings */
 	tcsetattr(STDIN_FILENO,TCSANOW,&old_tio);
+	// show cursor
+	printf("\x1b[?25h");
 }
 #endif
 

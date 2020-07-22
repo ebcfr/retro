@@ -45,8 +45,10 @@ void mwait (header *hd);
 void mrandom (header *hd);
 void mnormal (header *hd);
 void mtext (header *hd);
+#if 0
 void mctext (header *hd);
 void mrtext (header *hd);
+#endif
 void mtextsize (header *hd);
 void mwire (header *hd);
 void msolid (header *hd);
@@ -203,9 +205,11 @@ builtintyp builtin_list[] = {
 	{"wait",1,mwait},
 	{"random",1,mrandom},
 	{"normal",1,mnormal},
-	{"text",2,mtext},
+	{"text",3,mtext},
+#if 0
 	{"ctext",2,mctext},
 	{"rtext",2,mrtext},
+#endif
 	{"textsize",0,mtextsize},
 	{"wire",3,mwire},
 	{"solid",3,msolid},

@@ -73,14 +73,17 @@ double myclock (void);
 void gprint (char *s); /* print an output text (no newline) */
 void gflush (void); /* flush out graphics */
 
-void move_cr (void);
-void move_cl (void);
-void clear_eol (void);
-void cursor_off (void); 
-void cursor_on (void);
+void edit_on_cb (void);
+void edit_off_cb (void);
+void cursor_off_cb (void); 
+void cursor_on_cb (void);
+void move_cr_cb (void);
+void move_cl_cb (void);
+void page_up_cb(void);
+void page_down_cb(void);
 
-void edit_on (void);
-void edit_off (void);
+void clear_eol (void);
+
 
 void sys_wait (double delay, int *scan);
 

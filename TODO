@@ -1,0 +1,11 @@
+* bug when not enough memory to do assignment
+* XInput: allow UTF8 input for string but pure ASCII for identifiers
+* integrate mark function in xplot, add a comb style for graph,
+  add styles for xplot
+* More update on documentation
+* More module development
+* Graph object with zoom and cursor
+* Review terminal interface
+  - notebook style option back (?), though preserve default terminal interface
+  - graphics in text window ?
+* meta for outputing graphics to various formats (helper program?)

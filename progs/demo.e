@@ -485,8 +485,8 @@ function udfdemo
 	"" "As an example we list a function, which computes the first n"
 	"fibonacci numbers when called with fibo(n):"
 	weiter();
-	">type fibo",
-	type fibo;
+	">show fibo",
+	show fibo;
 	">fibo(5)", fibo(5),
 	weiter();
 	"As you can see, a function starts with" 
@@ -523,7 +523,7 @@ function udfdemo
 	
 	"" "Example:"
 	""
-	type itertest
+	show itertest
 	""
 	">longformat(); itertest(1.5), shortformat();", 
 	longformat(); itertest(1.5), shortformat();
@@ -540,12 +540,12 @@ function udfdemo
 	weiter();
 	"An example:"
 	""
-	type multitest
+	show multitest
 	""
 	"{a,b}=multitest(2); a, b,", {a,b}=multitest(2); a, b,
 	weiter();
 	
-	"Comments start with #"|"#. Comments are not listet with type."
+	"Comments start with #"|"#. Comments are not listet with show."
 	"If the first lines of a functions start with #"|"#,"
 	"they are considered help text. With help this text can be read."
 	""
@@ -558,7 +558,7 @@ function udfdemo
 	"uses a complicate algorithm or cases. Then there is the {} indexing"
 	"which treats the matrix like a vector."
 	weiter();
-	">type hut", type hut
+	">show hut", show hut
 	""
 	v=view(5,2,0,0.4);
 	">{x,y}=field(-1.2:0.2:1.2,-1.2:0.2:1.2); framedsolid(x,y,hut(x,y));",
@@ -611,7 +611,7 @@ function specialdemo
 ## Simpson
 	"Simpson integral : ",
 	""
-	">type f", type f;
+	">show f", show f;
 	""
 	">t=simpson("|char(34)|"f"|char(34)|",0,1)", t=simpson("f",0,1),
 	""
@@ -623,7 +623,7 @@ function specialdemo
 ## Bisection
 	"Solutions of an equation : "
 	""
-	">type f", type f;
+	">show f", show f;
 	""
 	">t=bisect("|char(34)|"f"|char(34)|",0,1),", t=bisect("f",0,1),
 	""
@@ -635,7 +635,7 @@ function specialdemo
 ## Differential equations
 	"Differential equations : "
 	""
-	">type dgl", type dgl;
+	">show dgl", show dgl;
 	""
 	">t=0:0.05:2; s=heun("|char(34)|"dgl"|char(34)|",t,1); plot(t,s);"
 	t=0:0.05:2; s=heun("dgl",t,1); plot(t,s); title("(return)"); warten();
@@ -917,7 +917,7 @@ function demo (del=5)
 endfunction
 
 ""
-type demos
+show demos
 ""
 "Use one of the above, or type demo() or demo(10)."
 

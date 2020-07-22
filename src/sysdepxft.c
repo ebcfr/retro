@@ -48,7 +48,10 @@ static int chscreen;		/* screen height in [line] */
 
 static int cx,cy;			/* current char pos relative to the screen 
 							   in char count/linecount */
-
+#if 0
+static int cyview=0;		/* nb of the line corresponding to the
+							   textview position in the buffer */
+#endif
 static int cursoron=0,		/* cursor is visible */
            scrolled=0,		/* view scrolled ? */
            in_text=1;		/* text window is the active view */
@@ -65,16 +68,21 @@ double nextcheck;
 #include <X11/Xatom.h>
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
+#include <X11/Xft/Xft.h>
 
 #define MAXCOLORS 16
 
-Display *display;
+#include "icon.h"
+
+void process_event (XEvent *event);
+
 char sdisp[64]="";
+Display *display;
 int screen, depth;
 Window window;
 unsigned long mask;
 Atom sel_prop;
-GC gc,cleargc,stipplegc,textgc,invtextgc;
+GC gc,cleargc,stipplegc;
 Pixmap stipple[64];
 unsigned long blackpixel, whitepixel;
 Colormap colormap;
@@ -87,13 +95,70 @@ char *colorname[MAXCOLORS]=
 	"LightSteelBlue","LimeGreen","Navy"
 };
 Pixmap pixmap;
-XFontStruct *gfont,*tfont;
-char gfontname[32]=GFONT;
-char tfontname[32]=FONT;
 
 int userwidth=800,userheight=600,userx=0,usery=0,usersize=0,userpos=0;
 
-#include "icon.h"
+XftFont *gfont, *gvfont, *tfont;
+XftDraw *draw;
+Visual* visual;
+XftColor tfgcolor, tbgcolor;
+
+char* tfontname="Mono:size=10";
+char* gfontname="Sans:size=10";
+char* gvfontname="Sans:size=10:matrix=0 -1 1 0";
+//char* gfontname="Mono:size=10";
+
+#if 0
+/* Purely graphic info */
+typedef struct {
+	Display *dpy;
+	Colormap cmap;
+	Window win;
+	Drawable buf;
+	Atom xembed, wmdeletewin, netwmname, netwmpid;
+	XIM xim;
+	XIC xic;
+	Visual *vis;
+	XSetWindowAttributes attrs;
+	int scr;
+	int isfixed;	/* is fixed geometry? */
+	int l, t;		/* left and top offset */
+	int gm;			/* geometry mask */
+	int tw, th;		/* tty width and height */
+	int w, h;		/* window width and height */
+	int ch;			/* char height */
+	int cw;			/* char width  */
+	char state;		/* focus, redraw, visible */
+	int cursor;		/* cursor style */
+} XWindow;
+
+
+/* text window buffer */
+#define MAX_BUF_LINES	1024
+
+typedef struct _buf_t {
+	char*			data;		// the data line
+	int				size;		// size of the data
+	unsigned int	flags		// type of line: command, output, comment
+} buf_t;
+
+/* the terminal object */
+typedef struct _term_t {
+	buf_t	tbuf[MAX_BUF_LINES];// circular buffer of lines
+	int		tbuf_r_id=0;		// current start of the buffer
+	int		tbuf_w_id=0;		// current end
+
+	int		view_line_length;	// nb of viewable chars on the display
+	int		view_max_lines;		// nb of lines that be displayed in the view
+	int		view_top;			// tbuf index at the top of the view
+	
+} term_t;
+
+term_t term;
+
+int term_push(term_t* term, char* data, int flags);
+
+#endif
 
 void die(const char *errstr, ...) {
 	va_list ap;
@@ -104,20 +169,22 @@ void die(const char *errstr, ...) {
 	exit(EXIT_FAILURE);
 }
 
-void process_event (XEvent *event);
-
 void computechar (void)
 {
+	XGlyphInfo extents;
+	
+	XftTextExtents8(display,gfont,(XftChar8*)"0",1,&extents);
 	hchar=(gfont->ascent+gfont->descent+2)*1024l/hscreen;
-	wchar=(XTextWidth(gfont,"m",1))*1024l/wscreen;
+//	wchar=gfont->max_advance_width*1024l/wscreen;
+	wchar=extents.width*1024l/wscreen;
 }
 
 void quitX (void)
 /* Disconnect from server */
 {   
 	XDestroyWindow(display,window);
-	XFreeFont(display,tfont);
-	XFreeFont(display,gfont);
+	XftFontClose(display,tfont);
+	XftFontClose(display,gfont);
 	XFreePixmap(display,pixmap);
 	XCloseDisplay(display);
 }
@@ -137,7 +204,9 @@ Window open_window (int x, int y, int width, int height, int flag)
 	unsigned char byte,bits[512];
 	XColor rgb,hardware;
 	XGCValues gcvalues;
-
+	XRenderColor black = {.red=0, .green=0, .blue=0, .alpha=0xFFFF};
+	XRenderColor white = {.red=0xFFFF, .green=0xFFFF, .blue=0xFFFF, .alpha=0xFFFF};
+	
 	/* window attributes */
 	attributes.border_pixel=BlackPixel(display,screen);
 	attributes.background_pixel=WhitePixel(display,screen);
@@ -173,8 +242,8 @@ Window open_window (int x, int y, int width, int height, int flag)
 	XSetClassHint(display,window,classhints); */
 
 	/* Window and Icon name */
-	XStoreName(display,window,"Retro");
-	XSetIconName(display,window,"Retro");
+	XStoreName(display,window,"retro");
+	XSetIconName(display,window,"retro");
 
 	/* size hints */
 	sizehints.flags=PMinSize;
@@ -206,7 +275,6 @@ Window open_window (int x, int y, int width, int height, int flag)
 	gc=XCreateGC(display,window,0,&gcvalues);
 	XSetForeground(display,gc,blackpixel);
 	XSetBackground(display,gc,whitepixel);
-	XSetFont(display,gc,gfont->fid);
 				
 	cleargc=XCreateGC(display,window,0,&gcvalues);
 	XSetForeground(display,cleargc,whitepixel);
@@ -228,16 +296,10 @@ Window open_window (int x, int y, int width, int height, int flag)
 		stipple[i]=XCreateBitmapFromData(display,window,(char*)bits,64,64);
 	}
 
-	textgc=XCreateGC(display,window,0,&gcvalues);
-	XSetForeground(display,textgc,blackpixel);
-	XSetBackground(display,textgc,whitepixel);
-	XSetFont(display,textgc,tfont->fid);
-
-	invtextgc=XCreateGC(display,window,0,&gcvalues);
-	XSetForeground(display,invtextgc,whitepixel);
-	XSetBackground(display,invtextgc,blackpixel);
-	XSetFont(display,invtextgc,tfont->fid);
-
+	draw = XftDrawCreate(display, window, visual, colormap);
+	XftColorAllocValue(display, visual, colormap, &black, &tfgcolor);
+	XftColorAllocValue(display, visual, colormap, &white, &tbgcolor);
+					
 	/* events, we like to receive */
 	mask=KeyPressMask|ExposureMask|ButtonPressMask|StructureNotifyMask;
 	XSelectInput(display,window,mask);
@@ -248,7 +310,6 @@ Window open_window (int x, int y, int width, int height, int flag)
 	/* create a pixmap of same size */
 	pixmap=XCreatePixmap(display,window,width,height,depth);
 	XFillRectangle(display,pixmap,cleargc,0,0,width,height);
-	XFlush(display);
 
 	return window;
 }
@@ -260,8 +321,8 @@ void computetext (void)
 }
 
 void initX (void)
+/* switch to a graphic screen */
 {
-	/* Sets up the connection to the X server */
 	display=XOpenDisplay(sdisp);
 	if (!display)
 	{       
@@ -269,8 +330,9 @@ void initX (void)
 		    sdisp);
 		exit(1);
 	}
-	screen=DefaultScreen(display); /* screen # */
-	depth=DefaultDepth(display,screen); /* color depth */
+	screen=DefaultScreen(display);			/* screen # */
+	visual=DefaultVisual(display,screen);	/* visual */
+	depth=DefaultDepth(display,screen);		/* color depth */
 	switch(depth)
 	{
 		case 1 : usedcolors=2; break;
@@ -281,32 +343,20 @@ void initX (void)
 	blackpixel=BlackPixel(display,screen);
 	whitepixel=WhitePixel(display,screen);
 
-	tfont=XLoadQueryFont(display,tfontname);
-	if (!tfont)
-	{
-		fprintf(stderr,"Cannot find %s font\n",tfontname);
-		exit(1);
-	}
+	/* load fonts */
+	tfont = XftFontOpenName(display, screen, tfontname);
+	if (!tfont) die("Cannot find %s font\n",tfontname);
+
 	textheight=tfont->ascent+tfont->descent+2;
-	textwidth=XTextWidth(tfont,"m",1);
-	if (textwidth!=XTextWidth(tfont,"i",1))
-	{
-		fprintf(stderr,
-			"You cannot use the proportional font %s!\n",tfontname);
-		exit(1);
-	}
+	textwidth=tfont->max_advance_width;
 	textoffset=textwidth/2;
 
-	gfont=XLoadQueryFont(display,gfontname);
-	if (!gfont)
-	{
-		fprintf(stderr,"Cannot find %s font\n",gfontname);
-		exit(1);
-	}
-
-	sel_prop=XInternAtom(display,"SEL_PROP",False);
-
-	atexit(quitX);
+	gfont = XftFontOpenName(display, screen, gfontname);
+	if (!gfont) die("Cannot find %s font\n",gfontname);
+	
+	gvfont = XftFontOpenName(display, screen, gvfontname);
+	if (!gvfont) die("Cannot find %s font\n",gvfontname);
+	
 	if (usersize)
 	{	
 		userwidth=abs(userwidth);
@@ -336,11 +386,18 @@ void initX (void)
 	{
 		userx=usery=0;
 	}
+	
 	window=open_window(userx,usery,userwidth,userheight,0);
+	
 	wscreen=userwidth;
 	hscreen=userheight;
 	computetext();
 	computechar();
+	
+	sel_prop=XInternAtom(display,"SEL_PROP",False);
+	
+	atexit(quitX);
+	
 }
 
 void setcolor (int c)
@@ -699,7 +756,9 @@ void gtext (double c, double r, char *text, int color, int align)
 	output a graphic text on screen.
 *****/
 {	
-	int width;
+	int len = strlen(text);
+	XGlyphInfo extents;
+	
 	if (metafile)
 	{	
 		intwrite(4); 
@@ -710,41 +769,41 @@ void gtext (double c, double r, char *text, int color, int align)
 		stringwrite(text);
 	}
 	setcolor(color);
-	
+
 	switch (align) {
 	case 0:
-#ifdef WINDOW
-		XDrawString(display,window,gc,
-		    column(c),row(r)+gfont->ascent,text,strlen(text));
-#endif
-		XDrawString(display,pixmap,gc,
-		    column(c),row(r)+gfont->ascent,text,strlen(text));
+		XftTextExtents8(display, gfont, (XftChar8*)text, len, &extents);
+		XftDrawString8(draw, &tfgcolor, gfont, column(c), row(r)+gfont->ascent, (XftChar8*)text, len);
+		XftDrawChange(draw, pixmap);
+		XftDrawString8(draw, &tfgcolor, gfont, column(c), row(r)+gfont->ascent, (XftChar8*)text, len);
 		break;
-	case 1:	
-		width=XTextWidth(gfont,text,strlen(text));
-#ifdef WINDOW
-		XDrawString(display,window,gc,
-		    column(c)-width/2,row(r)+gfont->ascent,
-		    text,strlen(text));
-#endif
-		XDrawString(display,pixmap,gc,
-		    column(c)-width/2,row(r)+gfont->ascent,
-		    text,strlen(text));
+	case 1:
+		XftTextExtents8(display, gfont, (XftChar8*)text, len, &extents);
+		XftDrawString8(draw, &tfgcolor, gfont, column(c)-extents.width/2, row(r)+gfont->ascent, (XftChar8*)text, len);
+		XftDrawChange(draw, pixmap);
+		XftDrawString8(draw, &tfgcolor, gfont, column(c)-extents.width/2, row(r)+gfont->ascent, (XftChar8*)text, len);
 		break;
 	case 2:
-		width=XTextWidth(gfont,text,strlen(text));
-#ifdef WINDOW
-		XDrawString(display,window,gc,
-		    column(c)-width,row(r)+gfont->ascent,
-		    text,strlen(text));
-#endif
-		XDrawString(display,pixmap,gc,
-		    column(c)-width,row(r)+gfont->ascent,
-		    text,strlen(text));
+		XftTextExtents8(display, gfont, (XftChar8*)text, len, &extents);
+		XftDrawString8(draw, &tfgcolor, gfont, column(c)-extents.width, row(r)+gfont->ascent, (XftChar8*)text, len);
+		XftDrawChange(draw, pixmap);
+		XftDrawString8(draw, &tfgcolor, gfont, column(c)-extents.width, row(r)+gfont->ascent, (XftChar8*)text, len);
+		break;
+	case 3:
+		break;
+	case 4:
+		XftTextExtents8(display, gvfont, (XftChar8*)text, len, &extents);
+		XftDrawString8(draw, &tfgcolor, gvfont, column(c)+extents.width, row(r)+extents.height/2, (XftChar8*)text, len);
+		XftDrawChange(draw, pixmap);
+		XftDrawString8(draw, &tfgcolor, gvfont, column(c)+extents.width, row(r)+extents.height/2, (XftChar8*)text, len);
+		break;
+	case 5:
 		break;
 	default:
 		break;
 	}
+	
+	XftDrawChange(draw, window);
 }
 
 void scale (double s)
@@ -809,7 +868,7 @@ textwindow-> |     |
              |-----+ cy
              |     cx       SCREEN
              |
-             |     textend->X
+             |     textend->\0X
              +---------------------------------+
  
  
@@ -835,32 +894,44 @@ void move_cr_cb (void)
 
 void cursor_on_cb (void)
 {
+	int h=tfont->ascent+tfont->descent;
 	char cstring[]=" ";
 
 	if (scrolled || cx>cwscreen) return;
-
+	
 	cstring[0]=textend[cx];
 	if (cstring[0]==0) cstring[0]=' ';
-	XDrawImageString(display,window,invtextgc,
+	XftDrawRect(draw, &tfgcolor,
+		textoffset+cx*textwidth,
+		cy*textheight+textoffset,
+		textwidth, h
+	);
+	XftDrawString8(draw,&tbgcolor,tfont,
 		textoffset+cx*textwidth,
 		cy*textheight+tfont->ascent+textoffset,
-		cstring,1);
+		(XftChar8*)cstring,1);
 
 	cursoron=1;
 }
 
 void cursor_off_cb (void)
 {
+	int h=tfont->ascent+tfont->descent;
 	char cstring[]=" ";
 
 	if (scrolled || cx>cwscreen) return;
-
+	
 	cstring[0]=textend[cx];
 	if (cstring[0]==0) cstring[0]=' ';
-	XDrawImageString(display,window,textgc,
+	XftDrawRect(draw, &tbgcolor,
+		textoffset+cx*textwidth,
+		cy*textheight+textoffset,
+		textwidth, h
+	);
+	XftDrawString8(draw,&tfgcolor,tfont,
 		textoffset+cx*textwidth,
 		cy*textheight+tfont->ascent+textoffset,
-		cstring,1);
+		(XftChar8*)cstring,1);
 
 	cursoron=0;
 }
@@ -907,8 +978,15 @@ void page_down_cb(void)
  */
 static void textline (char *p, int x, int y)
 {
-	XDrawImageString(display,window,textgc,textoffset+x*textwidth,
-		y*textheight+tfont->ascent+textoffset,p+x,
+	int len=strlen(p+x);
+	XftDrawRect(draw,&tbgcolor,
+		textoffset+x*textwidth,
+		y*textheight+textoffset,
+		textwidth*len,
+		tfont->ascent+tfont->descent
+	);
+	XftDrawString8(draw,&tfgcolor,tfont,textoffset+x*textwidth,
+		y*textheight+tfont->ascent+textoffset,(XftChar8*)p+x,
 		strlen(p+x));
 }
 
@@ -918,7 +996,7 @@ static void textline (char *p, int x, int y)
  */
 static void clearline (char *p, int cx, int cy)
 {
-	XFillRectangle(display,window,invtextgc,
+	XftDrawRect(draw,&tbgcolor,
 		textoffset+cx*textwidth,textoffset+cy*textheight,
 		wscreen-(textoffset+cx*textwidth),textheight);
 	memset(p+cx,0,textstart+TEXTSIZE-(p+cx));
@@ -926,14 +1004,18 @@ static void clearline (char *p, int cx, int cy)
 
 /* clear_eol [CALLBACK] */
 void clear_eol (void)
-{	clearline(textend,cx,cy);
+{
+	/* SEEM TO BUG! when XftDrawRect commented and inserting in
+	   the middle of a string
+	 */
+	clearline(textend,cx,cy);
 }
 
 /* clear_screen [CALLBACK]
  *   clear the whole text screen, reset the buffer
  */
 void clear_screen (void)
-{	XFillRectangle(display,window,invtextgc,0,0,wscreen,hscreen);
+{	XftDrawRect(draw,&tbgcolor,0,0,wscreen,hscreen);
 	cx=0; cy=0; scrolled=0;
 	textwindow=textend=textstart;
 	memset(textstart,0,TEXTSIZE);
@@ -945,7 +1027,7 @@ void clear_screen (void)
 static void textupdate (void)
 {	char *tp;
 	int i;
-	XFillRectangle(display,window,invtextgc,0,0,wscreen,hscreen);
+	XftDrawRect(draw,&tbgcolor,0,0,wscreen,hscreen);
 	tp=textwindow; i=0;
 	while (tp<=textend && i<chscreen) {
 		textline(tp,0,i);
@@ -1130,15 +1212,17 @@ void process_event (XEvent *event)
 			break;
 		case GraphicsExpose:
 			if (event->xgraphicsexpose.count>0) break;
+//			fprintf(stderr,"Graphics Expose\n");
 			refresh_window(); break;
 		case Expose:
 			if (event->xexpose.count>0) break;
+//			fprintf(stderr,"Expose\n");
 			refresh_window(); break;
-			if (cursoron) cursor_on_cb();
 		case ConfigureNotify :
 			while (XCheckWindowEvent(display,window,mask,&dummyevent));
 			if (event->xconfigure.width==wscreen &&
 			    event->xconfigure.height==hscreen) break;
+//			fprintf(stderr,"Configure Notify\n");
 			wscreen=event->xconfigure.width;
 			hscreen=event->xconfigure.height;
 			computechar();
@@ -1590,7 +1674,8 @@ int main (int argc, char *argv[])
 	signal(SIGFPE,setfpe);
 #endif
 	XSetIOErrorHandler(ioerrorhandler);
-	nextcheck=myclock();
+
+	/* parse args */
 	while (argc>1)
 	{
 		if (argv[1][0]=='=')
@@ -1655,7 +1740,7 @@ int main (int argc, char *argv[])
 	
 	ramend=ramstart+stacksize;
 	
-
+	
 	/* set up default pathes and directory */
 	char* s=getenv("RETRO");
 	if (!s) s="~/.retro/progs:";
@@ -1689,6 +1774,8 @@ int main (int argc, char *argv[])
 	}
 #endif
 
+	nextcheck=myclock();
+	
 	initX();
 	XWindowEvent(display,window,ExposureMask,&event);
 	process_event(&event);

@@ -1,6 +1,53 @@
+function signal
+## A signal processing package with functions to:
+## - generate signals: 
+##   dirac, sha, ustep, ramp, pulse, triangle, sawwave, sqrwave, triwave
+## - deal with LTI analog systems
+##   * simulate: tf (Transfer function), ss (state space), zp (zeros, poles, gain) models supported
+##     impulse, step, lsim, freqs, unwrap
+##   * convert from a model to another: tf2zp, zp2tf, tf2ss
+##   * make filter design: outputs zpk model (zeros, poles, gain)
+##     butter, bessel, cheb1, ellip, ellipord
+##   * special plots: bode, nyquist, black/nichols [TODO]
+## - deal with LTI digital systems [TODO]
+## - compute special polynoms: be, cheb
+## - get quick asymptotical frequency response for standard small order filters
+##   alp1, ahp1, alp2, ahp2
+	error("Illegal argument number!");
+endfunction
+
+function dirac(t)
+## returns a vector containing a dirac = 1 when t==0, else 0
+##
+## t     : time
+	return(t==0);
+endfunction
+
+function sha(t,f)
+## returns a vector containing a dirac comb
+##
+## t     : time
+## f     : frequency
+	x=zeros(size(t));
+	dt=t[2]-t[1];dn=1/(f*dt);
+	for  i=0 to cols(t)/dn-1;
+		x[1+i*dn]=1;
+	end
+	return x;
+endfunction
+
 function ustep(t)
 ## returns the heaviside step function
-	return (t>0);
+##
+## t     : time
+	return (t>=0);
+endfunction
+
+function ramp(t)
+## returns a vector containing a unit ramp signal: r(t) = t when t>=0,  0 else
+##
+## t     : time
+	return t*(t>=0);
 endfunction
 
 function sawwave(t,f)
@@ -11,28 +58,42 @@ function sawwave(t,f)
 	return t*f-floor(t*f);
 endfunction
 
-function sqrwave(t,f,E=1,alpha=0.5)
-## returns a vector containing the square signal
+function sqrwave(t,f,E,alpha=0.5)
+## returns a vector containing a square signal
 ##
 ## t     : time
 ## f     : frequency
-## E     : amplitude (from 0 to max)
-## alpha : period ratio
+## alpha : duty cycle
 ##
-	return E*(2*(sawwave(t,f)<alpha)-1);
-endfunction;
+	return 2*(sawwave(t,f)<alpha)-1;
+endfunction
 
 function triwave(t,f,E=1,alpha=0.5)
-## returns a vector containing the triangle signal
+## returns a vector containing a triangle signal
 ##
 ## t     : time
 ## f     : frequency
-## E     : amplitude (from 0 to max)
 ## alpha : period ratio
 ##
 	s=(t*f-floor(t*f));
-	return E*(2*(s/alpha*(s<=alpha)+(1-s)/(1-alpha)*(s>alpha))-1);
-endfunction;
+	return 2*(s/alpha*(s<=alpha)+(1-s)/(1-alpha)*(s>alpha))-1;
+endfunction
+
+function pulse(t,theta=1)
+## returns a signal containing a centered pulse = 1 for |t|<theta/2, else 0
+##
+## t     : time
+## theta : pulse width
+	return (t>=-theta/2)-(t>=theta/2);
+endfunction
+
+function triangle(t,theta=1)
+## returns a signal containing a centered pulse = 1 - |t|/theta for |t|<theta, else 0
+##
+## t     : time
+## theta : half triangle width
+	return (1-abs(t)/theta)*pulse(t,2*theta);
+endfunction
 
 function tf2zp(num,den)
 ## {z,p,k}=tf2zp(num,den)

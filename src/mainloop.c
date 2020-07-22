@@ -1733,6 +1733,7 @@ static commandtyp command_list[] = {
 	{"cd",c_global,do_cd},
 	{"dir",c_global,do_dir},
 	{"rm",c_global,do_remove},
+	{NULL,c_none,NULL}
 };
 
 static void command_print (void)
@@ -1756,7 +1757,7 @@ static int command_compare (const commandtyp *p1, const commandtyp *p2)
 
 static void command_sort (void)
 {
-	command_count=sizeof(command_list)/sizeof(commandtyp);
+	command_count=sizeof(command_list)/sizeof(commandtyp)-1;
 	qsort(command_list,command_count,sizeof(commandtyp),
 		(int (*)(const void *, const void *))command_compare);
 }

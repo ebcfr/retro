@@ -1,5 +1,5 @@
-.. Show the apple set and investigate it, starts automatically or with
-.. >test();
+... Show the apple set and investigate it, starts automatically or with
+... >test();
 
 function apple1 (z,z0)
 ## one iteration
@@ -46,7 +46,8 @@ endfunction
 function test()
 	"Bitte einen Moment warten!",
 	x=[-2,0.5,-1.25,1.25];
-	w=showapple(x); title("Bitte Taste drucken!"); wait(180);
+	clg;
+	w=showapple(x); title("Bitte Taste drucken!"); wait(2);
 	showcontour(w);
 	return w;
 endfunction

@@ -936,7 +936,7 @@ void mlinew (header *hd)
 	res=new_real(old,"");
 	moveresult(st,res);
 }
-
+#if 0
 void mctext (header *hd)
 {	header *hd1;
 	hd1=next_param(hd);
@@ -968,20 +968,22 @@ void mrtext (header *hd)
 		stringof(hd),textcolor,2);
 	gflush();
 }
-
+#endif
 void mtext (header *hd)
-{	header *hd1;
+{	header *hd1, *hd2;
 	hd1=next_param(hd);
+	hd2=next_param(hd1);
 	hd=getvalue(hd); if (error) return;
 	if (hd1) {hd1=getvalue(hd1); if (error) return;}
+	if (hd1) {hd2=getvalue(hd2); if (error) return;}
 	if (hd->type!=s_string || hd1->type!=s_matrix || 
-		dimsof(hd1)->r!=1 || dimsof(hd1)->c!=2)
+		dimsof(hd1)->r!=1 || dimsof(hd1)->c!=2 || hd2->type!=s_real)
 	{	output("Text needs a string and a vector [x y]!\n");
 		error=91; return;
 	}
 	graphic_mode();
 	gtext((int)*matrixof(hd1),(int)*(matrixof(hd1)+1),
-		stringof(hd),textcolor,0);
+		stringof(hd),textcolor,*realof(hd2));
 	gflush();
 }
 
