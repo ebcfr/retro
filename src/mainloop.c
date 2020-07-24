@@ -795,11 +795,37 @@ static void parse_udf (void)
 		}
 		else 
 		if (*next) 
-		{	if (*next=='"')
-			{	*p++=*next++;
+		{	
+			if (*next=='"')
+			{	
+#ifndef MULTILINE_STRING
+				*p++=*next++;
 				while (*next!='"' && *next) *p++=*next++;
+				while(1) {
+					if ((*next=='\"' && *(next-1)!='\\') || *next==0) break;
+					*p++=*next++;
+				}
 				if (*next=='"') *p++=*next++;
-				else { output("\" missing.\n"); error=2200; goto stop; }
+				else { output1("\" missing while parsing user defined function %s.\n",var->name); error=2200; goto stop; }				
+#else
+				int len=0;		/* verify the string is terminated by 
+								   a '"' and its size<1024, allow multiline */
+				*p++=*next++;
+				while (len<1024) {
+					if (*next==0) {
+						len++;		// for '\n'
+						*p++=0; next_line(); firstchar=next;
+					} else {
+						if (*next=='"' && *(next-1)!='\\') {
+							break;
+						}
+						len++;
+						*p++=*next++;
+					}
+				}
+				if (*next=='"') *p++=*next++;
+				else { output1("\" missing while parsing user defined function %s.\n",var->name); error=2200; goto stop; }				
+#endif
 			}
 			else if (isdigit(*next) || 
 				     	(*next=='.' && isdigit(*(next+1))) )
@@ -2373,9 +2399,11 @@ static void scan_elementary (void)
 		scan_matrix();
 	}
 	else if (*next=='\"')		/* parse a string, de-escape escaped '\"' */
-	{	int len, cpy=0;
+	{	int len=0, cpy=0;
 		char *s, *p, *x;
-		next++; s=next; 
+#ifndef MULTILINE_STRING
+		next++; s=next;			/* s beginning of the string */
+
 		while (1) {
 			if (*next=='\"' && *(next-1)=='\\') ;	/* count escaped character \" */
 			else if (*next=='\"' || *next==0) break;
@@ -2386,7 +2414,7 @@ static void scan_elementary (void)
 		next++;
 		/* de-escape characters */
 		for (p=x=s; x!=next; p++,x++) {
-			if (*x=='\\') {
+			if (*x=='\\' && *(x+1)=='\"') {
 				cpy=1;
 				x++;
 				len--;
@@ -2394,6 +2422,39 @@ static void scan_elementary (void)
 			if (cpy) *p=*x;
 		}
 		hd=new_string(s,len,"");
+#else
+		char buf[1024];
+		next++; s=next;			/* s beginning of the string */
+		while (len<1024) {
+			if (*next==0) {
+				strncpy(buf+len,s,next-s);
+				len+=next-s;
+				buf[len++]='\n';
+				next_line();
+				s=next;
+			} else {
+				if (*next=='\"' && *(next-1)!='\\') {
+					strncpy(buf+len,s,next-s);
+					len+=next-s;
+					break;
+				}
+				next++;
+			}
+		}
+		buf[len]=0;
+		if (*next!='\"') { output("\" missing: unterminated string, maybe string too long (>1024 chars)\n"); error=1; return; }
+		next++;
+		/* de-escape characters */
+		for (p=x=buf; *x!=0; p++,x++) {
+			if (*x=='\\' && *(x+1)=='\"') {
+				cpy=1;
+				x++;
+				len--;
+			}
+			if (cpy) *p=*x;
+		}
+		hd=new_string(buf,len,"");
+#endif		
 	}
 	else error=1;
 	after: if (error) return;

@@ -1,8 +1,8 @@
 ... The Demo. Starts automatically.
 
-""
-"Demo loading."
-""
+"
+Demo loading.
+"
 
 demodelay=5;
 
@@ -127,34 +127,34 @@ function normaldemo
 ## Demo of Retro
 	global Pi; pi=Pi;
 	
-	"Hint for window versions:"
-	""
-	"Use the scrollbars to see the complete text"
-	"(or Shift+Cursorup or PageUp on some systems),"
-	"if the text disappeared."
+	"Hint for window versions:
+	
+	Use the scrollbars to see the complete text
+	(or Shift+Cursorup or PageUp on some systems),
+	if the text disappeared."
 	weiter();
 
-	"                             Wellcome at EULER" 
-	""
-	"EULER has been designed to ease numerical computation."
-	"Most of the time one has a tiny problem, to tiny to use a compiler"
-	"language."
-	""
-	"Besides, one may want to play with intermediate results, see a"
-	"graphical representation, or simply have readily available"
-	"numerical functions."
-	"" 
-	"All this can be done with EULER."
-	"It is like using a numerical laboratory."
+	"                             Wellcome at EULER
+	
+	EULER has been designed to ease numerical computation.
+	Most of the time one has a tiny problem, to tiny to use a compiler
+	language.
+	
+	Besides, one may want to play with intermediate results, see a
+	graphical representation, or simply have readily available
+	numerical functions.
+	 
+	All this can be done with EULER.
+	It is like using a numerical laboratory."
 	weiter();
 	
-	"But EULER is not a symbolic algebra program. It uses numbers with"
-	"finite accuracy as supplied by the C compiler used. It is therefore"
-	"faster than a symbolic program, like MATHEMATICA."
-	""
-	"All commands are entered by the keyboard. Old commands can be"
-	"recalled with cursor up or down. ESC interrupts a computation,"
-	"and HELP shows the graphics screen."
+	"But EULER is not a symbolic algebra program. It uses numbers with
+	finite accuracy as supplied by the C compiler used. It is therefore
+	faster than a symbolic program, like MATHEMATICA.
+	
+	All commands are entered by the keyboard. Old commands can be
+	recalled with cursor up or down. ESC interrupts a computation,
+	and HELP shows the graphics screen."
 	weiter();
 	
 ## Eingabe von Matrizen

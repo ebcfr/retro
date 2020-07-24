@@ -1565,9 +1565,9 @@ void sys_wait (double time, int *scan)
 	xfd=XConnectionNumber(display);
 	FD_SET(xfd,&fds);
 	
-	if ((long)time!=0) {
+	if (time>0.0) {
 		tv.tv_sec = (long)time;
-		tv.tv_usec = 0;
+		tv.tv_usec = (long)((time-floor(time))*1e6);
 		tvp=&tv;
 	}
 	

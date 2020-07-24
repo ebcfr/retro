@@ -2543,7 +2543,7 @@ void mfft (header *hd)
 	{	make_complex(st); hd=st; }
 	getmatrix(hd,&r,&c,&m);
 	if (r!=1) wrong_arg("row vector expected");
-	result=new_cmatrix(1,c,"");
+	result=new_cmatrix(1,c,""); if (error) return;
 	mr=matrixof(result);
     memmove((char *)mr,(char *)m,(ULONG)2*c*sizeof(double));
 	fft(mr,c,-1);
@@ -2560,7 +2560,7 @@ void mifft (header *hd)
 	{	make_complex(st); hd=st; }
 	getmatrix(hd,&r,&c,&m);
 	if (r!=1) wrong_arg("row vector expected");
-	result=new_cmatrix(1,c,"");
+	result=new_cmatrix(1,c,""); if (error) return;
 	mr=matrixof(result);
     memmove((char *)mr,(char *)m,(ULONG)2*c*sizeof(double));
 	fft(mr,c,1);

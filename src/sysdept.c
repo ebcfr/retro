@@ -669,9 +669,9 @@ void sys_wait (double time, int *scan)
 	FD_ZERO(&fds);
 	FD_SET(STDIN_FILENO,&fds);
 	
-	if ((long)time!=0) {
+	if (time>0.0) {
 		tv.tv_sec = (long)time;
-		tv.tv_usec = (long)((time-tv.tv_sec)*1e6);
+		tv.tv_usec = (long)((time-floor(time))*1e6);
 		tvp=&tv;
 	}
 	

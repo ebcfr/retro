@@ -1,4 +1,3 @@
-* bug when not enough memory to do assignment
 * XInput: allow UTF8 input for string but pure ASCII for identifiers
 * integrate mark function in xplot, add a comb style for graph,
   add styles for xplot

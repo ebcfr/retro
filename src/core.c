@@ -593,7 +593,7 @@ header *assign (header *var, header *value)
 			strcpy(value->name,name);
 			value->xor=xor(name);
 			if (newram+size>ramend)
-			{	output("Memory overflow.\n"); error=500; return value;
+			{	output1("Memory overflow while assigningu user function %s.\n",var->name); error=500; return value;
 			}
 			memmove(ramstart+size,ramstart,newram-ramstart);
 			newram+=size; endlocal+=size; startlocal+=size;
@@ -603,6 +603,9 @@ header *assign (header *var, header *value)
 			return (header *)ramstart;
 		}
 		/* else, assign a new variable with the value */
+		if (newram+size>ramend)
+		{	output1("Memory overflow while assigning variable %s.\n", var->name); error=500; return value;
+		}
 		memmove(endlocal+size,endlocal,newram-endlocal);
 		value=(header *)((char *)value+size);
 		newram+=size;

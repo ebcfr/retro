@@ -8,7 +8,7 @@
 #include "sysdep.h"
 #include "matheh.h"
 
-char *ram;
+static char *ram;
 int *perm,*col,signdet,luflag=0;
 double **lumat,*c,det;
 complex **c_lumat,*c_c,c_det;

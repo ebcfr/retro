@@ -78,6 +78,7 @@ typedef struct {
 
 typedef struct { header hd; double val; } realtyp;
 
+
 #define realof(hd) ((double *)((hd)+1))
 #define matrixof(hd) ((double *)((char *)((hd)+1)+sizeof(dims)))
 #define dimsof(hd) ((dims *)((hd)+1))

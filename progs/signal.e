@@ -16,6 +16,10 @@ function signal
 	error("Illegal argument number!");
 endfunction
 
+...............................................................
+... signals
+...............................................................
+
 function dirac(t)
 ## returns a vector containing a dirac = 1 when t==0, else 0
 ##
@@ -58,7 +62,7 @@ function sawwave(t,f)
 	return t*f-floor(t*f);
 endfunction
 
-function sqrwave(t,f,E,alpha=0.5)
+function sqrwave(t,f,alpha=0.5)
 ## returns a vector containing a square signal
 ##
 ## t     : time
@@ -68,7 +72,7 @@ function sqrwave(t,f,E,alpha=0.5)
 	return 2*(sawwave(t,f)<alpha)-1;
 endfunction
 
-function triwave(t,f,E=1,alpha=0.5)
+function triwave(t,f,alpha=0.5)
 ## returns a vector containing a triangle signal
 ##
 ## t     : time
@@ -95,6 +99,9 @@ function triangle(t,theta=1)
 	return (1-abs(t)/theta)*pulse(t,2*theta);
 endfunction
 
+...............................................................
+... convert between LTI models
+...............................................................
 function tf2zp(num,den)
 ## {z,p,k}=tf2zp(num,den)
 ## Convert transfer function filter parameter to zero-pole-gain form
@@ -142,6 +149,9 @@ function tf2ss(num,den)
 	return {A,B,C,D};
 endfunction
 
+...............................................................
+... simulate LTI models
+...............................................................
 
 function impulse()
 ## {y,x}=impulse(A,B,C,D,t)
@@ -248,6 +258,9 @@ function lsim()
 	return {y,x};
 endfunction
 
+...............................................................
+... filter design
+...............................................................
 function cheb(x,n)
 	signum=-mod(n,2)*2+1;
 	w1=matrix([rows(n),0],0);
@@ -450,4 +463,51 @@ endfunction
 function unwrap(ph)
 	dph=ph-(ph[1]|ph[1:length(ph)-1]);
 	return ph-2*pi*(cumsum(dph>1.5*pi)-cumsum(dph<-0.5*pi));
+endfunction
+
+...............................................................
+... digital
+...............................................................
+function c2d(t,ff,fs)
+## continous to digital world. it realizes the sample and hold function.
+##   t : time vector
+##   ff: function or vector of the signal to sample
+##   fs: sampling frequency
+## returns {xa,xh,xs}
+##   xa: the analog sampled signal
+##   xh: the analog sample & hold signal
+##   xs: the discretized analog signal
+	sh=sha(t,fs);i=nonzeros(sh);
+	if isfunction(ff) 
+		xa=ff(t,args(4))*sh;
+	else
+		xa=zeros(size(t));xa[i]=ff[i];
+	endif
+	xs=xa[i];
+	f=zeros(size(xs));f[2:cols(f)]=xs[2:cols(f)]-xs[1:cols(f)-1];f[1]=xs[1];
+	xt=zeros(size(t));xt[i]=f;
+	xh=cumsum(xt);
+	return {xa,xh,xs};
+endfunction
+
+function d2c()
+
+endfunction
+
+function ADC(x,FS=3.3,n=12)
+## quantifies the signal according to the ADC parameters
+##   x : the discretized analog signal
+##   FS: ADC full scale
+##   n : ADC resolution
+## returns the digital signal
+	return 2^(n-1)+floor(2^(n-1)*x/FS+0.5);
+endfunction
+
+function DAC(x,FS=3.3,n=12)
+## set the signal back to the analog world
+##   x : the digital signal
+##   FS: DAC full scale
+##   n : DAC resolution
+## returns a discretized analog signal
+	return FS*(x-2^(n-1))/2^(n-1);
 endfunction

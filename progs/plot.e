@@ -40,6 +40,29 @@ function select
 	x=x'; return {x[1],x[2]}
 endfunction
 
+function toscreen
+## Convert the x-y-coordinates v[1],v[2] to screen coordinates,
+## from 0..1024. Useful for Labels.
+	p=plot(); w=window();
+	if argn()==1
+		x=arg1[1];y=arg1[2];
+	elseif argn()==2
+		x=arg1;y=arg2;
+	else
+		error("Wrong arguments for toscreen");
+	endif
+	return [w[1]+(x-p[1])/(p[2]-p[1])*(w[3]-w[1]), ...
+		w[2]-(y-p[4])/(p[4]-p[3])*(w[4]-w[2])];
+endfunction
+
+function fromscreen (c,r)
+## Convert the screen coordinates v[1],v[2] to x-y-coordinates,
+## Returns {x,y}
+	p=plot(); w=window();
+	return [p[1]+(c-w[1])/(w[3]-w[1])*(p[2]-p[1]), ...
+		p[3]+(w[4]-r)/(w[4]-w[2])*(p[4]-p[3])]
+endfunction
+
 ... text and labeling
 
 function textheight

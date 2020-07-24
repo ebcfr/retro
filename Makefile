@@ -13,7 +13,7 @@ SIZE    = $(TARGET)size
 OBJDUMP = $(TARGET)objdump
 
 # List all default C defines here
-DDEFS = -g -O0 -DFONT=\"8x13\" -DGFONT=\"8x13\" -DINSTALL=\"$(INSTALL_DIR)\" -D_GNU_SOURCE
+DDEFS = -g -O0 -DFONT=\"8x13\" -DGFONT=\"8x13\" -DINSTALL=\"$(INSTALL_DIR)\" -D_GNU_SOURCE -DMULTILINE_STRING
 
 # List all default directories to look for include files here
 DINCDIR = . src /usr/include/freetype2
