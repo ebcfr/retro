@@ -6,7 +6,7 @@
 #include "sysdep.h"
 #include "core.h"
 
-#define MAXLINE		256			/* Maximum input line length */
+#define MAXLINE		1024		/* Maximum input line length */
 #define	MAXHIST		32			/* Maximum entries in editing history */
 
 /* Format string for */
@@ -44,9 +44,8 @@ typedef struct {
 } commandtyp;
 
 /* edit.c */
-
 scantyp edit (char *s);
-//void prompt (void);
+void prompt (void);
 
 /* mainloop.c */
 extern int nosubmref,trace;

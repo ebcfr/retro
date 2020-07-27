@@ -13,7 +13,19 @@
 int subplot=111;
 
 typedef struct _plot_t {
+	int 	upperc, upperr, lowerc, lowerr;
 	double	x_min, x_max, y_min, y_max;
+	int		linetype;
+	int		linecolor;
+	int		linewidth;
+	int		marker_type;
+	int		new_frame;
+	int		lines;
+	int		textcolor;
+	int		holding;
+	int		framecolor;
+	int		wirecolor;
+	int		twosides;
 } plot_t;
 
 double x_min=-1,x_max=1,y_min=-1,y_max=1,meshfactor=1,dgrid=0;
@@ -22,9 +34,20 @@ int upperc=10,upperr=30,lowerc=1010,lowerr=1010;
 int connected[4]={1,1,1,1};
 int tconnected[3]={1,0,0};
 
-int linetype=line_solid,linecolor=1,lines=1,holding=0,framecolor=3,
-	wirecolor=2,textcolor=2,markertype=marker_cross,scaling=1,
-	newframe,twosides=1,triangles=0,linewidth=1,densitycolor=1;
+int linetype=line_solid,
+    linecolor=1,
+    lines=1,
+    holding=0,
+    framecolor=3,
+	wirecolor=2,
+	textcolor=2,
+	markertype=marker_cross,
+	scaling=1,
+	newframe,
+	twosides=1,
+	triangles=0,
+	linewidth=1,
+	densitycolor=1;
 
 double distance=5,tele=1.5,a_left=0.5,a_up=0.5;
 
@@ -847,6 +870,7 @@ void mdcolor (header *hd)
 
 void mdgrid (header *hd)
 {	int old=dgrid;
+	header* st=hd;
 	hd=getvalue(hd);
 	if (hd->type!=s_real)
 	{	output("Argument for huegrid must be real!\n");
@@ -854,6 +878,7 @@ void mdgrid (header *hd)
 	}
 	dgrid=(int)*realof(hd);
 	*realof(hd)=(double)old;
+	moveresult(st,new_real(old,""));
 }
 
 void mstyle (header *hd)

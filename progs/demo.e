@@ -165,7 +165,7 @@ function normaldemo
 	"These matrices are stored on the variables x and A."
 	weiter();
 	
-	"All computing is done element for element."
+	"All computing is done elementwise."
 	">x*x" x*x,
 	">A+A" A+A,
 	weiter();

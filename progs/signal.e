@@ -99,6 +99,12 @@ function triangle(t,theta=1)
 	return (1-abs(t)/theta)*pulse(t,2*theta);
 endfunction
 
+function sinc(x)
+## cardinal sinus = sin(x)/x
+## x: a matrix
+	return sin(x)/(x+(x==0))+(x==0);
+endfunction
+
 ...............................................................
 ... convert between LTI models
 ...............................................................

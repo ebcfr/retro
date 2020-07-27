@@ -7,13 +7,7 @@ function weiter
 	" wait(5);
 	return 120;
 endfunction
-"
-                                          (i)                          
-                               __ oo     f   (0) i                     
-                     f(x)  =  \          -------x                      
-                              /__ i = 0    i!                          
 
-"
 "1. Convolution: an introduction"
 ... pulse signal
 function d(t, dt)
@@ -189,6 +183,10 @@ xplot(t,y[1:length(t)]*dt,lw=2);wait(5);
 ... xplot(t,y[1:length(t)]*dt,lw=2);wait(5);
 
 
+"Delaying the impulse response and the signal of N points leads to
+delay the response of 2N points.
+ 
+So one have to shift the response by N points to synchronise all the plots."
 
 tau=10m;N=4000;t=(-N:N-1)*20*tau/N;dt=t[2]-t[1];printf("tau/dt=%g",tau/dt)
 x=ustep(t-2*tau)-ustep(t-8*tau);

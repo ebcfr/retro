@@ -20,14 +20,20 @@ FILE *metafile=0;
 double epsilon;
 
 int error,			/* error code */
-    quit,
-    surpressed,
-    udf=0,			/* set prompt to udf input prompt */
-    errorout,
-    outputing=1,
-    stringon=0,		/* interpret a single string : no assignment, no nextline!, see input(), interpret() and errorlevel() builtin functions */
+    stringon=0,		/* interpret a single string :
+    				   no assignment, no nextline allowed!
+    				   see input(), interpret() and errorlevel()
+    				   builtin functions */
 	trace=0;
 	
+static int errorout;
+static int quit=0;		/* set if we want to quit the program */
+static int udf=0;		/* set when parsing a udf */
+static int outputing=1;	/* allow outputing results */
+#if 0
+static int echoing=0;	/* if set will echo commands from files before executing them */
+#endif
+
 char line[MAXLINE];
 
 long loopindex=0;
@@ -149,6 +155,12 @@ key is pressed.
 		c++;
 	}
 	return count;
+}
+
+void prompt (void)
+{	if (!outputing) gprint("\n>");
+	if (!udf) output(">");
+	else output("$");
 }
 
 /* functions that manipulate the stack */
@@ -297,21 +309,24 @@ void trace_udfline (char *next)
 	}
 }
 
+/**** readline
+	read a line from a file
+ ****/
 static void read_line (char *line)
 {	int count=0,input;
 	char *p=line;
-	while(1)
-	{	input=getc(infile);
-		if (input==EOF)
-		{	fclose(infile); *p++=1; infile=0;
+	while(1) {
+		input=getc(infile);
+		if (input==EOF) {
+			fclose(infile); *p++=1; infile=0;
 			break; 
 		}
 		if (input=='\n') break;
-		if (count>=1023) 
-		{	output("Line too long!\n"); error=50; *line=0; return;
+		if (count>=MAXLINE-1) {
+			output("Line too long!\n"); error=50; *line=0; return;
 		}
-		if ((char)input>=' ' || (signed char)input<0 || (char)input=='\t')
-		{	*p++=(char)input; count++;
+		if ((char)input>=' ' || (signed char)input<0 || (char)input=='\t') {
+			*p++=(char)input; count++;
 		}
 	}
 	*p=0;
@@ -320,14 +335,13 @@ static void read_line (char *line)
 static void next_line (void)
 /**** next_line
 	read a line from keyboard or file.
-****/
+ ****/
 {
 	if (udfon) {
 		while (*next) next++;
 		next++;
 		if (*next==1) udfon=0; else udfline=next;
 		if (trace>0) trace_udfline(next);
-		return;
 	} else {
 		if (trace==-1) trace=1;
 		if (stringon) {
@@ -338,13 +352,12 @@ static void next_line (void)
 		if (!infile) {
 			scantyp r=edit(line);
 			if (r==eot) strcpy(line,"quit");
+		} else {
+			read_line(line);
 		}
-		else read_line(line);
 		next=line;
 	}
 }
-
-
 
 /********************* output functions **************************/
 /* Display modes :
@@ -601,7 +614,7 @@ static void load_file (void)
 {	char filename[256];
 	char oldline[1024],*oldnext;
 	FILE *oldinfile;
-
+	
 	if (udfon) {
 		output("Cannot load a file in a function!\n");
 		error=221; return;
@@ -809,9 +822,9 @@ static void parse_udf (void)
 				else { output1("\" missing while parsing user defined function %s.\n",var->name); error=2200; goto stop; }				
 #else
 				int len=0;		/* verify the string is terminated by 
-								   a '"' and its size<1024, allow multiline */
+								   a '"' and its size<MAXLINE, allow multiline */
 				*p++=*next++;
-				while (len<1024) {
+				while (len<MAXLINE) {
 					if (*next==0) {
 						len++;		// for '\n'
 						*p++=0; next_line(); firstchar=next;
@@ -1512,14 +1525,30 @@ static void do_output (void)
 	toggles output.
 ****/
 {	scan_space();
-	if (!strncmp(next,"off",3))
-	{	outputing=0; next+=3;
+	if (!strncmp(next,"off",3)) {
+		outputing=0; next+=3;
+	} else if (!strncmp(next,"on",2)) {
+		outputing=1; next+=2;
+	} else {
+		output("on/off missing!\n");error=1002;
 	}
-	else if (!strncmp(next,"on",2))
-	{	outputing=1; output("\n"); next+=2;
-	}
-	else outputing=!outputing;
 }
+
+#if 0
+static void do_echo (void)
+/**** do_output
+	toggles output.
+****/
+{	scan_space();
+	if (!strncmp(next,"off",3)) {
+		echoing=0; next+=3;
+	} else if (!strncmp(next,"on",2)) {
+		echoing=1; next+=2;
+	} else {
+		output("on/off missing!\n");error=1002;
+	}
+}
+#endif
 
 static void do_comment (void)
 {	FILE *fp=infile;
@@ -1751,6 +1780,9 @@ static commandtyp command_list[] = {
 	{"do",c_global,do_do},
 	{"memorydump",c_global,do_mdump},
 	{"hexdump",c_global,do_hexdump},
+#if 0
+	{"echo", c_global, do_echo},
+#endif
 	{"output",c_global,do_output},
 	{"meta",c_global,do_meta},
 	{"comment",c_global,do_comment},
@@ -2423,9 +2455,9 @@ static void scan_elementary (void)
 		}
 		hd=new_string(s,len,"");
 #else
-		char buf[1024];
+		char buf[MAXLINE];
 		next++; s=next;			/* s beginning of the string */
-		while (len<1024) {
+		while (len<MAXLINE) {
 			if (*next==0) {
 				strncpy(buf+len,s,next-s);
 				len+=next-s;

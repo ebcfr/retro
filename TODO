@@ -1,10 +1,40 @@
+CODE
 * XInput: allow UTF8 input for string but pure ASCII for identifiers
+* get the color back for labels via textcolor()
+* graph object with zoom and cursor
+* review terminal interface
+  - notebook style option back (?), though preserve terminal 
+    interface as default --> notebook command?
+  - graphics in text window ?
+* make a decision about where to put the line variable and its size 
+  according to the fact that multple string can expand up to 1 kbyte.
+* better error handling with number of the line of the file and the
+  name of function the error occurs in.
+* fix parser issues
+CMDS
+* meta for outputing graphics to various formats (helper program?)
+* protect command to protect some variables from being cleared (only
+  outside of udf ie for global variables)
+* a echo on/off command to allow commands executed from a file to be 
+  echoed in the window.
+* move store/restore functions from builtin to commands (or get
+  them out?)
+* comment on/off or simpler "my multiline";
+* get out output on/off?
+DOC
+* more update on documentation:
+  - graphics:
+    One can make a pause on the graph screen by putting
+    * shg: switch to graphics screen
+    * wait(10) will stay on the graphics view 10s before getting
+      back to the terminal screen.
+      (the switch seems to get done at the end of the evaluation
+      of the line: TO BE CHECKED).
+MODULES
 * integrate mark function in xplot, add a comb style for graph,
   add styles for xplot
-* More update on documentation
+* signal.e: digital filters
 * More module development
-* Graph object with zoom and cursor
-* Review terminal interface
-  - notebook style option back (?), though preserve default terminal interface
-  - graphics in text window ?
-* meta for outputing graphics to various formats (helper program?)
+MISC
+* optionnally monitor graphically the stack use
+

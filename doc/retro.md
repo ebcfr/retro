@@ -477,6 +477,14 @@ A " can be escaped in a string constant like
 
 	>s="say \"Hello!\""
 
+Finally strings can expand over several lines
+
+	>s="A
+	>multiline
+	>string"
+	
+provides "A\\nmultiline\\nstring".
+
 There are a few builtin function which can produce strings: 
 
 |**char(n)**|A single character string with ASCII code n|

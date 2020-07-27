@@ -11,7 +11,6 @@ char fktext [12][64];
 static char history[MAXHIST][MAXLINE];
 static int act_history=0,	/* number of actual entries in history */
            hist=0;			/* current line */
-extern int outputing;
 
 void clear_fktext (void)
 {	int i;
@@ -45,12 +44,6 @@ static void push_in_history (char *s)
 	strcpy(history[act_history],s);
 	if (hist==act_history) hist++;
 	act_history++;
-}
-
-static void prompt (void)
-{	if (!outputing) gprint("\n>");
-	if (!udf) output(">");
-	else output("$");
 }
 
 static void left (int n)

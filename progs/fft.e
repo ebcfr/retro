@@ -1,3 +1,6 @@
+load signal
+
+comment
 "*** sinusoide spectrum ***"
 N=1000;Ts=0.1m;fs=1/Ts;f0=100;
 t=Ts*(0:N-1);s=5*sin(2*pi*f0*t);
@@ -131,3 +134,56 @@ a=1;b=0;
 x=-2:0.01:2;dx=x[2]-x[1],y=a*x+b;
 z=cumsum(y)*dx;
 xplot(x,y_z,lw=2)
+endcomment
+
+cls
+delay=5;
+
+"
+============== Discrete Fourier Transform =============
+
+
+Let's start with an analog pulse signal and display its spectrum
+
+				       |sin(pi theta f)| 
+				A theta|---------------| 
+				       |  pi theta f   | 
+
+"
+"A theta\left|\frac{\sin(pi theta f)}{pi theta f}\right|";
+
+wait(delay);
+
+t=[-1,-0.1,-0.1,0.1,0.1,1];x=[0,0,5,5,0,0];
+theta=0.2;A=5;
+f=-100:0.1:100;X=A*theta*abs(sinc(pi*theta*f));
+xsubplot(211);title("a pulse analog signal, and its spectrum");
+xplot(t,x,lw=2);xlabel("t [s]");ylabel("x(t)");
+xsubplot(212);
+xplot(f,X,lw=2);xlabel("f [Hz]");ylabel("|X(f)|");wait(delay);
+
+"Sampling a signal is, in fact, multiplying it by a Dirac comb with a period Ts.
+
+          __ +oo                                       1  __ +oo               k 
+x(t)  =  \            x(t) delta(t - n T ) ~> X(f)  =  -- \             X(f - --)
+         /__ n = -oo                    s              T  /__ k = -oo         T  
+                                                        s                      s 
+"
+"x(t) = \sum_{n=-\infty}^{+\infty}x(t) delta(t-n T_s) \leadsto X(f) = \frac{1}{T_s} \sum_{k=-\infty}^{+\infty} X(f-\frac{k}{T_s})";
+"
+
+which leads to a periodisation of the spectrum.
+
+"
+
+wait(delay);
+
+fs=100;Ts=1/fs;
+t=-1:Ts:1;
+f=-100:0.1:100;X=A*theta*abs(sinc(pi*theta*f));
+X=abs(A*theta*abs(sinc(pi*theta*(f+fs)))+A*theta*abs(sinc(pi*theta*f))+A*theta*abs(sinc(pi*theta*(f-fs))));
+
+xsubplot(211);title("a pulse analog signal, and its spectrum");
+style("m[]");xmark(t,A*pulse(t,theta),lw=2);xlabel("t [s]");ylabel("x(t)");
+xsubplot(212);
+xplot(f,X,lw=2);xlabel("f [Hz]");ylabel("|X(f)|");wait(delay);

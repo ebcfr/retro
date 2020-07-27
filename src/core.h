@@ -11,7 +11,7 @@ extern char *ramstart,
             *udfend;
 	
 
-extern int error,surpressed,udf,udfon,linelength,stringon;
+extern int error,udfon,linelength,stringon;
 extern long loopindex;
 extern char *next,*udfline;
 extern int searchglobal;
