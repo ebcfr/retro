@@ -682,7 +682,7 @@ a power of 2.
 
 The signal is the mountain shaped function
 
-    >s=pi-abs(s-pi);
+    >s=pi-abs(t-pi);
     >xplot(t,s)
         0.00000        6.27091        0.00000        3.14159
         

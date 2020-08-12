@@ -33,32 +33,46 @@ endfunction
 {t,f}=ticks(-5,6);t,f
 {t,f}=ticks(-7,8);t,f
 
-TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.05:5);w=2*pi*f;
+j=1i;TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.05:5);w=2*pi*f;
 T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
 Ta=abs(T);
 xplot(f,Ta);
 
 .. xlog plot
-load plot
-TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.01:5);w=2*pi*f;
-T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
-xplot(f,20*log10(abs(T)),xlog=1);
 
-.. xlog-ylog plot
 load plot
-TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.01:5);w=2*pi*f;
+j=1i;TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.01:5);w=2*pi*f;
 T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
-xplot(f,abs(T),xlog=1,ylog=1);
+subplot(111);xplot(f,20*log10(abs(T)),"LX,w=2");
+subplot(111);xplot(f,20*log10(abs(T)),"LX",lw=2);
+
+
+. xlog-ylog plot
+load plot
+subplot(111);
+j=1i;TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.01:5);w=2*pi*f;
+T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
+xplot(f,abs(T),"LLc5,w=2");
 
 .. multiple subplots 2x1 layout
 load plot
 j=1i;
-TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(1:0.005:5);w=2*pi*f;
+TM=4;f0=3k;m=[1,0.7,0.5,0.3,0.05]';w0=2*pi*f0;f=10^(1:0.005:5);w=2*pi*f;
 T=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
-xsubplot(211);
-xplot(f,abs(T),xlog=1,ylog=1,lw=2);
-xsubplot(212);
-xplot(f,arg(T)/pi*180,xlog=1,lw=2,yticks=45*(-2:2));
+subplot(211);
+xplot(f,abs(T),"LL,c1+",lw=2);
+subplot(212);
+xplot(f,arg(T)/pi*180,"LX,c1+",lw=2,yticks=45*(-2:2));
+
+.. multiple subplots 2x1 layout
+load plot
+j=1i;
+Ti=1;f0=1k;m=[5,1,0.7,0.5,0.3,0.05]';w0=2*pi*f0;f=10^(1:0.005:5);w=2*pi*f;
+T=Ti*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
+subplot(211);
+setplot([10,100k,0.01,10]);xplot(f,abs(T),"LL,c1+",lw=2);xlabel("f [Hz]")ylabel("|T(jw)|");title("band-pass 2nd order filter");
+subplot(212);
+xplot(f,arg(T)/pi*180,"LX,c1+",lw=2,yticks=45*(-2:2));xlabel("f [Hz]")ylabel("arg T(jw)");
 
 .. multiple subplots 2x2 layout
 load plot
@@ -66,24 +80,24 @@ j=1i;
 TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(2:0.005:5);w=2*pi*f;
 T1=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
 T2=-TM*(w/w0)^2/(1-(w/w0)^2+j*2*m*w/w0);
-xsubplot(221);
-xplot(f,abs(T1),xlog=1,ylog=1,lw=2);xlabel("f [Hz]");ylabel("|T|");
+subplot(221);
+xplot(f,abs(T1),"LL,w=2");xlabel("f [Hz]");ylabel("|T|");
 title("2nd order band-pass filter");
-xsubplot(222);
-xplot(f,abs(T2),xlog=1,ylog=1,lw=2);xlabel("f [Hz]");ylabel("arg T");
+subplot(222);
+xplot(f,abs(T2),"LL,w=2");xlabel("f [Hz]");ylabel("arg T");
 title("2nd order high-pass filter");
-xsubplot(223);
-xplot(f,arg(T1)/pi*180,xlog=1,lw=2,yticks=45*(-2:2));xlabel("f [Hz]");ylabel("|T|");
-xsubplot(224);
-xplot(f,arg(T2)/pi*180,xlog=1,lw=2,yticks=45*(0:4));xlabel("f [Hz]");ylabel("arg T");
+subplot(223);
+xplot(f,arg(T1)/pi*180,"LX,w=2",grid=0,yticks=45*(-2:2));xlabel("f [Hz]");ylabel("|T|");
+subplot(224);
+xplot(f,arg(T2)/pi*180,"LX,w=2",yticks=45*(0:4));xlabel("f [Hz]");ylabel("arg T");
 
 load plot
 j=1i;
 TM=4;f0=3k;m=0.05;w0=2*pi*f0;f=10^(2:0.005:5);w=2*pi*f;
 T1=TM*2*m*j*w/w0/(1-(w/w0)^2+j*2*m*w/w0);
 T2=-TM*(w/w0)^2/(1-(w/w0)^2+j*2*m*w/w0);
-xsubplot(111);
-xplot(f,abs(T1),xlog=1,ylog=1,lw=2);xlabel("f [Hz]");ylabel("|T| Hello World ppp!");
+subplot(111);
+xplot(f,abs(T1),"LL,w=2");xlabel("f [Hz]");ylabel("|T| Hello World ppp!");
 title("2nd order band-pass filter");
 
 
@@ -96,8 +110,11 @@ endfunction
 testloop();
 
 load plot
-xsubplot(111);
-x=-3m:0.01m:4m;y=10*cos(2000*pi*x)*exp(-1000*x);xplot(x,10M*y,lw=2,col=16);
+subplot(111);
+x=-3m:0.01m:4m;y=10*cos(2000*pi*x)*exp(-1000*x);xplot(x,10M*y,lw=2,col=13);
 
-xsubplot(111);
+subplot(111);
 setplot(-3,4,-70,20);x=-3:0.05:4;y=x^3-4*x^2+2*x+8;xplot(x,y,col=11);
+
+subplot(111);x=0:11;xplot(x,x^2)
+subplot(111);setplot([-4,14,-10,130]);x=0:11;xplot(x,x^2)

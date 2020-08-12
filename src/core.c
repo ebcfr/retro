@@ -593,7 +593,7 @@ header *assign (header *var, header *value)
 			strcpy(value->name,name);
 			value->xor=xor(name);
 			if (newram+size>ramend)
-			{	output1("Memory overflow while assigningu user function %s.\n",var->name); error=500; return value;
+			{	output1("Memory overflow while assigning user function %s.\n",var->name); error=500; return value;
 			}
 			memmove(ramstart+size,ramstart,newram-ramstart);
 			newram+=size; endlocal+=size; startlocal+=size;
@@ -645,7 +645,17 @@ header *assign (header *var, header *value)
 			getmatrix(value,&rv,&cv,&mv);
 			getmatrix(submrefof(var),&r,&c,&m);
 			if (d->r!=rv || d->c!=cv)
-			{	output("Illegal assignment!\n"); error=45; return 0;
+			{   if (rv==1 && cv==1)
+				{	rind=rowsof(var); cind=colsof(var);
+					for (i=0; i<d->r; i++)
+					{	m1=mat(m,c,rind[i],0);
+						for (j=0; j<d->c; j++)
+						{	m1[cind[j]]=*mv;
+						}
+					}
+					return submrefof(var);
+				}
+				output("Illegal assignment!\nrow or column do not agree!\n"); error=45; return 0;
 			}
 			rind=rowsof(var); cind=colsof(var);
 			for (i=0; i<d->r; i++)
@@ -671,7 +681,17 @@ header *assign (header *var, header *value)
 			getmatrix(value,&rv,&cv,&mv);
 			getmatrix(submrefof(var),&r,&c,&m);
 			if (d->r!=rv || d->c!=cv)
-			{	output("Illegal assignment!\n"); error=45; return 0;
+			{   if (rv==1 && cv==1)
+				{	rind=rowsof(var); cind=colsof(var);
+					for (i=0; i<d->r; i++)
+					{	m1=cmat(m,c,rind[i],0);
+						for (j=0; j<d->c; j++)
+						{	copy_complex(m1+(long)2*cind[j],mv);
+						}
+					}
+					return submrefof(var);
+				}
+				output("Illegal assignment!\nrow or column do not agree!\n"); error=45; return 0;
 			}
 			rind=rowsof(var); cind=colsof(var);
 			for (i=0; i<d->r; i++)

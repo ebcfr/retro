@@ -98,13 +98,14 @@ Pixmap pixmap;
 
 int userwidth=800,userheight=600,userx=0,usery=0,usersize=0,userpos=0;
 
-XftFont *gfont, *gvfont, *tfont;
+XftFont *gfont, *gsfont, *gvfont, *tfont;
 XftDraw *draw;
 Visual* visual;
 XftColor tfgcolor, tbgcolor;
 
 char* tfontname="Mono:size=10";
 char* gfontname="Sans:size=10";
+char* gsfontname="Sans:size=6";
 char* gvfontname="Sans:size=10:matrix=0 -1 1 0";
 //char* gfontname="Mono:size=10";
 
@@ -301,7 +302,7 @@ Window open_window (int x, int y, int width, int height, int flag)
 	XftColorAllocValue(display, visual, colormap, &white, &tbgcolor);
 					
 	/* events, we like to receive */
-	mask=KeyPressMask|ExposureMask|ButtonPressMask|StructureNotifyMask;
+	mask=KeyPressMask|ExposureMask|ButtonPressMask|ButtonReleaseMask|Button1MotionMask|StructureNotifyMask;
 	XSelectInput(display,window,mask);
 
 	/* show the window */
@@ -352,6 +353,9 @@ void initX (void)
 	textoffset=textwidth/2;
 
 	gfont = XftFontOpenName(display, screen, gfontname);
+	if (!gfont) die("Cannot find %s font\n",gfontname);
+	
+	gsfont = XftFontOpenName(display, screen, gsfontname);
 	if (!gfont) die("Cannot find %s font\n",gfontname);
 	
 	gvfont = XftFontOpenName(display, screen, gvfontname);
@@ -494,6 +498,39 @@ void text_mode (void)
 	}
 }
 
+void gclear (void)
+{	
+	XFillRectangle(display,pixmap,cleargc,0,0,wscreen,hscreen);
+#ifdef WINDOW
+	XFillRectangle(display,window,cleargc,0,0,wscreen,hscreen);
+#endif
+	XFlush(display);
+}
+
+void gflush (void)
+{
+#ifndef WINDOW
+	XCopyArea(display,pixmap,window,gc,0,0,wscreen,hscreen,0,0);
+#endif
+	XFlush(display);
+}
+
+void gclip(plot_t *p)
+{
+	short xf = (p->upperc*wscreen)>>10;
+	short yf = (p->upperr*hscreen)>>10;
+	short wf = ((p->lowerc-p->upperc)*wscreen)>>10;
+	short hf = ((p->lowerr-p->upperr)*hscreen)>>10;
+	XRectangle r;
+	r.x=xf; r.y=yf; r.width=wf; r.height=hf;
+	XSetClipRectangles(display, gc, 0, 0, &r, 1, Unsorted);
+}
+
+void gunclip(plot_t *p)
+{
+	XSetClipMask(display,gc,None);
+}
+
 void gsubplot(int r, int c, int index)
 {
 
@@ -511,7 +548,473 @@ void setline (int w, int st)
 		default : st=LineSolid; break;
 	}
 	XSetLineAttributes(display,gc,w,st,CapRound,JoinRound);
-	oldwidth=w;
+	oldwidth=w;	
+}
+
+void gframe(plot_t* p)
+{
+	short xf = (p->upperc*wscreen)>>10;
+	short yf = (p->upperr*hscreen)>>10;
+	short wf = ((p->lowerc-p->upperc)*wscreen)>>10;
+	short hf = ((p->lowerr-p->upperr)*hscreen)>>10;
+	setcolor(1);
+	XSetLineAttributes(display,gc,1,LineSolid,CapRound,JoinRound);
+	XDrawRectangle(display,window,gc,xf,yf,wf,hf);
+	XDrawRectangle(display,pixmap,gc,xf,yf,wf,hf);
+}
+
+void gpath(plot_t* p, double *x, double *y, int n)
+{
+	XPoint* curve=(XPoint*)malloc(n*sizeof(XPoint));
+	short xf = (p->upperc*wscreen)>>10;
+	short yf = (p->upperr*hscreen)>>10;
+	short wf = ((p->lowerc-p->upperc)*wscreen)>>10;
+	short hf = ((p->lowerr-p->upperr)*hscreen)>>10;
+	double kx, ky;
+	
+	if (!p->xlog) {
+		kx = (double)wf/(p->x_max-p->x_min);
+		for (int i=0 ; i<n ; i++) {
+			curve[i].x = xf + kx*(x[i]-p->x_min);
+			
+		}
+	} else {
+		kx = (double)wf/log10(p->x_max/p->x_min);
+		for (int i=0 ; i<n ; i++) {
+			curve[i].x = xf + kx*log10(x[i]/p->x_min);
+		}
+	}
+	if (!p->ylog) {
+		ky = (double)hf/(p->y_max-p->y_min);
+		for (int i=0 ; i<n ; i++) {
+			if (y[i]>p->y_max)			/* avoid int16 overflow */
+				curve[i].y = yf - 5;
+			else if (y[i]<p->y_min)		/* avoid int16 overflow */
+				curve[i].y = yf + hf + 5;
+			else						/* calculate standard case */
+				curve[i].y = yf + hf - ky*(y[i]-p->y_min);
+		}
+	} else {
+		ky = (double)hf/log10(p->y_max/p->y_min);
+		for (int i=0 ; i<n ; i++) {
+			curve[i].y = yf + hf - ky*log10(y[i]/p->y_min);
+		}
+	}
+	
+	setcolor(linecolor);
+	setline(linewidth,linetype);
+	
+	switch (linetype) {
+	case line_solid:
+	case line_dotted:
+	case line_dashed:
+		XDrawLines(display,window,gc,curve,n,CoordModeOrigin);
+		XDrawLines(display,pixmap,gc,curve,n,CoordModeOrigin);
+		break;
+	case line_comb:
+		for (int i=0;i<n;i++) {
+			/* draw a line from bottom or 0 axis to the point */
+			XSegment s;
+			s.x1 = curve[i].x;
+			s.y1 = p->y_min<0.0 ? yf + hf + ky*p->y_min : yf+hf;
+			s.x2 = curve[i].x;
+			s.y2 = curve[i].y;
+			XDrawSegments(display,window,gc,&s,1);
+			XDrawSegments(display,pixmap,gc,&s,1);
+		}
+		break;
+	case line_none:
+	default:
+		break;
+	}
+
+	if (markertype!=marker_none) {
+		XSetLineAttributes(display,gc,1,LineSolid,CapProjecting,JoinRound);
+		if (markertype==marker_dot) {
+			XDrawPoints(display,window,gc,curve,n,CoordModeOrigin);
+			XDrawPoints(display,pixmap,gc,curve,n,CoordModeOrigin);
+		} else {
+			for (int i=0;i<n;i++) {
+				switch (markertype) {
+				case marker_cross: {
+					XSegment xs[2];
+					xs[0].x1=curve[i].x-markersize/2;
+					xs[0].y1=curve[i].y-markersize/2;
+					xs[0].x2=curve[i].x+markersize/2+1;
+					xs[0].y2=curve[i].y+markersize/2+1;
+					xs[1].x1=curve[i].x-markersize/2;
+					xs[1].y1=curve[i].y+markersize/2;
+					xs[1].x2=curve[i].x+markersize/2+1;
+					xs[1].y2=curve[i].y-markersize/2-1;
+					XDrawSegments(display,window,gc,xs,2);
+					XDrawSegments(display,pixmap,gc,xs,2);
+					break;
+				}
+				case marker_plus: {
+					XSegment xs[2];
+					xs[0].x1=curve[i].x-markersize/2;
+					xs[0].y1=curve[i].y;
+					xs[0].x2=curve[i].x+markersize/2;
+					xs[0].y2=curve[i].y;
+					xs[1].x1=curve[i].x;
+					xs[1].y1=curve[i].y+markersize/2;
+					xs[1].x2=curve[i].x;
+					xs[1].y2=curve[i].y-markersize/2;
+					XDrawSegments(display,window,gc,xs,2);
+					XDrawSegments(display,pixmap,gc,xs,2);
+					break;
+				}
+				case marker_star: {
+					short d=markersize/2*239/338;			// markersize/2*0.707
+					short d1=(markersize/2+1)*239/338;		// markersize/2*0.707
+					XSegment xs[4];
+					xs[0].x1=curve[i].x-markersize/2;
+					xs[0].y1=curve[i].y;
+					xs[0].x2=curve[i].x+markersize/2;
+					xs[0].y2=curve[i].y;
+					xs[1].x1=curve[i].x;
+					xs[1].y1=curve[i].y+markersize/2;
+					xs[1].x2=curve[i].x;
+					xs[1].y2=curve[i].y-markersize/2;
+					xs[2].x1=curve[i].x-d;
+					xs[2].y1=curve[i].y-d;
+					xs[2].x2=curve[i].x+d1;
+					xs[2].y2=curve[i].y+d1;
+					xs[3].x1=curve[i].x-d;
+					xs[3].y1=curve[i].y+d;
+					xs[3].x2=curve[i].x+d1;
+					xs[3].y2=curve[i].y-d1;
+					XDrawSegments(display,window,gc,xs,4);
+					XDrawSegments(display,pixmap,gc,xs,4);
+					break;
+				}
+				case marker_square:
+					XDrawRectangle(display,window,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize);
+					XDrawRectangle(display,pixmap,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize);
+					break;
+				case marker_circle:
+					XDrawArc(display,window,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize,0,360<<6);
+					XDrawArc(display,pixmap,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize,0,360<<6);
+					break;
+				case marker_diamond: {
+					XPoint p[5];
+					p[0].x=curve[i].x-markersize/2;
+					p[0].y=curve[i].y;
+					p[1].x=curve[i].x;
+					p[1].y=curve[i].y-markersize/2;
+					p[2].x=curve[i].x+markersize/2;
+					p[2].y=curve[i].y;
+					p[3].x=curve[i].x;
+					p[3].y=curve[i].y+markersize/2;
+					p[4].x=curve[i].x-markersize/2;
+					p[4].y=curve[i].y;
+					XDrawLines(display,window,gc,p,5,CoordModeOrigin);
+					XDrawLines(display,pixmap,gc,p,5,CoordModeOrigin);
+					break;
+				}
+				case marker_fsquare:
+					XFillRectangle(display,window,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize);
+					XFillRectangle(display,pixmap,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize);
+					break;
+				case marker_fcircle:
+					XFillArc(display,window,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize,0,360<<6);
+					XFillArc(display,pixmap,gc,curve[i].x-markersize/2,curve[i].y-markersize/2,markersize,markersize,0,360<<6);
+					break;
+				case marker_fdiamond: {
+					XPoint p[4];
+					p[0].x=curve[i].x-markersize/2;
+					p[0].y=curve[i].y;
+					p[1].x=curve[i].x;
+					p[1].y=curve[i].y-markersize/2;
+					p[2].x=curve[i].x+markersize/2;
+					p[2].y=curve[i].y;
+					p[3].x=curve[i].x;
+					p[3].y=curve[i].y+markersize/2;
+					XFillPolygon(display,window,gc,p,4,Nonconvex,CoordModeOrigin);
+					XFillPolygon(display,pixmap,gc,p,4,Nonconvex,CoordModeOrigin);
+					break;
+				}
+				case marker_arrow: {
+					XPoint p[3];
+					p[0].x=curve[i].x;
+					p[0].y=curve[i].y;
+					p[1].x=curve[i].x+markersize*13/38;
+					p[1].y=curve[i].y-markersize;
+					p[2].x=curve[i].x-markersize*13/38;
+					p[2].y=curve[i].y-markersize;
+					XFillPolygon(display,window,gc,p,3,Nonconvex,CoordModeOrigin);
+					XFillPolygon(display,pixmap,gc,p,3,Nonconvex,CoordModeOrigin);
+					break;
+				}
+				case marker_dot:
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+	free(curve);
+}
+
+#define TICKSIZE		5
+#define SUBTICKSIZE		3
+
+void gxgrid(plot_t* p, double factor, double* ticks, int n)
+{
+	XSegment* grid=(XSegment*)malloc(n*sizeof(XSegment));
+	short xf = (p->upperc*wscreen)>>10;
+	short yf = (p->upperr*hscreen)>>10;
+	short wf = ((p->lowerc-p->upperc)*wscreen)>>10;
+	short hf = ((p->lowerr-p->upperr)*hscreen)>>10;
+	double kx;
+	
+	if (!p->xlog) {
+		kx = (double)wf/(p->x_max-p->x_min);
+		for (int i=0 ; i<n ; i++) {
+			grid[i].x1 = xf + kx*(ticks[i]-p->x_min);
+			grid[i].y1 = yf;
+			grid[i].x2 = grid[i].x1;
+			grid[i].y2 = yf + hf;
+		}
+		
+		setcolor(gridcolor);
+		setline(1,line_dashed);
+		if (p->xgrid) {
+			XDrawSegments(display,window,gc,grid,n);
+			XDrawSegments(display,pixmap,gc,grid,n);
+		}
+				
+		setcolor(1);
+		setline(1,line_solid);
+		
+		for (int i=0 ; i<n ; i++) {
+			grid[i].y2 = yf+TICKSIZE;
+		}
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+		
+		for (int i=0 ; i<n ; i++) {
+			XGlyphInfo extents;
+			char s[32];
+			int len = snprintf(s,32,"%g",fabs(ticks[i]/factor) < 1e-6 ? 0.0 : ticks[i]/factor);
+			grid[i].y2 = yf+hf;
+			grid[i].y1 = grid[i].y2-TICKSIZE;
+			XftTextExtents8(display, gfont, (XftChar8*)s, len, &extents);
+			XftDrawString8(draw, &tfgcolor, gfont, grid[i].x2-extents.width/2, grid[i].y2+gfont->ascent+hchar*hscreen/4096, (XftChar8*)s, len);
+			XftDrawChange(draw, pixmap);
+			XftDrawString8(draw, &tfgcolor, gfont, grid[i].x2-extents.width/2, grid[i].y2+gfont->ascent+hchar*hscreen/4096, (XftChar8*)s, len);
+			XftDrawChange(draw, window);
+		}
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+		
+		if (factor!=1.0) {
+			XGlyphInfo extents;
+			char s[32];
+			int len = snprintf(s,32,"x%g", factor);
+			XftTextExtents8(display, gfont, (XftChar8*)s, len, &extents);
+			XftDrawString8(draw, &tfgcolor, gfont, xf+wf-extents.width, yf+hf+(gfont->ascent+gfont->descent+2)*5/2, (XftChar8*)s, len);
+			XftDrawChange(draw, pixmap);
+			XftDrawString8(draw, &tfgcolor, gfont, xf+wf-extents.width, yf+hf+(gfont->ascent+gfont->descent+2)*5/2, (XftChar8*)s, len);
+			XftDrawChange(draw, window);
+		}
+	} else {
+	
+		kx = (double)wf/log10(p->x_max/p->x_min);
+		for (int i=0 ; i<n ; i++) {
+			grid[i].x1 = xf + kx*log10(ticks[i]/p->x_min);
+			grid[i].y1 = yf;
+			grid[i].x2 = grid[i].x1;
+			grid[i].y2 = yf + hf;
+		}
+		
+		setcolor(gridcolor);
+		setline(1,line_dashed);
+		if (p->xgrid) {
+			XDrawSegments(display,window,gc,grid,n);
+			XDrawSegments(display,pixmap,gc,grid,n);
+		}
+		
+		setcolor(1);
+		setline(1,line_solid);
+		
+		for (int i=0 ; i<n ; i++) {
+			double d = ticks[i]/pow(10.0,floor(log10(ticks[i])));
+			if (d!=1.0) {
+				grid[i].y2 = yf+SUBTICKSIZE;
+			} else {
+				grid[i].y2 = yf+TICKSIZE;
+			}
+		}
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+		
+		for (int i=0 ; i<n ; i++) {
+			XGlyphInfo extents, extents1;
+			char s[32];
+			grid[i].y2 = yf+hf;
+			
+			double e = floor(log10(ticks[i]));
+			double d = ticks[i]/pow(10.0,e);
+			if (d!=1.0) {
+				int len = snprintf(s,32,"%g", d);
+				grid[i].y1 = grid[i].y2-SUBTICKSIZE;
+				XftTextExtents8(display, gsfont, (XftChar8*)s, len, &extents);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x2-extents.width/2, grid[i].y2+gsfont->ascent+gsfont->descent+2, (XftChar8*)s, len);
+				XftDrawChange(draw, pixmap);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x2-extents.width/2, grid[i].y2+gsfont->ascent+gsfont->descent+2, (XftChar8*)s, len);
+				XftDrawChange(draw, window);
+			} else {
+				char s1[3]="10";
+				grid[i].y1 = grid[i].y2-TICKSIZE;
+				int len = snprintf(s,32,"%g", e);
+				XftTextExtents8(display, gfont, (XftChar8*)s1, 2, &extents1);
+				XftTextExtents8(display, gsfont, (XftChar8*)s, len, &extents);
+				XftDrawString8(draw, &tfgcolor, gfont, grid[i].x2-extents1.width/2, grid[i].y2+(gfont->ascent+gfont->descent+2)*11/8, (XftChar8*)s1, 2);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x2+extents1.width/2, grid[i].y2+(gfont->ascent+gfont->descent+2)*7/8, (XftChar8*)s, len);
+				XftDrawChange(draw, pixmap);
+				XftDrawString8(draw, &tfgcolor, gfont, grid[i].x2-extents1.width/2, grid[i].y2+(gfont->ascent+gfont->descent+2)*11/8, (XftChar8*)s1, 2);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x2+extents1.width/2, grid[i].y2+(gfont->ascent+gfont->descent+2)*7/8, (XftChar8*)s, len);
+				XftDrawChange(draw, window);				
+			}
+		}
+		
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+	}
+	
+	free(grid);
+}
+
+void gygrid(plot_t* p, double factor, double* ticks, int n)
+{
+	XSegment* grid=(XSegment*)malloc(n*sizeof(XSegment));
+	short xf = (p->upperc*wscreen)>>10;
+	short yf = (p->upperr*hscreen)>>10;
+	short wf = ((p->lowerc-p->upperc)*wscreen)>>10;
+	short hf = ((p->lowerr-p->upperr)*hscreen)>>10;
+	double ky;
+	
+	if (!p->ylog) {
+		ky = (double)hf/(p->y_max-p->y_min);
+		for (int i=0 ; i<n ; i++) {
+			grid[i].x1 = xf;
+			grid[i].y1 = yf + hf - ky*(ticks[i]-p->y_min);
+			grid[i].x2 = xf + wf;
+			grid[i].y2 = grid[i].y1;
+		}
+		
+		setcolor(gridcolor);
+		setline(1,line_dashed);
+		if (p->ygrid) {
+			XDrawSegments(display,window,gc,grid,n);
+			XDrawSegments(display,pixmap,gc,grid,n);
+		}
+		
+		setcolor(1);
+		setline(1,line_solid);
+		
+		for (int i=0 ; i<n ; i++) {
+			XGlyphInfo extents;
+			char s[32];
+			int len = snprintf(s,32,"%g",fabs(ticks[i]/factor) < 1e-6 ? 0.0 : ticks[i]/factor);
+			grid[i].x2 = xf+TICKSIZE;
+			XftTextExtents8(display, gfont, (XftChar8*)s, len, &extents);
+			XftDrawString8(draw, &tfgcolor, gfont, grid[i].x1-wchar*wscreen/1024-extents.width, grid[i].y1+gfont->ascent-hchar*hscreen/2048, (XftChar8*)s, len);
+			XftDrawChange(draw, pixmap);
+			XftDrawString8(draw, &tfgcolor, gfont, grid[i].x1-wchar*wscreen/1024-extents.width, grid[i].y1+gfont->ascent-hchar*hscreen/2048, (XftChar8*)s, len);
+			XftDrawChange(draw, window);
+		}
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+		
+		for (int i=0 ; i<n ; i++) {
+			grid[i].x2 = xf + wf;
+			grid[i].x1 = grid[i].x2-TICKSIZE;
+		}
+		
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+		
+		if (factor!=1.0) {
+			XGlyphInfo extents;
+			char s[32];
+			int len = snprintf(s,32,"x%g", factor);
+			XftTextExtents8(display, gfont, (XftChar8*)s, len, &extents);
+			XftDrawString8(draw, &tfgcolor, gfont, xf-wchar*wscreen*7/1024, yf-(gfont->ascent+gfont->descent+2)/2-gfont->descent, (XftChar8*)s, len);
+			XftDrawChange(draw, pixmap);
+			XftDrawString8(draw, &tfgcolor, gfont, xf-wchar*wscreen*7/1024, yf-(gfont->ascent+gfont->descent+2)/2-gfont->descent, (XftChar8*)s, len);
+			XftDrawChange(draw, window);
+		}
+		
+	} else {
+	
+		ky = (double)hf/log10(p->y_max/p->y_min);
+		for (int i=0 ; i<n ; i++) {
+			grid[i].x1 = xf;
+			grid[i].y1 = yf + hf - ky*log10(ticks[i]/p->y_min);
+			grid[i].x2 = xf + wf;
+			grid[i].y2 = grid[i].y1;
+		}
+		
+		setcolor(gridcolor);
+		setline(1,line_dashed);
+		if (p->ygrid) {
+			XDrawSegments(display,window,gc,grid,n);
+			XDrawSegments(display,pixmap,gc,grid,n);
+		}
+		
+		setcolor(1);
+		setline(1,line_solid);
+		
+		for (int i=0 ; i<n ; i++) {
+			XGlyphInfo extents, extents1;
+			char s[32];
+			double e = floor(log10(ticks[i]));
+			double d = ticks[i]/pow(10.0,e);
+			if (d!=1.0) {
+				int len = snprintf(s,32,"%g",d);
+				grid[i].x2 = xf+SUBTICKSIZE;
+				XftTextExtents8(display, gsfont, (XftChar8*)s, len, &extents);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x1-wchar*wscreen/1024-extents.width, grid[i].y1+(gsfont->ascent+gsfont->descent)/2, (XftChar8*)s, len);
+				XftDrawChange(draw, pixmap);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x1-wchar*wscreen/1024-extents.width, grid[i].y1+(gsfont->ascent+gsfont->descent)/2, (XftChar8*)s, len);
+				XftDrawChange(draw, window);
+			} else {
+				char s1[3]="10";
+				grid[i].x2 = xf+TICKSIZE;
+				int len = snprintf(s,32,"%g", e);
+				XftTextExtents8(display, gfont, (XftChar8*)s1, 2, &extents1);
+				XftTextExtents8(display, gsfont, (XftChar8*)s, len, &extents);
+				XftDrawString8(draw, &tfgcolor, gfont, grid[i].x1-3*wchar*wscreen/1024-extents1.width, grid[i].y1+(gfont->ascent+gfont->descent)*1/4, (XftChar8*)s1, 2);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x1-3*wchar*wscreen/1024, grid[i].y1+(gfont->ascent+gfont->descent)*(-2)/4, (XftChar8*)s, len);
+				XftDrawChange(draw, pixmap);
+				XftDrawString8(draw, &tfgcolor, gfont, grid[i].x1-3*wchar*wscreen/1024-extents1.width, grid[i].y1+(gfont->ascent+gfont->descent)*1/4, (XftChar8*)s1, 2);
+				XftDrawString8(draw, &tfgcolor, gsfont, grid[i].x1-3*wchar*wscreen/1024, grid[i].y1+(gfont->ascent+gfont->descent)*(-2)/4, (XftChar8*)s, len);
+				XftDrawChange(draw, window);
+
+			}
+		}
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+		
+		for (int i=0 ; i<n ; i++) {
+			grid[i].x2 = xf + wf;
+			double d = ticks[i]/pow(10.0,floor(log10(ticks[i])));
+			if (d!=1.0) {
+				grid[i].x1 = grid[i].x2-SUBTICKSIZE;
+			} else {
+				grid[i].x1 = grid[i].x2-TICKSIZE;
+			}
+		}
+		
+		XDrawSegments(display,window,gc,grid,n);
+		XDrawSegments(display,pixmap,gc,grid,n);
+	}
+		
+	free(grid);
+
 }
 
 void gline (double c, double r, double c1, double r1, int col, int st, int width)
@@ -1210,6 +1713,14 @@ void process_event (XEvent *event)
 				if (in_text) ev_scroll_down();
 			}
 			break;
+		case ButtonRelease:
+			if (event->xbutton.button==1) {
+				fprintf(stderr,"button1 release x=%d, y=%d\n",event->xbutton.x,event->xbutton.y);
+			}
+			break;
+		case MotionNotify:
+			fprintf(stderr,"button1 release x=%d, y=%d\n",event->xmotion.x,event->xmotion.y);
+			break;
 		case GraphicsExpose:
 			if (event->xgraphicsexpose.count>0) break;
 //			fprintf(stderr,"Graphics Expose\n");
@@ -1229,7 +1740,7 @@ void process_event (XEvent *event)
 			computetext();
 			XFreePixmap(display,pixmap);
 			pixmap=XCreatePixmap(display,window,wscreen,hscreen,depth);
-			clear_graphics();
+			gclear();
 			textwindow=textend-1;
 			while (textwindow>=textstart && *textwindow) textwindow--;
 			textwindow++; oldtextwindow=textwindow; cy=0;
@@ -1509,28 +2020,11 @@ char *dir (char *pattern)
 #endif
 /***************** clear screens ********************/
 
-void clear_graphics (void)
-{	
-	XFillRectangle(display,pixmap,cleargc,0,0,wscreen,hscreen);
-#ifdef WINDOW
-	XFillRectangle(display,window,cleargc,0,0,wscreen,hscreen);
-#endif
-	XFlush(display);
-}
-
 int execute (char *name, char *args)
 /**** execute
 	call an external program, return 0, if there was no error.
 ****/
 {	return 0;
-}
-
-void gflush (void)
-{
-#ifndef WINDOW
-	XCopyArea(display,pixmap,window,gc,0,0,wscreen,hscreen,0,0);
-#endif
-	XFlush(display);
 }
 
 #ifndef SY_CLK_TCK

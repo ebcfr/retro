@@ -110,13 +110,41 @@ There should be a function, which computes the correct screen
 coordinates from these internal ones.
 ****/
 
-void clear_graphics (void)
+void gclear (void)
 /***** clear the graphics screen 
 *****/
 {	if (metafile) intwrite(6);
 }
 
+void gclip(plot_t *p)
+{
+}
+
+void gunclip(plot_t *p)
+{
+}
+
 void gsubplot(int r, int c, int index)
+{
+
+}
+
+void gframe(plot_t* p)
+{
+
+}
+
+void gpath(plot_t* p, double *x, double *y, int n)
+{
+
+}
+
+void gxgrid(plot_t* p, double factor, double* ticks, int n)
+{
+
+}
+
+void gygrid(plot_t* p, double factor, double* ticks, int n)
 {
 
 }

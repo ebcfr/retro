@@ -437,6 +437,23 @@ void text_mode (void)
 	}
 }
 
+void gclear (void)
+{	
+	XFillRectangle(display,pixmap,cleargc,0,0,wscreen,hscreen);
+#ifdef WINDOW
+	XFillRectangle(display,window,cleargc,0,0,wscreen,hscreen);
+#endif
+	XFlush(display);
+}
+
+void gflush (void)
+{
+#ifndef WINDOW
+	XCopyArea(display,pixmap,window,gc,0,0,wscreen,hscreen,0,0);
+#endif
+	XFlush(display);
+}
+
 void gsubplot(int r, int c, int index)
 {
 
@@ -1145,7 +1162,7 @@ void process_event (XEvent *event)
 			computetext();
 			XFreePixmap(display,pixmap);
 			pixmap=XCreatePixmap(display,window,wscreen,hscreen,depth);
-			clear_graphics();
+			gclear();
 			textwindow=textend-1;
 			while (textwindow>=textstart && *textwindow) textwindow--;
 			textwindow++; oldtextwindow=textwindow; cy=0;
@@ -1425,28 +1442,11 @@ char *dir (char *pattern)
 #endif
 /***************** clear screens ********************/
 
-void clear_graphics (void)
-{	
-	XFillRectangle(display,pixmap,cleargc,0,0,wscreen,hscreen);
-#ifdef WINDOW
-	XFillRectangle(display,window,cleargc,0,0,wscreen,hscreen);
-#endif
-	XFlush(display);
-}
-
 int execute (char *name, char *args)
 /**** execute
 	call an external program, return 0, if there was no error.
 ****/
 {	return 0;
-}
-
-void gflush (void)
-{
-#ifndef WINDOW
-	XCopyArea(display,pixmap,window,gc,0,0,wscreen,hscreen,0,0);
-#endif
-	XFlush(display);
 }
 
 #ifndef SY_CLK_TCK

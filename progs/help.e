@@ -541,6 +541,14 @@ function sort
 	error("Illegal argument number!"),
 endfunction
 
+function subplot
+## sets plot layout to r x c plots, sets plot index to the ith one
+##   with r, c, i coded on a single digit each, i <= r x c
+##   so i<=9 : 2x4, 4*2 or 3x3 max layouts
+## returns a 1x3 vector with [r, c, i]
+	error("Illegal argument number!"),
+endfunction
+
 function style
 ## style("s") sets the style of plots and markers.
 ## For plots, there are ".", "-", "--", "i" (invisible).

@@ -350,7 +350,7 @@ function totalmax (A)
 endfunction
 
 function log10(x)
-# base 10 logaithm
+## base 10 logarithm
   return log(x)/log(10);
 endfunction
 

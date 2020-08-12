@@ -3,29 +3,6 @@
 textcolor(1);
 framecolor(1);
 
-subwindows=zeros([9,4]);
-
-function xsubplot(rci)
-## sets plot layout to r x c plots, sets plot index to the ith one
-##   with r, c, i coded on a single digit each, i <= r x c
-##   so i<=9 : 2x4, 4*2 or 3x3 max layouts
-## returns a 1x3 vector with [r, c, i]
-	global subwindows;
-	l=subplot(rci);
-	if l[3]==1 hold off; clg; endif
-	w=window(); wt=textwidth(); ht=textheight();
-	hr=floor(1024/l[1]);wc=floor(1024/l[2]);
-	for r=1 to l[1]
-		for c=1 to l[2]
-			w=[8*wt+(c-1)*wc,1.5*ht+(r-1)*hr,c*wc-2*wt,r*hr-3*ht];
-			subwindows[(r-1)*l[2]+c]=w;
-		end
-	end
-	hold on
-	window(subwindows[l[3]]);	
-	return l;
-endfunction
-
 function select
 ## Returns coordinates {x,y} of mouse clicks, until the user clicked
 ## above the plot window.
@@ -126,15 +103,18 @@ function fullwindow
 ## plots.
 	h=textsize();
 	w=window();
+	subplot(111); ...holding(0);
 	window([12,textheight()*1.5,1011,1011]);
 	return w;
 endfunction
 
 function shrinkwindow
 ## shrinkwindow() shrinks the window to allow labels.
-	h=textheight(); b=textwidth();
+...	h=textheight(); b=textwidth();
 	w=window();
-	window([8*b,1.5*h,1023-2*b,1023-3*h]);
+...	window([8*b,1.5*h,1023-2*b,1023-3*h]);
+	subplot(111);
+	...holding(0);
 	return w;
 endfunction
 
@@ -173,30 +153,32 @@ function ticks (a,b,extend=0)
 endfunction
 
 function logticks(a,b)
-...	expi=floor(log(a)/log(10))+1;
-...	expf=ceil(log(b)/log(10))-1;
-	expi=floor(a)+1;expf=ceil(b)-1;
+	expi=floor(log(a)/log(10))+1;
+	expf=ceil(log(b)/log(10))-1;
+...	expi=floor(a)+1;expf=ceil(b)-1;
 	tick=expi-1+log(floor(a/10^(expi-1)+1):9)/log(10);
 	for k=expi to expf-1
 		tick=tick|(k+log(1:9)/log(10));
 	end
 	tick=tick|expf+log(1:ceil(b/10^(expf))-0.95)/log(10);
-	return {tick,1};
+	return {10^tick,1};
 endfunction
 
 function logticks2(a,b)
-...	expi=floor(log(a)/log(10));
-...	expf=ceil(log(b)/log(10));
-	expi=floor(a);expf=ceil(b);
+	expi=floor(log(a)/log(10));
+...	expf=floor(log(b)/log(10));
+	expf=ceil(log(b)/log(10));
+...	expi=floor(a);expf=ceil(b);
 	tick=[];
 	for k=expi to expf-1
 		tick=tick|(k+log(1:9)/log(10));
 	end
 	tick=tick|expf;
-	return {tick,1};
+	
+	return {10^tick,1};
 endfunction
 
-function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
+function xplot (x,y=0,style="",grid=1,ticks=1)
 ## xplot(x,y) or xplot(y) works like plot, but shows axis ticks.
 ## xplot() shows only axis ticks and the grid.
 ## options:
@@ -212,38 +194,42 @@ function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 			endif
 		else xh=x;
 		endif
-		if xlog xh=log(xh)/log(10); endif
-		if ylog y=log(y)/log(10); endif
+		oldsty=style(style);
 		p=plotarea(xh,y);
 		if !holding() clg; endif
 	else
 		p=plot();
 	endif
+	flog=logscale(); xlog=flog[1]; ylog=flog[2];
 	olw=linewidth(1);
 	if !xlog
 		if isvar(xticks)
 			t=xticks; f=1;
-			p=setplot([xticks[1],xticks[length(xticks)]]|p[3:4]);
+			p=[xticks[1],xticks[length(xticks)]]|p[3:4];
 		else
 			{t,f}=ticks(p[1],p[2],1);
-			p=setplot([t[1],t[length(t)]]|p[3:4]);
+			p=[t[1],t[length(t)]]|p[3:4];
 		endif
 	else
 		{t,f}=logticks2(p[1],p[2]);
+		p=[t[1],t[length(t)]]|p[3:4];
 	endif
-	xgrid(t,f,grid,ticks,xlog);
+	setplot(p);
+	xgrid(t,f,grid,ticks,3);
 	if !ylog
 		if isvar(yticks)
 			t=yticks; f=1;
-			p=setplot(p[1:2]|[yticks[1],yticks[length(yticks)]]);
+			p=p[1:2]|[yticks[1],yticks[length(yticks)]];
 		else
 			{t,f}=ticks(p[3],p[4],1);
-			p=setplot(p[1:2]|[t[1],t[length(t)]]);
+			p=p[1:2]|[t[1],t[length(t)]];
 		endif
 	else
 		{t,f}=logticks2(p[3],p[4]);
+		p=p[1:2]|[t[1],t[length(t)]];
 	endif
-	ygrid(t,f,grid,ticks,ylog);
+	setplot(p);
+	ygrid(t,f,grid,ticks,3);
 	if isvar(lw) linewidth(lw); else linewidth(olw); endif;
 	if argn()>0;
 		if isvar(col)
@@ -254,30 +240,11 @@ function xplot (x,y=0,grid=1,ticks=1,xlog=0,ylog=0)
 		endif
 		ho=holding(1); plot(xh,y); holding(ho);
 		color(ocolor);
+		style(oldsty);
 	endif;
 	linewidth(olw);
 ...	if !holding() frame(); endif
 	frame();
-	return p;
-endfunction
-
-function xmark (x,y=0,grid=1,ticks=1)
-## xmark(x,y) or xmark(y) works like plot, but shows axis ticks.
-## xmark() shows only axis ticks and the grid.
-	if !holding(); clg; frame(); endif;
-	if argn()==1;
-		if iscomplex(x); y=im(x); xh=re(x);
-		else; y=x; xh=1:cols(y);
-		endif;
-	else; xh=x;
-	endif;
-	p=plotarea(xh,y);
-	{t,f}=ticks(p[1],p[2]);
-	xgrid(t,f,grid,ticks);
-	{t,f}=ticks(p[3],p[4]);
-	ygrid(t,f,grid,ticks);
-	ho=holding(1); p=mark(xh,y); holding(ho);
-	if !holding() frame(); endif
 	return p;
 endfunction
 
@@ -327,73 +294,6 @@ function niceform (x)
 ## Return a string, containing a nice print of x.
 	y=round(x,10);
 	return printf("%g",y);
-endfunction
-
-function xgrid(xx,f=1,grid=1,ticks=1,xlog=0,color=3)
-## xgrid([x0,x1,...]) draws vertical grid lines on the plot window at
-## x0,x1,...
-## xgrid([x0,x1,...],f) additionally writes x0/f to the axis.
-	c=plot(); n=cols(xx); s=scaling(0); h=holding(1);
-	w=window();
-	st=linestyle("."); color(color);
-	ht=textheight();wt=textwidth();
-	if argn()<2 ticks=0; endif
-	loop 1 to n;
-		x=xx[index()];
-		if (x<=c[2])&&(x>=c[1])
-			if grid plot([x,x],[c[3],c[4]]); endif
-			if ticks && !xlog
-				col=w[1]+(x-c[1])/(c[2]-c[1])*(w[3]-w[1]);
-				ctext(niceform(x/f),[col,w[4]+0.2*ht]);
-			endif
-		endif
-	end
-	if xlog
-		loop floor(c[1]) to ceil(c[2])
-			col=w[1]+(#-c[1])/(c[2]-c[1])*(w[3]-w[1]);
-...			ctext(printf("10^%g",#),[col,w[4]+0.2*ht]);
-			rtext("10",[col+wt,w[4]+0.75*ht]);
-			text(printf("%g",#),[col+wt,w[4]+ht*0.25]);
-		end
-	endif
-	if ticks && !(f~=1)
-		rtext(printf("*%g",f),[w[3],w[4]+1.5*ht]);
-	endif
-	linestyle(st); color(1); holding(h); scaling(s);
-	return 0;
-endfunction
-
-function ygrid(yy,f=1,grid=1,ticks=1,ylog=0,color=3)
-## ygrid([x0,x1,...]) draws horizontal grid lines on the plot window at
-## x0,x1,...
-## ygrid([x0,x1,...],f) additionally writes x0/f to the axis.
-	c=plot(); n=cols(yy); s=scaling(0); h=holding(1);
-	st=linestyle("."); color(color);
-	w=window(); wt=textwidth(); ht=textheight();
-	if argn()<2 ticks=0; endif
-	loop 1 to n
-		y=yy[index()];
-		if (y>=c[3])&&(y<=c[4])
-			if ticks && !ylog
-				row=w[4]-(y-c[3])/(c[4]-c[3])*(w[4]-w[2]);
-				rtext(niceform(y/f),[w[1]-wt/2,row-ht/2]);
-			endif
-			if grid plot([c[1],c[2]],[y,y]); endif
-		endif
-	end;
-	if ylog
-		loop ceil(c[3]) to floor(c[4])
-			row=w[4]-(#-c[3])/(c[4]-c[3])*(w[4]-w[2]);
-...			rtext(printf("10^%g",#),[w[1]-wt/2,row-h/2]);
-			rtext("10",[w[1]-3*wt,row-ht/2]);
-			text(printf("%g",#),[w[1]-3*wt,row-ht]);
-		end
-	endif
-	if ticks && !(f~=1)
-		text(printf("*%g",f),[w[1]-6*wt,w[2]-1.5*ht]);
-	endif
-	linestyle(st); color(1); holding(h); scaling(s);
-	return 0;
 endfunction
 
 function plot (x,y)

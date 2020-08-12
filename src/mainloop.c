@@ -45,7 +45,7 @@ FILE *infile=NULL,*outfile=NULL;
 header commandheader;
 int commandtype;
 
-/* dumping to file */
+/* dumping output to the screen or to a file */
 
 void output (char *s)
 {	text_mode();
@@ -1203,7 +1203,7 @@ static void do_trace(void)
 }
 
 static void do_clg (void)
-{	graphic_mode(); clear_graphics(); gflush();
+{	graphic_mode(); gclear(); gflush();
 }
 
 void do_cls (void)

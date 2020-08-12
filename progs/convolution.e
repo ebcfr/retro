@@ -34,12 +34,39 @@ N=20;T=10e-3;tau=5e-3;dt=2*T/N;
 t=-T:T/100:2*T;ti=[0;10*dt];ei=d(t-ti,dt);
 xi=h(t-ti, tau);
 clg;
-xsubplot(221);xplot(t,ei(1,:),lw=2);xlabel("t [s]");title("impulse at 0");
-xsubplot(222);xplot(t,ei(2,:),lw=2);xlabel("t [s]");title("impulse at 10ms");
-xsubplot(223);xplot(t,xi(1,:),lw=2);xlabel("t [s]");
-xsubplot(224);xplot(t,xi(2,:),lw=2);xlabel("t [s]");wait(5);
+subplot(221);xplot(t,ei[1,:],lw=2);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
+subplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
+subplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
+subplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");
+xsubplot(221);xplot(t,ei[1,:],lw=2);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
+xsubplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
+xsubplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
+xsubplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");wait(5);
 
 weiter();
+load signal
+function d(t, dt)
+	return ustep(t) - ustep(t-dt);
+endfunction
+function h(t, tau)
+## h(t,tau)
+##  1st order impulse response
+##   = 1/tau*exp(-t/tau)
+	return 1/tau*exp(-t/tau)*ustep(t);
+endfunction
+N=20;T=10e-3;tau=5e-3;dt=2*T/N;
+t=-T:T/100:2*T;ti=[0;10*dt];ei=d(t-ti,dt);
+xi=h(t-ti, tau);
+subplot(221);linewidth(2);plot(t,ei[1,:],"lnmoc10");linewidth(1);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
+subplot(221);linewidth(2);plot(t,ei[1,:],"l--c8");linewidth(1);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
+subplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
+subplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
+subplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");
+
+subplot(221);xplot(t,ei[1,:],lw=2);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
+subplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
+subplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
+subplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");
 
 ... step response
 "1.3. step response as the pulse narrows"
@@ -81,7 +108,7 @@ xsubplot(212);xplot(t,e(t,f0)_dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("sinus r
 
 function freqresp()
 	for N=20 to 200 step 10
-		T=10e-3;tau=5e-3;dt=2*T/N,f0=1/T;
+		T=10e-3;tau=5e-3;dt=2*T/N;f0=1/T;
 		t=-T:T/100:2*T;ti=(0:dt:2*T)';xi=h(t-ti, tau)*e(ti,f0);
 		xsubplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: sinus response");
 		xsubplot(212);xplot(t,e(t,f0)_dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("sinus response");

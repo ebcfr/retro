@@ -58,8 +58,12 @@ void mplot (header *hd);
 void mplotarea (header *hd);
 void mplot1 (header *hd);
 void msubplot (header *hd);
+void mxgrid (header *hd);
+void mygrid (header *hd);
 void mpixel (header *hd);
+#if 0
 void mmark (header *hd);
+#endif
 void mcontour (header *hd);
 void mdup (header *hd);
 void mmod (header *hd);
@@ -69,8 +73,11 @@ void mfcolor (header *hd);
 void mwcolor (header *hd);
 void mtcolor (header *hd);
 void mstyle (header *hd);
+void mstyle0 (header *hd);
+#if 0
 void mmstyle (header *hd);
 void mlstyle (header *hd);
+#endif
 void mlinew (header *hd);
 void mwindow (header *hd);
 void mwindow0 (header *hd);
@@ -138,6 +145,8 @@ void msetplot (header *hd);
 void mscaling (header *hd);
 void mholding (header *hd);
 void mholding0 (header *hd);
+void mlogscale (header *hd);
+void mlogscale0 (header *hd);
 void mlineinput (header *hd);
 void minterpret (header *hd);
 void mname (header *hd);
@@ -218,8 +227,12 @@ builtintyp builtin_list[] = {
 	{"plotarea",2,mplotarea},
 	{"plot",0,mplot1},
 	{"subplot",1,msubplot},
+	{"xgrid",5,mxgrid},
+	{"ygrid",5,mygrid},
 	{"pixel",0,mpixel},
+#if 0
 	{"mark",2,mmark},
+#endif
 	{"contour",2,mcontour},
 	{"dup",2,mdup},
 	{"mod",2,mmod},
@@ -229,8 +242,11 @@ builtintyp builtin_list[] = {
 	{"wirecolor",1,mwcolor},
 	{"textcolor",1,mtcolor},
 	{"style",1,mstyle},
+	{"style",0,mstyle0},
+#if 0
 	{"markerstyle",1,mmstyle},
 	{"linestyle",1,mlstyle},
+#endif
 	{"linewidth",1,mlinew},
 	{"window",1,mwindow},
 	{"window",0,mwindow0},
@@ -296,6 +312,8 @@ builtintyp builtin_list[] = {
 	{"scaling",1,mscaling},
 	{"holding",1,mholding},
 	{"holding",0,mholding0},
+	{"logscale",1,mlogscale},
+	{"logscale",0,mlogscale0},
 	{"twosides",1,mtwosides},
 	{"triangles",1,mtriangles},
 	{"meshfactor",1,mmeshfactor},

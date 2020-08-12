@@ -1,4 +1,3 @@
-
 setkey(1,"help");
 setkey(2,"cls");
 setkey(3,"clg");
@@ -12,7 +11,7 @@ setkey(10,"quit");
 
 cd progs;
 
-load util
 load plot
+load util
 
-shortformat(); shrinkwindow();
+shortformat(); ... shrinkwindow();
