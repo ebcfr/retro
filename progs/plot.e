@@ -197,8 +197,7 @@ function xplot (x,y=0,style="",grid=1,ticks=1)
 		oldsty=style(style);
 		p=plotarea(xh,y);
 		if !holding() clg; endif
-	else
-		p=plot();
+	else		p=plot();
 	endif
 	flog=logscale(); xlog=flog[1]; ylog=flog[2];
 	olw=linewidth(1);

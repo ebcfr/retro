@@ -304,6 +304,12 @@ void interpret_udf (header *var, header *args, int argn)
 				/* empty reference parameter: skip for now
 				   look later for named parameter or default val */
 			} else {
+				if (hd->type==s_reference && !referenceof(hd)) {
+					/* lazy evaluation of builtin and udf without () */
+					header* hd1=getvalue(hd);
+					strcpy(hd1->name,hd->name);
+					referenceof(hd)=hd1;
+				}
 				udf_arg* arg=(udf_arg*)p;
 				strcpy(hd->name,arg->name); hd->xor=arg->xor;
 				arg_bitmap |= 1<<i;
@@ -316,6 +322,12 @@ void interpret_udf (header *var, header *args, int argn)
 			} else {
 				/* valid parameter: rename it 'arg#' with # the
 				   position in the actual parameter list */
+				if (hd->type==s_reference && !referenceof(hd)) {
+					/* lazy evaluation of builtin and udf without () */
+					header* hd1=getvalue(hd);
+					strcpy(hd1->name,hd->name);
+					referenceof(hd)=hd1;
+				}
 				strcpy(hd->name,argname[i]);
 				hd->xor=xors[i];
 			}

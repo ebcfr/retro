@@ -2354,8 +2354,8 @@ static void scan_elementary (void)
 	else if (isalpha(*next))
 	{	scan_name(name); if (error) return;
 		scan_space(); nargs=0;
-		if (*next=='{')					/* indexing a variable linearly */
-		{	next++; scan(); if (error) return; scan_space();
+		if (*next=='{') {				/* indexing a variable linearly */
+			next++; scan(); if (error) return; scan_space();
 			if (*next!='}')
 			{	output("} missing!\n"); error=1010; return;
 			}
@@ -2363,25 +2363,26 @@ static void scan_elementary (void)
 			get_element1(name,hd);
 			goto after;
 		}
-		if (*next=='(' || *next=='[')	/* arguments or indices */
-		{	hadargs=(*next=='[')?2:1;
+		if (*next=='(' || *next=='[') {	/* arguments or indices */
+			hadargs=(*next=='[')?2:1;
 			next++; nargs=parse_arguments();
 			if (error) return;
 		}
-		if (hadargs==1 && exec_builtin(name,nargs,hd));	/* call builtin function */
-		else
-		{	if (hadargs==2) var=searchvar(name);
-			else if (hadargs==1)
-			{	var=searchudf(name);
+		if (hadargs==1 && exec_builtin(name,nargs,hd)) {
+			/* try a builtin function with () following the name (standard way) */
+		} else {
+			if (hadargs==2) var=searchvar(name);
+			else if (hadargs==1) {	var=searchudf(name);
 				if (!var) var=searchvar(name);
+			} else {
+				var=searchvar(name);
 			}
-			else var=searchvar(name);
 			
-			if (var && var->type==s_udf && hadargs==1)	/* call udf */
-			{	interpret_udf(var,hd,nargs); if (error) return;
-			}
-			else if (!var && hadargs)
-			{	error=24;
+			if (var && var->type==s_udf && hadargs==1) {
+				/* call udf */
+				interpret_udf(var,hd,nargs); if (error) return;
+			} else if (!var && hadargs) {
+				error=24;
 				if (hadargs==2)
 				output1("%s no variable!\n",name);
 				else
@@ -2389,18 +2390,20 @@ static void scan_elementary (void)
 			"%s no function or variable, or wrong argument number!\n",
 			name);
 				return;
-			}
-			else if (var && hadargs)
-			{	/* call a function whose name is defined by a string 
+			} else if (var && hadargs) {
+				/* call a function whose name is defined by a string 
 				   or get an element of a matrix whose indices are defined
 				   between [] or () */
 				get_element(nargs,var,hd);
-			}
-			else
-			{	/* the name is not followedhas no [] or (): it can be
+			} else {	
+				/* the name is not followed with any [] or (): it can be
+				   - a builtin or udf function without (): do lazy evaluation (in 
+				     getvalue()) so that variable with the same name will be 
+				     evaluated before searching for builtin or udf
 				   - a reference to a new variable e.g. X=...
 				   - a reference to a variable in an expression e.g. ...=X+3
 				*/
+
 				hd=new_reference(var,name);
 			}
 		}

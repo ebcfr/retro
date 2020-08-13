@@ -81,3 +81,48 @@ eval("f",[1,2,3])
 
 num=[7,-2,3,5];den=[3,8,0,-4];
 {a,b}=polydiv(num,den)
+
+
+function f(a,b)
+  memorydump
+  listvar
+  hexdump a
+  hexdump b
+  hexdump pi
+  return b/a;
+endfunction;
+f(1,pi)
+
+function getdata
+	return pi;
+endfunction
+
+function getdata1(x=3)
+	listvar
+	"..."
+	return x+pi;
+endfunction
+
+function f(a,b,c,extra1=5,extra2=7)
+  d=3*pi;
+  listvar
+  "..."
+  return b/a+c+d;
+endfunction;
+z=2;f(z,pi,1)
+z=2;h=7;f(z,h,1)
+z=2;f(z,getdata,1)
+z=2;f(z,getdata,getdata1)
+z=2;f(z,getdata,getdata1+1)
+
+function setplot
+  listvar
+  arg1
+  arg2
+  arg3
+  arg4
+  if argn==4 return setplot([arg1,arg2,arg3,arg4]);
+  else error("bad args")
+endfunction
+setplot(-pi,pi,-2,2);
+
