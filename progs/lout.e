@@ -318,6 +318,10 @@ function graph()
 	endif
 	if isvar(xlog) "xlog{10} " endif
 	if isvar(ylog) "ylog{10} " endif
+	if isvar(xmin) "xmin{" xmin "} " endif
+	if isvar(xmax) "xmax{" xmax "} " endif
+	if isvar(ymin) "ymin{" ymin "} " endif
+	if isvar(ymax) "ymax{" ymax "} " endif
 	if isvar(xticks) "xticks{" xticks "} " endif
 	if isvar(yticks) "yticks{" yticks "} " endif
 	if isvar(xticksep) "xticksep{" xticksep "} " endif

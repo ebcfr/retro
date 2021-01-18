@@ -1,4 +1,4 @@
-.. Test the random number creator
+... Test the random number creator
 
 function randomtest (n=5000)
 ## perform various test on the random number creator
@@ -27,8 +27,7 @@ function randomtest (n=5000)
 	printf("chi^2 for the gaps = %0.5f",chi2),
 	printf("Probability for this: %0.2f%%",(1-chidis(chi2,20))*100),	
 ## distribution of pairs test
-	markerstyle("m.");
-	xmark(t[1],t[2],grid=0); title("pairs of random numbers");
+	xplot(t[1],t[2],style="m+",grid=0); title("pairs of random numbers");
 	wait();
 	l=floor(t[1]*10)*10+floor(t[2]*10);
 	histogram(l,integer=1); title("distribution of pairs"); wait();

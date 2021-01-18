@@ -1033,7 +1033,7 @@ char* parsestyle(plot_t* p, char*s)
 	linetype=line_solid;
 	markertype=marker_none;
 	
-	while (*s!=0 && *s!=';') {
+	while (*s!=0) {
 		switch (*s) {
 		case 'L':			/* scale style */
 			s1=s++;
@@ -1169,6 +1169,7 @@ char* parsestyle(plot_t* p, char*s)
 			return s;
 		}
 		if (*s==',') s++;
+		if (*s==';') {s++; break;}
 	}
 	return s;
 }
@@ -1807,8 +1808,45 @@ double project (double x, double y, double z, double *c, double *r)
 	if (y<-0.9*distance) y=-0.9*distance;
 	x/=(y+distance); z/=(y+distance);
 	*c=((plt_cur->upperc+plt_cur->lowerc)/2+(plt_cur->lowerc-plt_cur->upperc)/2*x*tele);
-	*r=plt_cur->lowerr-((plt_cur->upperr+plt_cur->lowerr)/2+(plt_cur->lowerr-plt_cur->upperr)/2*z*tele);
+	*r=((plt_cur->upperr+plt_cur->lowerr)/2-(plt_cur->lowerr-plt_cur->upperr)/2*z*tele);
 	return y;
+}
+
+void mproject (header *hd)
+{	LONG col;
+	double *mx,*my,*mz,*screen_col,*screen_row;
+	int c,r,i,j;
+	header *st=hd,*hd1,*hd2,*result1,*result2;
+	hd=getvalue(hd); if (error) return;
+	if (hd->type!=s_matrix)
+	{	output("Illegal parameter for project!\n"); error=82; return;
+	}
+	getmatrix(hd,&r,&c,&mx); col=c;
+	hd1=next_param(st); hd2=next_param(hd1);
+	hd1=getvalue(hd1); hd2=getvalue(hd2);
+	if (error) return;
+	if (hd1->type!=s_matrix || hd2->type!=s_matrix ||
+		dimsof(hd1)->r!=r || dimsof(hd2)->r!=r ||
+		dimsof(hd1)->c!=c || dimsof(hd2)->c!=c)
+	{	output("Matrix dimensions for project must agree!\n");
+		error=83; return;
+	}
+	my=matrixof(hd1); mz=matrixof(hd2);
+	result1=new_matrix(r,c,""); if (error) return;
+	result2=new_matrix(r,c,""); if (error) return;
+	screen_col=matrixof(result1);
+	screen_row=matrixof(result2);
+	
+	cos_left=cos(a_left); sin_left=sin(a_left);
+	cos_up=cos(a_up); sin_up=sin(a_up);
+	for (i=0; i<r; i++)
+		for (j=0; j<c; j++)
+		{	project(*mat(mx,c,i,j),*mat(my,c,i,j),*mat(mz,c,i,j),
+				&screen_col[col*i+j],&screen_row[col*i+j]);
+			if (test_key()==escape) { error=1; return; }
+		}
+	moveresult(st,result1);
+	moveresult(nextof(st),result2);
 }
 
 void mwire (header *hd)
@@ -1867,44 +1905,6 @@ void mwire (header *hd)
 	hd=new_real(0.0,"");
 	moveresult(st,hd);
 	gflush();
-}
-
-void mproject (header *hd)
-{	LONG col;
-	double *mx,*my,*mz,*screen_col,*screen_row;
-	int c,r,i,j;
-	header *st=hd,*hd1,*hd2,*result1,*result2;
-	hd=getvalue(hd); if (error) return;
-	if (hd->type!=s_matrix)
-	{	output("Illegal parameter for project!\n"); error=82; return;
-	}
-	getmatrix(hd,&r,&c,&mx); col=c;
-	hd1=next_param(st); hd2=next_param(hd1);
-	hd1=getvalue(hd1); hd2=getvalue(hd2);
-	if (error) return;
-	if (hd1->type!=s_matrix || hd2->type!=s_matrix ||
-		dimsof(hd1)->r!=r || dimsof(hd2)->r!=r ||
-		dimsof(hd1)->c!=c || dimsof(hd2)->c!=c)
-	{	output("Matrix dimensions for project must agree!\n");
-		error=83; return;
-	}
-	my=matrixof(hd1); mz=matrixof(hd2);
-	result1=new_matrix(r,c,""); if (error) return;
-	result2=new_matrix(r,c,""); if (error) return;
-	screen_col=matrixof(result1);
-	screen_row=matrixof(result2);
-	
-	cos_left=cos(a_left); sin_left=sin(a_left);
-	cos_up=cos(a_up); sin_up=sin(a_up);
-	for (i=0; i<r; i++)
-		for (j=0; j<c; j++)
-		{	project(*mat(mx,c,i,j),*mat(my,c,i,j),*mat(mz,c,i,j),
-				&screen_col[col*i+j],&screen_row[col*i+j]);
-			screen_row[col*i+j]=plt_cur->upperr+plt_cur->lowerr-screen_row[col*i+j];
-			if (test_key()==escape) { error=1; return; }
-		}
-	moveresult(st,result1);
-	moveresult(nextof(st),result2);
 }
 
 typedef struct { int i,j; double z; } recttyp;

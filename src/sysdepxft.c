@@ -1043,6 +1043,7 @@ void gline (double c, double r, double c1, double r1, int col, int st, int width
 	draw(column(c),row(r),column(c1),row(r1));
 }
 
+#ifdef OLDGRAPH
 void gmarker (double c, double r, int col, int type)
 /***** gmarker
 	plot a single marker on screen.
@@ -1087,7 +1088,7 @@ void gmarker (double c, double r, int col, int type)
 		draw(column(c-10),row(r-10),column(c+10),row(r+10));
 	}
 }
-
+#endif
 void gfill (double c[], int st, int n, int connect[])
 /***** gfill
 	fill an area given by n pairs of points (in c: x,y,x,y,...)
@@ -2211,6 +2212,7 @@ int main (int argc, char *argv[])
 					{	stacksize=atoi(argv[2])*1024l; argc--; argv++;
 						break;
 					}
+					if (stacksize<512*1024l) stacksize=512*1024l;
 					break;
 				case 'd' :
 					strcpy(sdisp,argv[2]); argc--; argv++; break;
@@ -2227,7 +2229,6 @@ int main (int argc, char *argv[])
 	}
 	
 	/* Allocate the stack, initialize stack limit pointers */
-	if (stacksize<64*1024l) stacksize=64*1024l;
 	ramstart=(char *)malloc(stacksize);
 	
 	if (!ramstart) die("can't allocate the stack");
@@ -2259,7 +2260,7 @@ int main (int argc, char *argv[])
 	 		break;
 	 	}
 	}
-	path[npath++]=INSTALL"/share/retro/progs\n";
+	path[npath++]=INSTALL"/share/retro/progs";
 	
 #ifdef DEBUG	
 	fprintf(stderr,"npath %d\n",npath);

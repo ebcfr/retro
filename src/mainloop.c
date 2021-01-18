@@ -69,7 +69,7 @@ void output1 (char *fmt, ...)
 	va_end(v);
 	if (outputing || error) gprint(text);
 	if (outfile) {
-		fprintf(outfile,text);
+		fprintf(outfile,"%s",text);
 		if (ferror(outfile)) {	
 			error=200;
 			fclose(outfile); outfile=NULL;
@@ -96,7 +96,7 @@ int output1hold (int f, char *fmt, ...)
 	}
 	if (outputing || error) gprint(text);
 	if (outfile) {
-	   fprintf(outfile,text);
+	   fprintf(outfile,"%s",text);
 		if (ferror(outfile)) {
 			error=200;
 			fclose(outfile); outfile=NULL;
@@ -589,12 +589,12 @@ void give_out (header *hd)
 	print a value.
 *****/
 {	switch(hd->type)
-	{	case s_real : double_out(*realof(hd)); output("\n"); break;
+	{	case s_real :    double_out(*realof(hd)); output("\n"); break;
 		case s_complex : complex_out(*realof(hd),*(realof(hd)+1));
 			output("\n"); break;
-		case s_matrix : out_matrix(hd); break;
+		case s_matrix :  out_matrix(hd); break;
 		case s_cmatrix : out_cmatrix(hd); break;
-		case s_string : output(stringof(hd)); output("\n"); break;
+		case s_string :  output(stringof(hd)); output("\n"); break;
 		default : output("?\n");
 	}
 }
@@ -1789,7 +1789,7 @@ static commandtyp command_list[] = {
 	{"trace",c_global,do_trace},
 	{"exec",c_exec,do_exec},
 	{"cd",c_global,do_cd},
-	{"dir",c_global,do_dir},
+	{"ls",c_global,do_dir},
 	{"rm",c_global,do_remove},
 	{NULL,c_none,NULL}
 };
@@ -2256,6 +2256,7 @@ static double scan_number(void)
 		}
 		if (d!='.') goto do_exp;
 do_dot:
+		if (!(*(next+1)>='0' && *(next+1)<='9')) goto done;
 		next++;
 		dexp=0;
 		while ((d=*next)>='0' && d<='9') {
@@ -2308,6 +2309,7 @@ do_exp:
 			default: next--;break;
 			}
 		}
+done:
 		return val;
 	}
 	return 0.0;

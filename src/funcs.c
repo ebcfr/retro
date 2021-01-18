@@ -307,6 +307,7 @@ void interpret_udf (header *var, header *args, int argn)
 				if (hd->type==s_reference && !referenceof(hd)) {
 					/* lazy evaluation of builtin and udf without () */
 					header* hd1=getvalue(hd);
+					if (error) return;
 					strcpy(hd1->name,hd->name);
 					referenceof(hd)=hd1;
 				}
@@ -325,6 +326,7 @@ void interpret_udf (header *var, header *args, int argn)
 				if (hd->type==s_reference && !referenceof(hd)) {
 					/* lazy evaluation of builtin and udf without () */
 					header* hd1=getvalue(hd);
+					if (error) return;
 					strcpy(hd1->name,hd->name);
 					referenceof(hd)=hd1;
 				}
@@ -1174,7 +1176,7 @@ static double rlog (double x)
 }
 #endif
 
-void cclog (double *x, double *xi, double *z, double *zi)
+void c_log (double *x, double *xi, double *z, double *zi)
 {	
 #ifdef FLOAT_TEST
 	*z=rlog(sqrt(*x * *x + *xi * *xi));
@@ -1195,7 +1197,7 @@ static void c_atan (double *x, double *xi, double *y, double *yi)
 {	double h,hi,g,gi,t,ti;
 	h=1-*xi; hi=*x; g=1+*xi; gi=-*x;
 	complex_divide(&h,&hi,&g,&gi,&t,&ti);
-	cclog(&t,&ti,&h,&hi);
+	c_log(&t,&ti,&h,&hi);
 	*y=hi/2; *yi=-h/2;
 }
 
@@ -1230,7 +1232,7 @@ static void c_asin (double *x, double *xi, double *y, double *yi)
 	h=1-h; hi=-hi;
 	c_sqrt(&h,&hi,&g,&gi);
 	h=-*xi+g; hi=*x+gi;
-	cclog(&h,&hi,yi,y);
+	c_log(&h,&hi,yi,y);
 	*yi=-*yi;
 }
 
@@ -1257,7 +1259,7 @@ static void c_acos (double *x, double *xi, double *y, double *yi)
 	h=1-h; hi=-hi;
 	c_sqrt(&h,&hi,&g,&gi);
 	hi=*xi+g; h=*x-gi;
-	cclog(&h,&hi,yi,y);
+	c_log(&h,&hi,yi,y);
 	*yi=-*yi;
 }
 
@@ -1282,7 +1284,7 @@ void mexp (header *hd)
 }
 
 void mlog (header *hd)
-{	spread1(log,cclog,hd);
+{	spread1(log,c_log,hd);
 }
 
 #ifdef FLOAT_TEST
@@ -1324,7 +1326,7 @@ static void c_pow (double *x, double *xi, double *y, double *yi,
 	if (fabs(*x)<epsilon && fabs(*xi)<epsilon)
 	{	*z=*zi=0.0; return;
 	}
-	cclog(x,xi,&l,&li);
+	c_log(x,xi,&l,&li);
 	complex_multiply(y,yi,&l,&li,&w,&wi);
 	c_exp(&w,&wi,z,zi);
 }

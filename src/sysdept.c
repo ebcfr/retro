@@ -35,8 +35,6 @@ char outputs[256];
 #include "header.h"
 #include "sysdep.h"
 
-long size=512*1024l; /* default stack size in Byte */
-
 int linelength=80; /* width of text screen */
 int wchar,hchar; /* font metrics of graphic text */
 static int editing=0;
@@ -60,17 +58,6 @@ double getcolor (int i, int j)
 }
 
 int usecolors=1;
-
-int memory_init (void)
-/***** memory_init
-	get memory for stack.
-*****/
-{	ramstart=(char *)malloc(size);
-	if (!ramstart) return 0;
-	ramend=ramstart+size;
-	return 1;
-}
-
 
 /******************** writing the meta file ************/
 
@@ -784,13 +771,13 @@ void move_cr_cb (void)
 void cursor_on_cb (void)
 /* switch cursor on */
 {
-	gprint("\x1b[?25h");
+	if (!quiet) gprint("\x1b[?25h");
 }
 
 void cursor_off_cb (void)
 /* switch cursor off */
 {
-	gprint("\x1b[?25l");
+	if (!quiet) gprint("\x1b[?25l");
 }
 
 void clear_eol (void)
@@ -874,7 +861,7 @@ static void term_restore(void)
 	/* restore the former settings */
 	tcsetattr(STDIN_FILENO,TCSANOW,&old_tio);
 	// show cursor
-	printf("\x1b[?25h");
+	if (!quiet) printf("\x1b[?25h");
 }
 #endif
 
@@ -888,14 +875,15 @@ int main (int argc, char *argv[])
 Initialize memory and call main_loop
 ******/
 {
+	unsigned long stacksize=1024*1024l;
 	char *s;
 	
     while (argc>1 && argv[1][0]=='-')
 	{	switch (argv[1][1])
 		{	case 's' : /* set stacksize */
 				if (argc<3) goto error;
-				size=atoi(argv[2])*1024l;
-				if (size<512*1024l) size=512*1024l;
+				stacksize=atoi(argv[2])*1024l;
+				if (stacksize<512*1024l) stacksize=512*1024l;
 				argc-=2; argv+=2;
 				break;
 			case 'q' : /* set quiet mode */
@@ -909,8 +897,11 @@ Initialize memory and call main_loop
 		}
 	}
 	
-	if (!memory_init()) return 1;
-	
+	/* Allocate the stack, initialize stack limit pointers */
+	ramstart=(char *)malloc(stacksize);
+	if (!ramstart) return 1;
+	ramend=ramstart+stacksize;
+
 	/* set up default pathes and directory */
 	s=getenv("RETRO");
 	if (!s) s="~/.retro/progs:";
@@ -935,7 +926,7 @@ Initialize memory and call main_loop
 	 		break;
 	 	}
 	}
-	path[npath++]=INSTALL"/share/retro/progs\n";
+	path[npath++]=INSTALL"/share/retro/progs";
 	
 #ifdef DEBUG	
 	fprintf(stderr,"npath %d\n",npath);

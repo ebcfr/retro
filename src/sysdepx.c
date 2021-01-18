@@ -1680,7 +1680,7 @@ int main (int argc, char *argv[])
 	 		break;
 	 	}
 	}
-	path[npath++]=INSTALL"/share/retro/progs\n";
+	path[npath++]=INSTALL"/share/retro/progs";
 	
 #ifdef DEBUG	
 	fprintf(stderr,"npath %d\n",npath);

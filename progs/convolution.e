@@ -1,22 +1,42 @@
 ... ############### Convolution ################
 load signal
 
-function weiter
-	"
-	<< Press return to continue >>
-	" wait(5);
-	return 120;
+cls
+
+demodelay=5;
+
+function delay
+	global demodelay;
+	return demodelay
+endfunction
+
+function pause
+	"" "<< Press return to continue >>" "",
+	return wait(delay());
 endfunction
 
 "1. Convolution: an introduction"
+
+"
+1.1. A system can be characterized by its impulse response
+
+e(t)=delta(t)  --->  s(t) = h(t) [impulse response]
+"
+pause();
+
+"
+1.2. Principle of time invariance of a system
+
+if       e(t)  --->  s(t)
+
+then  e(t-t0)  --->  s(t-t0)
+"
+pause();
 ... pulse signal
 function d(t, dt)
 	return ustep(t) - ustep(t-dt);
 endfunction
 
-"
-1.1. A system can be characterized by its impulse response
-"
 ... impulse response
 function h(t, tau)
 ## h(t,tau)
@@ -25,71 +45,36 @@ function h(t, tau)
 	return 1/tau*exp(-t/tau)*ustep(t);
 endfunction
 
-weiter();
-
-"
-1.2. Principle of time invariance of a system
-"
 N=20;T=10e-3;tau=5e-3;dt=2*T/N;
 t=-T:T/100:2*T;ti=[0;10*dt];ei=d(t-ti,dt);
 xi=h(t-ti, tau);
 clg;
-subplot(221);xplot(t,ei[1,:],lw=2);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
-subplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
+subplot(221);setplot([-T,2*T,0,1.2]);xplot(t,ei[1,:],lw=2);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
+subplot(222);setplot([-T,2*T,0,1.2]);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
 subplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
-subplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");
-xsubplot(221);xplot(t,ei[1,:],lw=2);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
-xsubplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
-xsubplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
-xsubplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");wait(5);
-
-weiter();
-load signal
-function d(t, dt)
-	return ustep(t) - ustep(t-dt);
-endfunction
-function h(t, tau)
-## h(t,tau)
-##  1st order impulse response
-##   = 1/tau*exp(-t/tau)
-	return 1/tau*exp(-t/tau)*ustep(t);
-endfunction
-N=20;T=10e-3;tau=5e-3;dt=2*T/N;
-t=-T:T/100:2*T;ti=[0;10*dt];ei=d(t-ti,dt);
-xi=h(t-ti, tau);
-subplot(221);linewidth(2);plot(t,ei[1,:],"lnmoc10");linewidth(1);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
-subplot(221);linewidth(2);plot(t,ei[1,:],"l--c8");linewidth(1);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
-subplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
-subplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
-subplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");
-
-subplot(221);xplot(t,ei[1,:],lw=2);xlabel("t [s]");ylabel("e(t)");title("impulse at 0");
-subplot(222);xplot(t,ei[2,:],lw=2);xlabel("t [s]");ylabel("e(t-t_0)");title("impulse at 10ms");
-subplot(223);xplot(t,xi[1,:],lw=2);xlabel("t [s]");ylabel("h(t)");
-subplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)");
+subplot(224);xplot(t,xi[2,:],lw=2);xlabel("t [s]");ylabel("h(t-t_0)"); wait(delay());
 
 ... step response
 "1.3. step response as the pulse narrows"
 N=20;T=10e-3;tau=5e-3;dt=2*T/N;
 t=-T:T/100:2*T;ti=(0:dt:2*T)';xi=h(t-ti, tau);
 clg;
-xsubplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: step response");
-xsubplot(212);xplot(t,dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("step response");
+subplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: step response");
+subplot(212);xplot(t,dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("step response");
 
 function stepresp()
 	for N=20 to 200 step 10
 		T=10e-3;tau=5e-3;dt=2*T/N
 		t=-T:T/100:2*T;ti=(0:dt:2*T)';xi=h(t-ti, tau);
-		xsubplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: step response");
-		xsubplot(212);xplot(t,dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("step response");
+		subplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: step response");
+		subplot(212);xplot(t,dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("step response");
 		wait(0.2);
 	end
 	return 0;
 endfunction
 
-stepresp();
+stepresp(); wait(delay());
 
-weiter();
 
 ... harmonic response
 "
@@ -103,21 +88,21 @@ endfunction
 N=20;T=10e-3;tau=5e-3;dt=2*T/N;f0=1/T
 t=-T:T/100:2*T;ti=(0:dt:2*T)';xi=h(t-ti, tau)*e(ti,f0);
 clg;
-xsubplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: sinus response");
-xsubplot(212);xplot(t,e(t,f0)_dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("sinus response");
+subplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: sinus response");
+subplot(212);xplot(t,e(t,f0)_dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("sinus response");
 
 function freqresp()
 	for N=20 to 200 step 10
 		T=10e-3;tau=5e-3;dt=2*T/N;f0=1/T;
 		t=-T:T/100:2*T;ti=(0:dt:2*T)';xi=h(t-ti, tau)*e(ti,f0);
-		xsubplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: sinus response");
-		xsubplot(212);xplot(t,e(t,f0)_dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("sinus response");
+		subplot(211);xplot(t,xi,lw=2);xlabel("t [s]");ylabel("e(t_i) x h(t-t_i)");title("1st order system: sinus response");
+		subplot(212);xplot(t,e(t,f0)_dt*sum(xi')',lw=2);xlabel("t [s]");ylabel("sinus response");
 		wait(0.2);
 	end
 	return 0;
 endfunction
 
-freqresp();
+freqresp(); wait(delay());
 
 ... Note: the "large" dt used for the pulse width infers a sampling
 ... of the signals with a sample period Te=dt, and a 1/Te factor in
@@ -128,8 +113,6 @@ freqresp();
 ...
 ... To compensate the 1/Te factor in the spectrum, the result of 
 ... the convolution is multiplied by Te.
-
-weiter();
 
 "
 2. Effective methods to compute convolution
@@ -220,5 +203,5 @@ x=ustep(t-2*tau)-ustep(t-8*tau);
 h=1/tau*exp(-t/tau)*ustep(t);
 t1=time();y=polymult(x,h);t2=time();t2-t1;
 clg;
-xsubplot(211);xplot(t,h,lw=2);
-xsubplot(212);xplot(t,y[N:N-1+length(t)]*dt_x,lw=2);wait(5);
+subplot(211);xplot(t,h,lw=2);
+subplot(212);setplot([-0.2,0.2,0,1.2]);xplot(t,y[N:N-1+length(t)]*dt_x,lw=2);wait(5);

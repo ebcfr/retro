@@ -21,7 +21,7 @@ function fseries()
 endfunction
 fseries
 
-	n=256;fs=100;Ts=1/fs;t=(0:n-1)*Ts; x=sin(2*pi*10*t)+2*cos(2*pi*15*t);
+	n=128;fs=100;Ts=1/fs;t=(0:n-1)*Ts; x=sin(2*pi*10*t)+2*cos(2*pi*15*t);
 	y=x+normal(size(x));
 	subplot(211);
 	setplot(0,(n-1)*Ts,-5, 5); 
@@ -217,6 +217,174 @@ f=-100:0.1:100;X=A*theta*abs(sinc(pi*theta*f));
 X=abs(A*theta*abs(sinc(pi*theta*(f+fs)))+A*theta*abs(sinc(pi*theta*f))+A*theta*abs(sinc(pi*theta*(f-fs))));
 
 subplot(211);title("a pulse analog signal, and its spectrum");
-style("m[]");xmark(t,A*pulse(t,theta),lw=2);xlabel("t [s]");ylabel("x(t)");
+xplot(t,A*pulse(t,theta),"m[]",lw=2);xlabel("t [s]");ylabel("x(t)");
 subplot(212);
-plot(f,X,lw=2);xlabel("f [Hz]");ylabel("|X(f)|");wait(delay);
+xplot(f,X,lw=2);xlabel("f [Hz]");ylabel("|X(f)|");wait(delay);
+
+
+... WINDOWING EFFECT
+
+... fx=26k, N=32 pts
+... number of points, signal frequency and amplitude, sampling frequency
+j=1i; N=32; fx=26k; A=1; fe=64k;
+
+... analog signal
+Na=1024; ta=(0:Na-1)*N/(Na*fe); k=(0:Na-1)*N/Na;
+sa=A*exp(j*2*pi*fx*ta);
+
+... digital signal
+tn=(0:N-1)/fe; fn=0:N-1;
+sn=A*exp(j*2*pi*fx*tn);
+Sf=N*abs(fft(sn));
+
+... the theoritical expression of the DFT of a complex exponential signal 
+... limited by a rectangular window
+x=k/N-fx/fe;S=A*sin(N*pi*x)/(sin(pi*x)+(x==0))+(x==0)*N;
+
+subplot(211);
+xplot(ta,re(sa),"c7");hold on;style("lc,c11,m#o");plot(tn,re(sn));hold off;
+xlabel("t [s]");ylabel("magnitude [V]");
+subplot(212);
+xplot(k,abs(S),"c7"); hold on; style("lc,c11"); plot(fn,Sf); hold off;
+xlabel("index");ylabel("magnitude [Vs]");
+
+... fx=32k, N=32 pts
+... number of points, signal frequency and amplitude, sampling frequency
+j=1i; N=32; fx=32k; A=1; fe=64k;
+
+... analog signal
+Na=1024; ta=(0:Na-1)*N/(Na*fe); k=(0:Na-1)*N/Na;
+sa=A*exp(j*2*pi*fx*ta);
+
+... digital signal
+tn=(0:N-1)/fe; fn=0:N-1;
+sn=A*exp(j*2*pi*fx*tn);
+Sf=N*abs(fft(sn));
+
+... the theoritical expression of the DFT of a complex exponential signal 
+... limited by a rectangular window
+x=k/N-fx/fe;S=A*sin(N*pi*x)/(sin(pi*x)+(x==0))+(x==0)*N;
+
+subplot(211);
+xplot(ta,re(sa),"c7");hold on;style("lc,c11,m#o");plot(tn,re(sn));hold off;
+xlabel("t [s]");ylabel("magnitude [V]");
+subplot(212);
+xplot(k,abs(S),"c7"); hold on; style("lc,c11"); plot(fn,Sf); hold off;
+
+... fx=32k N=2
+... number of points, signal frequency and amplitude, sampling frequency
+j=1i; N=2; fx=32k; A=1; fe=64k;
+
+... analog signal
+Na=1024; ta=(0:Na-1)*N/(Na*fe); k=(0:Na-1)*N/Na;
+sa=A*exp(j*2*pi*fx*ta);
+
+... digital signal
+tn=(0:N-1)/fe; fn=0:N-1;
+sn=A*exp(j*2*pi*fx*tn);
+Sf=N*abs(fft(sn));
+
+... the theorical expression of the DFT of a complex exponential signal 
+... limited by a rectangular window
+x=k/N-fx/fe;S=A*sin(N*pi*x)/(sin(pi*x)+(x==0))+(x==0)*N;
+
+subplot(211);
+xplot(ta,re(sa),"c7");hold on;style("lc,c11,m#o");plot(tn,re(sn));hold off;
+xlabel("t [s]");ylabel("magnitude [V]");
+subplot(212);
+xplot(k,abs(S),"c7"); hold on; style("lc,c11"); plot(fn,Sf); hold off;
+
+... fx=25k, N=32 pts
+... number of points, signal frequency and amplitude, sampling frequency
+j=1i; N=16; fx=13k; A=1; fe=64k;
+
+... analog signal
+Na=1024; ta=(0:Na-1)*N/(Na*fe); k=(0:Na-1)*N/Na;
+sa=A*exp(j*2*pi*fx*ta);
+
+... digital signal
+tn=(0:N-1)/fe; fn=0:N-1;
+sn=A*exp(j*2*pi*fx*tn);
+Sf=N*abs(fft(sn));
+
+... the theoritical expression of the DFT of a complex exponential signal 
+... limited by a rectangular window
+x=k/N-fx/fe;S=A*sin(N*pi*x)/(sin(pi*x)+(x==0))+(x==0)*N;
+
+subplot(211);
+xplot(ta,re(sa),"c7");hold on;style("lc,c11,m#o");plot(tn,re(sn));hold off;
+xlabel("t [s]");ylabel("magnitude [V]");
+subplot(212);
+xplot(k,abs(S),"c7"); hold on; style("lc,c11"); plot(fn,Sf); hold off;
+
+
+... fx=25k, N=32 pts
+... number of points, signal frequency and amplitude, sampling frequency
+j=1i; N=32; fx=26k; fx2=27k; A=1; fe=64k;
+
+... analog signal
+Na=1024; ta=(0:Na-1)*N/(Na*fe); k=(0:Na-1)*N/Na;
+sa=A*(exp(j*2*pi*fx*ta)+exp(j*2*pi*fx2*ta));
+
+... digital signal
+tn=(0:N-1)/fe; fn=0:N-1;
+sn=A*(exp(j*2*pi*fx*tn)+exp(j*2*pi*fx2*tn));
+...sn=A*cos(2*pi*fx*tn);
+Sf=N*abs(fft(sn));
+
+... the theoritical expression of the DFT of a complex exponential signal 
+... limited by a rectangular window
+x=k/N-fx/fe;S=A*sin(N*pi*x)/(sin(pi*x)+(x==0))+(x==0)*N;
+x2=k/N-fx2/fe;S2=A*sin(N*pi*x2)/(sin(pi*x2)+(x2==0))+(x2==0)*N;
+
+subplot(211);
+xplot(ta,re(sa),"c7");hold on;style("lc,c11,m#o");plot(tn,re(sn));hold off;
+xlabel("t [s]");ylabel("magnitude [V]");
+subplot(212);
+xplot(k,abs(S),"c7"); hold on; style("lc,c11"); plot(fn,Sf); hold off;
+
+
+... non-periodic signal
+N=1024;fs=20k;Ts=1/fs;t=(-N/2:N/2-1)*Ts;
+y=pulse(t,1m);
+subplot(211);
+setplot(min(t),max(t),-0.2, 1.2); 
+xplot(t,y,"c11+,w=2");
+title("Signal");
+c=fft(y)*N*Ts; p=abs(c);f=(-N/2:N/2-1)*fs/N;
+subplot(212);
+xplot(f,(p[N/2+1:N]|p[1:N/2]),"c11+,w=2");
+title("Spectral analysis");
+
+
+function H(f,w0)
+	return 1/(1+1i*2*pi*f/w0);
+endunction
+N=1024;fs=80k;Ts=1/fs;t=(-N/2:N/2-1)*Ts;
+f0=10k;w0=2*pi*f0;y=w0*exp(-w0*t)*ustep(t);
+subplot(211);
+...setplot(min(t),max(t),-0.5, 1.5); 
+xplot(t,y,"c11+,w=2");
+title("Signal");
+c=fft(y)*N*Ts; p=abs(c);f=(-N/2:N/2-1)*fs/N;
+subplot(212);
+setplot(min(f),max(f),0,max(p));
+xplot(f,(p[N/2+1:N]|p[1:N/2]),"c11+,w=2");
+title("Spectral analysis");
+
+function H(f,w0=1)
+	return 1/(1+1i*2*pi*f/w0);
+endunction
+N=1000;fs=200k;Ts=1/fs;t=(-N/2:N/2-1)*Ts;
+m=0.05;f0=10k;w0=2*pi*f0;y=w0*exp(-m*w0*t*(t>0))*cos(w0*t)*ustep(t);
+m*w0/2/pi
+subplot(211);
+...setplot(min(t),max(t),-0.5, 1.5); 
+xplot(t,y,"c11+,w=2");
+title("Signal");
+c=fft(y)*N/fs; p=abs(c);f=(-N/2:N/2-1)*fs/N;
+subplot(212);
+setplot(min(f),max(f),0,max(p));
+xplot(f,(p[N/2+1:N]|p[1:N/2]),"c11+,w=2");
+title("Spectral analysis");
+

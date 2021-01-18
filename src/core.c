@@ -183,7 +183,14 @@ header *new_reference (header *ref, char *name)
 }
 
 header *new_subm (header *var, ULONG l, char *name)
-/* makes a new submatrix, which is a single element */
+/* makes a new submatrix, which is a single element 
+     submatrix structure
+     header  : name, s_submatrix
+     header* : pointer to the matrix
+     dims    : dims of the submatrix
+     int     : nb of the row in the original matrix
+     int     : nb of the col in the original matrix
+ */
 {
 	header **d,*hd=(header *)newram;
 	dims *dim;
@@ -207,7 +214,14 @@ header *new_subm (header *var, ULONG l, char *name)
 }
 
 header *new_csubm (header *var, ULONG l, char *name)
-/* makes a new submatrix, which is a single element */
+/* makes a new submatrix, which is a single element
+     submatrix structure
+     header  : name, s_submatrix
+     header* : pointer to the matrix
+     dims    : dims of the submatrix
+     int     : nb of the row in the original matrix
+     int     : nb of the col in the original matrix
+ */
 {
 	header **d,*hd=(header *)newram;
 	dims *dim;
@@ -232,6 +246,13 @@ header *new_csubm (header *var, ULONG l, char *name)
 
 header *hnew_submatrix (header *var, header *rows, header *cols, 
 	char *name, int type)
+/* make a new submatrix reference, which structure is
+     header  : name, s_submatrixref
+     header* : pointer to the matrix
+     dims    : dims of the submatrix (nb of row indexes, nb of col indexes)
+     int[]   : indexes of rows, followed by indexes of cols in the original
+               matrix.
+ */
 {	ULONG size;
 	header **d;
 	double *mr,*mc=0,x,*mvar;
@@ -239,6 +260,7 @@ header *hnew_submatrix (header *var, header *rows, header *cols,
 	int c,r,*n,i,c0,r0,cvar,rvar,allc=0,allr=0;
 	header *hd=(header *)newram;
 	getmatrix(var,&rvar,&cvar,&mvar);
+	/* analyze row indexes */
 	if (rows->type==s_matrix)
 	{	if (dimsof(rows)->r==1) r=dimsof(rows)->c;
 		else if (dimsof(rows)->c==1) r=dimsof(rows)->r;
@@ -256,6 +278,7 @@ header *hnew_submatrix (header *var, header *rows, header *cols,
 	else
 	{	output("Illegal index!\n"); error=41; return 0;
 	}
+	/* analyze col indexes */
 	if (cols->type==s_matrix)
 	{	if (dimsof(cols)->r==1) c=dimsof(cols)->c;
 		else if (dimsof(cols)->c==1) c=dimsof(cols)->r;
@@ -275,11 +298,12 @@ header *hnew_submatrix (header *var, header *rows, header *cols,
 	}
 	size=sizeof(header)+sizeof(header *)+
 		sizeof(dims)+((ULONG)r+c)*sizeof(int);
-	d=(header **)make_header(type,size,name);
+	d=(header **)make_header(type,size,name);	/* pointer to header* field */
 	if (d) *d=var;
 	else return hd;
-	dim = (dims *)(d+1);
-	n=(int *)(dim+1);
+	/* set pointer to the matrix header */
+	dim = (dims *)(d+1);						/* pointer to dims field */
+	n=(int *)(dim+1);							/* pointer to index field */
 	r0=0;
 	if (allr)
 	{	for (i=0; i<rvar; i++) *n++=i;
@@ -307,7 +331,7 @@ header *hnew_submatrix (header *var, header *rows, header *cols,
 #ifdef SPECIAL_ALIGNMENT
 	size=((size-1)/8+1)*8;
 #endif
-	newram=(char *)hd;
+	newram=(char *)hd+size;
 	hd->size=size;
 	return hd;
 }
@@ -565,10 +589,12 @@ int sametype (header *hd1, header *hd2)
 	returns true, if hd1 and hd2 have the same type and dimensions.
 *****/
 {	dims *d1,*d2;
+	if (hd1->type==s_string && hd2->type==s_string)
+    	return hd1->size>=hd2->size;
 	if (hd1->type!=hd2->type || hd1->size!=hd2->size) return 0;
-	if (hd1->type==s_matrix)
+	if (hd1->type==s_matrix || hd1->type==s_cmatrix)
 	{	d1=dimsof(hd1); d2=dimsof(hd2);
-			if (d1->r!=d2->r) return 0;
+		if (d1->r!=d2->r) return 0;
 	}
 	return 1;
 }
@@ -870,7 +896,7 @@ void moveresult1 (header *stack, header *result)
 /***** moveresult
 	move several results to the start of stack.
 *****/
-{	ULONG size;
+{	int size;
 	if (stack==result) return;
 	size=newram-(char *)result;
 	memmove((char *)stack,(char *)result,size);

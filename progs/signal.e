@@ -83,6 +83,19 @@ function triwave(t,f,alpha=0.5)
 	return 2*(s/alpha*(s<=alpha)+(1-s)/(1-alpha)*(s>alpha))-1;
 endfunction
 
+function trapwave(t,f,E,tr)
+## returns a vector containing a trapezoidal signal
+##
+## t     : time
+## f     : frequency
+## E     : amplitude
+## tr    : rise time [s]. must be < 1/(4f) = T/4
+	v=E/(4*f*tr)*triwave(t+1/(4*f),f);
+	i=nonzeros(v>E);v[i]=E;
+	i=nonzeros(v<-E);v[i]=-E;
+	return v;
+endfunction
+
 function pulse(t,theta=1)
 ## returns a signal containing a centered pulse = 1 for |t|<theta/2, else 0
 ##
@@ -103,6 +116,14 @@ function sinc(x)
 ## cardinal sinus = sin(x)/x
 ## x: a matrix
 	return sin(x)/(x+(x==0))+(x==0);
+endfunction
+
+function fftshift(x)
+## returns the spectrum vector calculated with 'fft' reordered to 
+## correspond to the frequency scale (-n/2:n/2-1)*fs/N where 'fs'
+## is the sampling frequency.
+	n=length(x);
+	return x[n/2+1:n]|x[1:n/2];
 endfunction
 
 ...............................................................

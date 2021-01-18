@@ -285,7 +285,7 @@ function histogram (d,n=10,grid=0,ticks=1,width=4,integer=0)
 	xx=linspace(mi,ma,n);
 	x[2:2:2*n]=xx[1:n]; x[3:2:2*n+1]=xx[2:n+1];
 	x[1]=mi; x[2*n+2]=ma;
-	w=linewidth(width); xplot(x,y,grid,ticks); linewidth(w);
+	w=linewidth(width); xplot(x,y,"",grid,ticks); linewidth(w);
 	return plot;
 endfunction
 
@@ -306,17 +306,6 @@ function plot (x,y)
 	if argn()==1;
 		if iscomplex(x); return plot(re(x),im(x));
 		else return plot(1:cols(x),x);
-		endif;
-	endif;
-	error("Illegal argument number!"),
-endfunction
-
-function mark (x,y)
-## mark(x,y) plots markers at (x(i),y(i)) according the the actual style.
-## Works like plot.
-	if argn()==1;
-		if iscomplex(x); return mark(re(x),im(x));
-		else return mark(1:cols(x),x);
 		endif;
 	endif;
 	error("Illegal argument number!"),
@@ -431,7 +420,7 @@ function scaleframe (x,y,z,f,m)
 	zm=(f[6]+f[5])/2;
 	ff=m/s*2;
 	f=[f[1]-xm,f[2]-xm,f[3]-ym,f[4]-ym,f[5]-zm,f[6]-zm]*ff;
-	return {(x-xm)*ff,(y-ym)*ff,(z-zm)*ff}
+	return {(x-xm)*ff,(y-ym)*ff,(z-zm)*ff};
 endfunction
 
 function framedsolid (x,y,z,scale=0)
@@ -441,8 +430,11 @@ function framedsolid (x,y,z,scale=0)
 	frame=getframe(x,y,z);
 	if !holding(); clg; endif;
 	h=holding(1);
-	if scale; {x1,y1,z1}=scaleframe(x,y,z,frame,scale);
-	else; {x1,y1,z1}={x,y,z}; endif;
+	if scale
+		{x1,y1,z1}=scaleframe(x,y,z,frame,scale);
+	else
+		{x1,y1,z1}={x,y,z};
+	endif
 	color(2); frame1(frame);
 	color(1); solid(x1,y1,z1);
 	color(2); frame2(frame);

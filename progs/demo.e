@@ -95,10 +95,10 @@ function grafikdemo
 	
 ## e^-r cos(r) als Drahtmodell.
 	clg;
-	t=-1:0.1:1; t=t*pi;
+	t=(-1:0.1:1)*pi;
 	{x,y}=field(t,t);
 	r=x*x+y*y; f=exp(-r)*cos(r);
-	view(2,1,0,0.5); ## [ Abstand, Zoom, Winkel rechts, Winkel hoch ]
+	view(2,1,0,0.5); ... [ Abstand, Zoom, Winkel rechts, Winkel hoch ]
 	wire(x/pi,y/pi,f);
     title("Wire frame model (return)"); wait(delay());
 
@@ -256,7 +256,8 @@ function normaldemo
 	"The function looks like this (press any key)"
 	wait(delay());
 	shrinkwindow();
-	setplot([1,10,-0.1,0.4]);xplot(x,y,"c1,w=2"); title("log(x)/x, maximum, and first derivative (return)"); wait(delay());
+	setplot([1,10,-0.1,0.4]);xplot(x,y,"c1,w=2");
+	title("log(x)/x, maximum, and first derivative (return)"); wait(delay());
 	"" "The maximal value is: " ">ym=max(y)",
 	ym=max(y),
 	"" "it is obtained in" ">xm=x[nonzeros(y>=ym)]",
@@ -879,7 +880,7 @@ function rings
 	X=x_(x+1.3)_(x-1.3);
 	Y=y_-z_-z;
 	Z=z_y_y;
-	solid(X,Y,Z,[m,2*m]);
+	solid(X,Y,Z,[m,2*m]); wait(delay);
 	return 0;
 endfunction
 
